@@ -38,7 +38,7 @@
 ! THIS ORIGINAL HEADER MUST BE MAINTAINED IN ALL DISTRIBUTED
 ! VERSIONS.
 !
-! Contact:      Y.Huang, Pacific Northwest National Laboratory
+! Contact:      Yicheng Huang, Pacific Northwest National Laboratory
 !
 ! Micro-Plastic transport model developed based on the structure of 
 ! Community Sediment Transport Model (CSTM) as implemented in ROMS 
