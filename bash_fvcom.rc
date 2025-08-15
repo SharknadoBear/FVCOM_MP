@@ -1,0 +1,20 @@
+#!/bin/bash
+
+module purge
+
+#Compile with intel and run with cray system
+module load gcc/12.1.0
+module load intel/2023.2.0
+module load intel-oneapi-mpi/2021.11.0-intel
+module load netcdf-c/4.9.2-cray-mpich-intel
+module load netcdf-fortran/4.6.1-intel
+
+
+#module load PrgEnv-intel/8.5.0
+#module load intel/2023.2.0
+#module load intel-oneapi-mpi/2021.10.0-intel
+#module load netcdf-c/4.9.2-cray-mpich-intel
+#module load netcdf-fortran/4.6.1-intel
+
+
+make
