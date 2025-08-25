@@ -1,0 +1,620 @@
+\documentclass[11pt,a4paper]{article}
+\usepackage[utf8]{inputenc}
+\usepackage{amsmath}
+\usepackage{amsfonts}
+\usepackage{amssymb}
+\usepackage{graphicx}
+\usepackage{geometry}
+\usepackage{hyperref}
+\usepackage{enumitem}
+\usepackage{booktabs}
+\usepackage{xcolor}
+
+\geometry{margin=1in}
+
+\title{\textbf{FVCOM-MP Microplastic Infiltration Physics Model}\\
+\large Mathematical Formulation and Parameterization}
+\author{WaterPACT Development Team}
+\date{\today}
+
+\begin{document}
+
+\maketitle
+
+\tableofcontents
+\newpage
+
+\section{Overview}
+
+This document presents the complete mathematical formulation for implementing 1D infiltration of microplastics (MP) and associated toxics into sediment columns within the FVCOM-MP (Finite Volume Community Ocean Model - MicroPlastic) framework. The model incorporates sophisticated retention mechanisms based on DLVO theory and strain-induced blockage effects.
+
+\section{Seepage Flow Input}
+
+The model requires vertical seepage velocity (Darcy velocity) input with two implementation options:
+
+\subsection{Implementation Options}
+\begin{enumerate}
+    \item \textbf{Uniform Option}: Single $w_D$ value applied to entire computational domain via namelist parameter
+    \item \textbf{Spatial Varying Option}: Node-specific $w_D$ values read from input file for spatial heterogeneity
+\end{enumerate}
+
+\section{Governing Equations for Microplastic Infiltration}
+
+The infiltration model employs a two-phase approach distinguishing between movable and blocked microplastics within the sediment matrix.
+
+\subsection{Primary MP Transport Equation}
+
+The transport equation for movable microplastics ($p_{MP}$) incorporates advection, diffusion, blocking, and leaching processes:
+
+\begin{equation}
+\boxed{
+\frac{\partial p_{MP}}{\partial t} + (w_D + w_{ss}) \frac{\partial p_{MP}}{\partial z} = \frac{\partial}{\partial z}\left[D_L \frac{\partial p_{MP}}{\partial z}\right] - \lambda|w_D + w_{ss}|p_{MP} - S_{leach}^p
+}
+\end{equation}
+
+\subsection{Blocked MP Equation}
+
+The evolution equation for blocked microplastics ($s_{MP}$) accounts for particle retention and release:
+
+\begin{equation}
+\boxed{
+\frac{\partial s_{MP}}{\partial t} = \lambda|w_D + w_{ss}|p_{MP} - S_{leach}^s
+}
+\end{equation}
+
+\subsection{Total Concentration}
+
+The total microplastic concentration in the sediment is:
+
+\begin{equation}
+\boxed{
+c_{MP} = p_{MP} + s_{MP}
+}
+\end{equation}
+
+\subsection{Variable Definitions}
+
+\begin{itemize}
+    \item $p_{MP}$: Movable MP concentration in sediment [mass/volume]
+    \item $s_{MP}$: Blocked MP concentration (immobilized by solid matrix) [mass/volume]
+    \item $c_{MP}$: Total MP concentration in sediment [mass/volume]
+    \item $w_D$: Darcy velocity (seepage flow, positive/negative) [m/s]
+    \item $w_{ss}$: MP settling velocity within solid matrix [m/s]
+    \item $z$: Vertical coordinate (sigma coordinate system) [m]
+    \item $t$: Time [s]
+    \item $\lambda$: Effective percolation blockage rate [1/s]
+    \item $D_L$: Mechanical seepage diffusivity [m$^2$/s]
+    \item $S_{leach}^p$, $S_{leach}^s$: Leaching source/sink terms [mass/(volume·time)]
+\end{itemize}
+
+\section{Mechanical Diffusivity Model}
+
+The mechanical seepage diffusivity combines mechanical dispersion and molecular diffusion effects:
+
+\begin{equation}
+\boxed{
+D_L = c \cdot d_g |w_D + w_{ss}| + \frac{D_m}{\tau}
+}
+\end{equation}
+
+\subsection{Parameters}
+\begin{itemize}
+    \item $c$: Solid-matrix mechanical diffusivity coefficient [dimensionless]
+    \item $d_g$: Solid-matrix grain size [m]
+    \item $D_m$: Molecular diffusivity [m$^2$/s]
+    \item $\tau$: Tortuosity in porous media [dimensionless]
+\end{itemize}
+
+\section{Percolation Blockage Rate Model}
+
+The total blockage rate combines DLVO theory and strain-induced effects:
+
+\begin{equation}
+\boxed{
+\lambda = \lambda_{DLVO} + \lambda_{strain}
+}
+\end{equation}
+
+\subsection{DLVO Theory Component}
+
+Based on colloid filtration theory incorporating van der Waals forces and electrostatic interactions:
+
+\begin{equation}
+\boxed{
+\lambda_{DLVO} = \frac{3(1-\phi)}{2d_g}[\eta_D + \eta_I + \eta_G]\alpha_{primary}
+}
+\end{equation}
+
+where $\alpha_{primary} = 1$ when Hamaker constant $A \geq 0$, otherwise $\alpha_{primary} = 0$.
+
+\subsubsection{Retention Efficiency Components}
+
+\paragraph{1. Diffusion-induced Retention}
+Accounts for van der Waals attraction forces and Brownian motion:
+\begin{equation}
+\boxed{
+\eta_D = 2.4 A_S^{1/3} N_R^{-0.081} N_{Pe}^{-0.715} N_{vdW}^{0.052}
+}
+\end{equation}
+
+\paragraph{2. Mechanical Interception Retention}
+Pure mechanical interception effects:
+\begin{equation}
+\boxed{
+\eta_I = 0.55 A_S N_R^{1.675} N_A^{0.125}
+}
+\end{equation}
+
+\paragraph{3. Gravitational Retention}
+Buoyancy-induced trajectory changes affecting particle-collector collisions:
+\begin{equation}
+\boxed{
+\eta_G = 0.22 N_R^{-0.24} N_G^{1.11} N_{vdW}^{0.053}
+}
+\end{equation}
+
+\subsection{Strain-induced Blockage Component}
+
+Physical straining effects due to pore throat restrictions:
+
+\begin{equation}
+\boxed{
+\lambda_{strain} = \frac{k_{str}\psi_{str}}{|w_D + w_{ss}|}
+}
+\end{equation}
+
+where:
+\begin{align}
+k_{str} &= 269.7\left(\frac{d_{MP}}{d_g}\right)^{1.42} \\[0.5em]
+\psi_{str} &= \left(\frac{d_{MP}+z}{d_{MP}}\right)^{-0.43}
+\end{align}
+
+with $z$ measured from sediment-water interface to the layer considered.
+
+\section{Dimensionless Parameters}
+
+\subsection{Porosity-dependent Parameter}
+
+\begin{align}
+A_S &= \frac{2(1-\gamma^5)}{2-3\gamma+3\gamma^5-2\gamma^6} \\[0.5em]
+\gamma &= (1-\phi)^{1/3}
+\end{align}
+
+\subsection{Size and Flow Parameters}
+
+\paragraph{Size Ratio:}
+\begin{equation}
+N_R = \frac{d_{MP}}{d_g}
+\end{equation}
+
+\paragraph{Peclet Number (convection vs diffusion):}
+\begin{equation}
+N_{Pe} = \frac{|w_D|d_g}{D_L}
+\end{equation}
+
+\paragraph{Gravity Number:}
+\begin{equation}
+N_G = \frac{|w_{ss}|}{|w_D|}
+\end{equation}
+
+\subsection{Interaction Parameters}
+
+\paragraph{Van der Waals Number:}
+\begin{equation}
+N_{vdW} = \frac{A}{kT}
+\end{equation}
+
+\paragraph{Attraction Number:}
+\begin{equation}
+N_A = \frac{A}{12\pi\mu(d_{MP}/2)^2|w_D|}
+\end{equation}
+
+\subsection{Parameter Definitions}
+
+\begin{itemize}
+    \item $\phi$: Porosity [dimensionless]
+    \item $d_{MP}$: Microplastic particle diameter [m]
+    \item $A$: Hamaker constant [J]
+    \item $k$: Boltzmann constant = $1.381 \times 10^{-23}$ [J/K]
+    \item $T$: Temperature [K]
+    \item $\mu$: Dynamic viscosity of water [Pa·s]
+\end{itemize}
+
+\section{Implementation Notes}
+
+\subsection{Coordinate System}
+\begin{itemize}
+    \item Vertical coordinate $z$ implemented using FVCOM's sigma coordinate system
+    \item Positive $z$ direction: upward from sediment-water interface
+    \item Seepage velocity $w_D$ can be positive (upward) or negative (downward)
+\end{itemize}
+
+\subsection{Boundary Conditions}
+
+The model supports two distinct simulation modes with different boundary condition treatments for various experimental and natural scenarios.
+
+\subsubsection{Mode 1: Natural Penetration Mode}
+
+This mode simulates natural infiltration of microplastics and toxics from surface water into the sediment column.
+
+\paragraph{Upper Boundary Conditions (z = 0, sediment-water interface)}
+
+\textbf{Movable MP and Embedded Toxics} - Robin boundary condition:
+\begin{align}
+w_D c_{MP}|_{bot} &= \left[-D_L \frac{\partial p_{MP}}{\partial z} + w_D p_{MP}\right]\bigg|_{z=0} \\[0.5em]
+w_D c_T^e|_{bot} &= \left[-D_L \frac{\partial p_T^e}{\partial z} + w_D p_T^e\right]\bigg|_{z=0}
+\end{align}
+
+\textbf{Free Toxics} - Dirichlet boundary condition:
+\begin{equation}
+c_T^f\big|_{z=0} = c_T^f|_{bot}
+\end{equation}
+
+\textbf{Blocked MP and Embedded Toxics} - Neumann boundary condition:
+\begin{align}
+\frac{\partial s_{MP}}{\partial z}\bigg|_{z=0} &= 0 \\[0.5em]
+\frac{\partial s_T^e}{\partial z}\bigg|_{z=0} &= 0
+\end{align}
+
+\paragraph{Lower Boundary Conditions (z = D_s, bottom outlet)}
+
+\textbf{All tracers} - Neumann boundary condition:
+\begin{equation}
+\frac{\partial \phi}{\partial z}\bigg|_{z=D_s} = 0 \quad \text{for all tracers } \phi
+\end{equation}
+
+\subsubsection{Mode 2: Laboratory Leaching Experiment Mode}
+
+This mode simulates controlled laboratory experiments with water inflow and toxic outflow, with microplastics pre-distributed in the column.
+
+\paragraph{Upper Boundary Conditions (z = 0, inlet)}
+
+\textbf{Free Toxics} - Dirichlet boundary condition:
+\begin{equation}
+c_T^f\big|_{z=0} = 0
+\end{equation}
+
+\textbf{All other tracers} - Neumann boundary condition:
+\begin{equation}
+\frac{\partial \phi}{\partial z}\bigg|_{z=0} = 0 \quad \text{for } p_{MP}, s_{MP}, p_T^e, s_T^e
+\end{equation}
+
+\paragraph{Lower Boundary Conditions (z = D_s, outlet)}
+
+\textbf{Movable MP and Embedded Toxics} - Robin boundary condition (no mass flux):
+\begin{align}
+\left[-D_L \frac{\partial p_{MP}}{\partial z} + w_D p_{MP}\right]\bigg|_{z=D_s} &= 0 \\[0.5em]
+\left[-D_L \frac{\partial p_T^e}{\partial z} + w_D p_T^e\right]\bigg|_{z=D_s} &= 0
+\end{align}
+
+\textbf{Free Toxics} - Robin boundary condition (free outflow):
+\begin{equation}
+w_D c_T^f|_{z=D_s} = \left[-D_L \frac{\partial c_T^f}{\partial z} + w_D c_T^f\right]\bigg|_{z=D_s}
+\end{equation}
+
+\textbf{Blocked MP and Embedded Toxics} - Neumann boundary condition:
+\begin{align}
+\frac{\partial s_{MP}}{\partial z}\bigg|_{z=D_s} &= 0 \\[0.5em]
+\frac{\partial s_T^e}{\partial z}\bigg|_{z=D_s} &= 0
+\end{align}
+
+\subsection{Boundary Condition Variable Definitions}
+
+\begin{itemize}
+    \item $c_{MP}|_{bot}$: MP concentration in bottom layer of surface water [mass/volume]
+    \item $c_T^e|_{bot}$: Embedded toxic concentration in bottom layer of surface water [mass/volume]
+    \item $c_T^f|_{bot}$: Free toxic concentration in bottom layer of surface water [mass/volume]
+    \item $z = 0$: Sediment-water interface (uppermost sediment layer) [m]
+    \item $D_s$: Total thickness of sediment matrix layer [m]
+\end{itemize}
+
+\subsection{Boundary Condition Types}
+\begin{itemize}
+    \item \textbf{Robin conditions}: Relate advective-diffusive flux to concentration gradients
+    \item \textbf{Dirichlet conditions}: Specify concentration values directly
+    \item \textbf{Neumann conditions}: Specify zero gradient (no flux through boundary)
+\end{itemize}
+
+\subsection{Initial Conditions Framework}
+
+The model supports multiple initialization approaches for sediment column concentrations.
+
+\subsubsection{Uniform Concentration Initialization}
+
+Read uniform concentrations from \texttt{generic\_plastic.inp} parameters:
+
+\begin{verbatim}
+! Sediment column initial concentrations (uniform)
+INIT_MP_CONC_SEDIMENT = 0.0001        ! kg/m^3
+INIT_ETOX_CONC_SEDIMENT = 0.00001     ! kg/m^3  
+INIT_FTOX_CONC_SEDIMENT = 0.0         ! kg/m^3
+INIT_SMASS_DISTRIBUTION = 0.5         ! fraction in blocked phase
+\end{verbatim}
+
+\subsubsection{NetCDF File Initialization}
+
+Read spatially-varying initial conditions from NetCDF files via namelist:
+
+\begin{verbatim}
+&NML_ADDITIONAL_MODELS
+INIT_INFILTRATION_TYPE = 'netcdf'
+INIT_INFILTRATION_FILE = 'initial_sediment_profiles.nc'
+\end{verbatim}
+
+\paragraph{NetCDF File Structure:}
+\begin{itemize}
+    \item \texttt{mp\_sediment\_conc(node, layer, nplast)}: Movable MP concentrations
+    \item \texttt{mp\_sediment\_blocked(node, layer, nplast)}: Blocked MP concentrations  
+    \item \texttt{etox\_sediment\_conc(node, layer, nplast)}: Embedded toxic concentrations
+    \item \texttt{etox\_sediment\_blocked(node, layer, nplast)}: Blocked embedded toxics
+    \item \texttt{ftox\_sediment\_conc(node, layer)}: Free toxic concentrations
+\end{itemize}
+
+\subsubsection{Implementation in init\_plast.F}
+
+\paragraph{Current Structure (lines 69-97):}
+\begin{itemize}
+    \item \texttt{LOAD\_INIT\_PLAST\_MASS()}: Bottom mass initialization
+    \item \texttt{LOAD\_INIT\_TOXIN\_MASS()}: Toxic mass initialization
+\end{itemize}
+
+\paragraph{Extensions Needed:}
+\begin{itemize}
+    \item \texttt{LOAD\_INIT\_SEDIMENT\_PROFILES()}: 3D concentration profiles
+    \item Layer-by-layer initialization for each tracer type
+    \item Boundary condition coupling with water column
+\end{itemize}
+
+\section{Embedded Toxic Transport Equations}
+
+Embedded toxics are carried by microplastics and follow identical transport dynamics with the same physical parameters and leaching kinetics.
+
+\subsection{Primary Embedded Toxic Transport Equation}
+
+The transport equation for movable embedded toxics ($p_T^e$) has identical form to the MP equation:
+
+\begin{equation}
+\boxed{
+\frac{\partial p_T^e}{\partial t} + (w_D + w_{ss}) \frac{\partial p_T^e}{\partial z} = \frac{\partial}{\partial z}\left[D_L \frac{\partial p_T^e}{\partial z}\right] - \lambda|w_D + w_{ss}|p_T^e - S_{leach}^p
+}
+\end{equation}
+
+\subsection{Blocked Embedded Toxic Equation}
+
+The evolution equation for blocked embedded toxics ($s_T^e$):
+
+\begin{equation}
+\boxed{
+\frac{\partial s_T^e}{\partial t} = \lambda|w_D + w_{ss}|p_T^e - S_{leach}^s
+}
+\end{equation}
+
+\subsection{Total Embedded Toxic Concentration}
+
+The total embedded toxic concentration in the sediment is:
+
+\begin{equation}
+\boxed{
+c_T^e = p_T^e + s_T^e
+}
+\end{equation}
+
+\subsection{Variable Definitions}
+
+\begin{itemize}
+    \item $p_T^e$: Movable embedded toxic concentration in sediment [mass/volume]
+    \item $s_T^e$: Blocked embedded toxic concentration (immobilized by solid matrix) [mass/volume]
+    \item $c_T^e$: Total embedded toxic concentration in sediment [mass/volume]
+\end{itemize}
+
+\subsection{Key Features}
+
+\begin{itemize}
+    \item \textbf{Identical Transport Parameters}: All parameters ($w_D$, $w_{ss}$, $D_L$, $\lambda$) are identical to MP transport since toxics are carried by MPs
+    \item \textbf{Same Leaching Kinetics}: Leaching terms ($S_{leach}^p$, $S_{leach}^s$) follow the same formulation as MP system
+    \item \textbf{Same Retention Mechanisms}: DLVO theory and strain-induced blocking apply identically
+    \item \textbf{Coupled Transport}: Physical coupling with MP transport through identical governing physics
+\end{itemize}
+
+\section{Free Toxic Transport Equations}
+
+Free toxics are not subject to blocking mechanisms and follow simplified transport dynamics driven by seepage flow and leaching from microplastics.
+
+\subsection{Free Toxic Transport Equation}
+
+The governing equation for free toxics ($c_T^f$) incorporates advection, diffusion, and leaching source terms:
+
+\begin{equation}
+\boxed{
+\frac{\partial c_T^f}{\partial t} + w_D \frac{\partial c_T^f}{\partial z} = \frac{\partial}{\partial z}\left[D_L \frac{\partial c_T^f}{\partial z}\right] + S_{leach}
+}
+\end{equation}
+
+\subsection{Leaching Source Term}
+
+The leaching source combines toxin release from both blocked and movable MP phases:
+
+\begin{equation}
+\boxed{
+S_{leach} = S_{leach}^p + S_{leach}^s
+}
+\end{equation}
+
+where:
+\begin{itemize}
+    \item $S_{leach}^p$: Leaching from movable MP phase [mass/(volume·time)]
+    \item $S_{leach}^s$: Leaching from blocked MP phase [mass/(volume·time)]
+\end{itemize}
+
+\subsection{Variable Definitions}
+
+\begin{itemize}
+    \item $c_T^f$: Mass concentration of free toxics in sediment [mass/volume]
+    \item $w_D$: Darcy velocity (seepage flow, identical to MP/embedded toxic equations) [m/s]
+    \item $D_L$: Mechanical seepage diffusivity (identical to MP/embedded toxic equations) [m$^2$/s]
+    \item $S_{leach}$: Combined leaching source from blocked and movable phases [mass/(volume·time)]
+\end{itemize}
+
+\subsection{Key Features}
+
+\begin{itemize}
+    \item \textbf{No Settling Velocity}: $w_{ss} = 0$ - free toxics don't settle independently
+    \item \textbf{No Blocking Mechanisms}: Free toxics are not retained by DLVO or strain effects
+    \item \textbf{Pure Advection-Diffusion}: Transport driven by seepage flow and diffusion only
+    \item \textbf{Source-Driven Dynamics}: Concentration evolution controlled by MP leaching processes
+    \item \textbf{Same Physical Diffusivity}: Uses identical $D_L$ formulation as other transport phases
+    \item \textbf{Simplified Transport}: No retention parameters ($\lambda$) or complex retention physics
+\end{itemize}
+
+\section{Numerical Implementation Strategy}
+
+\subsection{Existing Numerical Methods (Reference: mod\_plast.F)}
+
+The infiltration module leverages existing proven numerical schemes from the FVCOM-MP framework.
+
+\subsubsection{Flux-Limited Settling Algorithm}
+
+\paragraph{Reference:} \texttt{Settle\_Flux\_new()} subroutine (mod\_plast.F:1829-1982)
+
+\paragraph{Key Features:}
+\begin{itemize}
+    \item \textbf{CFL-limited time stepping}: $\Delta t_{max} = CFL_{settle} \cdot \min(\Delta x_i/w_{set,i})$
+    \item \textbf{Multi-cycle approach}: $n_{cycle} = \lfloor \Delta t_{plast}/\Delta t_{max} + 1 \rfloor$
+    \item \textbf{Flux limiters}: Support for upwind, minmod, Van Leer limiters
+    \item \textbf{Bottom boundary handling}: Different treatments for boundary conditions
+\end{itemize}
+
+\paragraph{Adaptation for Infiltration:}
+\begin{itemize}
+    \item Replace settling velocity $w_{set}$ with combined seepage-settling: $w_D + w_{ss}$
+    \item Modify boundary conditions for sediment-water interface
+    \item Add blocking term integration: $-\lambda|w_D + w_{ss}|p_{MP}$
+\end{itemize}
+
+\subsubsection{Vertical Diffusion Treatment}
+
+\paragraph{Reference:} \texttt{vdif\_scal()} calls (mod\_plast.F:863, 907)
+
+\paragraph{Key Features:}
+\begin{itemize}
+    \item \textbf{Implicit scheme}: Handles stiff diffusion problems
+    \item \textbf{Tridiagonal solver}: Efficient 1D solution
+    \item \textbf{Multiple tracers}: Supports different diffusivity values
+\end{itemize}
+
+\paragraph{Adaptation for Infiltration:}
+\begin{itemize}
+    \item Use mechanical diffusivity $D_L$ instead of turbulent diffusivity
+    \item Apply to all infiltration tracers: $p_{MP}$, $s_{MP}$, $p_T^e$, $s_T^e$, $c_T^f$
+\end{itemize}
+
+\subsubsection{Time Integration Strategy}
+
+\paragraph{Current Approach (mod\_plast.F:749-950):}
+\begin{itemize}
+    \item \textbf{Operator splitting}: Advection $\rightarrow$ Diffusion $\rightarrow$ Reactions
+    \item \textbf{Multi-step updates}: \texttt{cnew} $\rightarrow$ \texttt{conc} progression
+    \item \textbf{Source term integration}: Explicit treatment
+\end{itemize}
+
+\paragraph{Infiltration Integration (pseudo-code):}
+\begin{verbatim}
+! Infiltration time-stepping
+call calc_infiltration_advection(p_MP, w_D + w_ss, DT_infil)
+call calc_infiltration_diffusion(p_MP, D_L, DT_infil)  
+call calc_blocking_reactions(p_MP, s_MP, lambda, DT_infil)
+call calc_toxic_leaching(p_T_e, s_T_e, c_T_f, S_leach, DT_infil)
+\end{verbatim}
+
+\subsection{Proposed Infiltration Subroutines}
+
+\subsubsection{Main Integration: \texttt{Calc\_Infiltration()}}
+\begin{itemize}
+    \item \textbf{Location}: Add after \texttt{Calc\_Deposition} in mod\_plast.F
+    \item \textbf{Function}: Coordinate all infiltration processes
+    \item \textbf{Structure}: Loop over nodes and plastic classes, apply boundary conditions, call process subroutines, update arrays
+\end{itemize}
+
+\subsubsection{Transport Solver: \texttt{Infiltrate\_1D\_Transport()}}
+\begin{itemize}
+    \item \textbf{Function}: Solve 1D advection-diffusion-reaction system
+    \item \textbf{Method}: Based on existing \texttt{Settle\_Flux\_new()} framework
+    \item \textbf{Features}: CFL-limited time stepping, flux limiters, Robin/Dirichlet/Neumann boundary conditions
+\end{itemize}
+
+\subsubsection{Blocking Kinetics: \texttt{Calc\_Retention\_Kinetics()}}
+\begin{itemize}
+    \item \textbf{Function}: Handle DLVO + strain blocking mechanisms
+    \item \textbf{Method}: Explicit integration of blocking rates
+    \item \textbf{Components}: Calculate dimensionless parameters, compute retention efficiencies, apply blocking/release rates
+\end{itemize}
+
+\subsubsection{Boundary Coupling: \texttt{Apply\_Infiltration\_BC()}}
+\begin{itemize}
+    \item \textbf{Function}: Interface with water column concentrations
+    \item \textbf{Features}: Mode selection (natural vs laboratory), Robin condition implementation, mass balance enforcement
+\end{itemize}
+
+\subsection{Discretization Approach}
+Based on FVCOM finite volume framework with sigma coordinate system for vertical discretization.
+
+\subsection{Coupling with Water Column Transport}
+Interface conditions implemented through boundary flux coupling between water column settling and sediment infiltration processes.
+
+\section{Model Parameters Summary}
+
+\begin{table}[h!]
+\centering
+\begin{tabular}{@{}lll@{}}
+\toprule
+\textbf{Parameter} & \textbf{Description} & \textbf{Units} \\
+\midrule
+\multicolumn{3}{c}{\textbf{Transport Parameters}} \\
+\midrule
+$w_D$ & Darcy velocity (seepage) & m/s \\
+$w_{ss}$ & MP settling velocity in sediment & m/s \\
+$D_L$ & Mechanical seepage diffusivity & m$^2$/s \\
+$\lambda$ & Total blockage rate & 1/s \\
+\midrule
+\multicolumn{3}{c}{\textbf{Concentration Variables}} \\
+\midrule
+$p_{MP}$ & Movable MP concentration & mass/volume \\
+$s_{MP}$ & Blocked MP concentration & mass/volume \\
+$c_{MP}$ & Total MP concentration & mass/volume \\
+$p_T^e$ & Movable embedded toxic concentration & mass/volume \\
+$s_T^e$ & Blocked embedded toxic concentration & mass/volume \\
+$c_T^e$ & Total embedded toxic concentration & mass/volume \\
+$c_T^f$ & Free toxic concentration & mass/volume \\
+\midrule
+\multicolumn{3}{c}{\textbf{Physical Parameters}} \\
+\midrule
+$\phi$ & Sediment porosity & - \\
+$d_{MP}$ & Microplastic diameter & m \\
+$d_g$ & Sediment grain size & m \\
+$A$ & Hamaker constant & J \\
+$\mu$ & Water dynamic viscosity & Pa·s \\
+$T$ & Temperature & K \\
+$c$ & Mechanical diffusivity coefficient & - \\
+$\tau$ & Tortuosity & - \\
+$D_m$ & Molecular diffusivity & m$^2$/s \\
+\bottomrule
+\end{tabular}
+\caption{Key model parameters, variables, and their units}
+\label{tab:parameters}
+\end{table}
+
+\section{References}
+
+\textcolor{red}{[To be added based on literature cited in development]}
+
+\appendix
+
+\section{Derivation Details}
+
+\textcolor{red}{[Detailed derivations of key equations if needed]}
+
+\section{Validation Test Cases}
+
+\textcolor{red}{[Analytical solutions for model validation]}
+
+\end{document}

@@ -40,9 +40,9 @@
 !
 ! Contact:      Yicheng Huang, Pacific Northwest National Laboratory
 !
-! Micro-Plastic transport model developed based on the structure of 
-! Community Sediment Transport Model (CSTM) as implemented in ROMS 
-! by J. Warner (USGS), with all the transport and fate dynamics adapted
+! Micro-Plastic transport model (refer to as FVCOM-MP) developed based on 
+! the structure of Community Sediment Transport Model (CSTM) as implemented 
+! in ROMS by J. Warner (USGS), with all the transport and fate dynamics adapted
 ! for the plastics.
 !
 ! Comments:     Micro-Plastics Transport and Fate Module FVCOM-MP
@@ -156,6 +156,8 @@ Module Mod_Plast
 	! tox_r	       => model parameter: mass ratio of bottom toxin comparing to MP mass    [-                       ]
 	! D_plast      => model parameter: solid internal diffusivity of MP                   [m^2/s                   ]
 	! theta_s      => model parameter: equivalent boundary layer thickness of MP          [m                       ]
+	! A_Hamaker    => model parameter: Hamaker constant                                   [J m^-2                  ]
+	! ws_sed       => model parameter: sediment settling/rising velocity with in sediment [m/s                     ]
 	! unit_factor  => unit factor for MP resuspension flux unit transition                [various                 ]
     !
 	!              Notes units system: on all the input and output value of MP and toxin 'variables' is SI!	
@@ -166,9 +168,11 @@ Module Mod_Plast
 	! conc         => plastic variables: plastics concentration in water column 	      [# m^-3 or kg m^-3       ] 	
 	! cnew         => plastic variables: plastics concentration during update   	      [# m^-3 or kg m^-3       ]
 	! mass         => plastic variables: plastics mass density in at the bottom           [kg m^-2                 ]
+	! conc_sed     => plastic variables: plastics concentration in sediment               [# m^-3 or kg m^-3       ]
 	! frac         => plastic variables: plastics fraction in active layer 	              [-                       ]
 	! eflx         => plastic variables: suspended plastics erosive flux (+out of bed)    [# m^-2 or kg m^-2       ]
 	! dflx         => plastic variables: suspended plastics depositional flux (+into bed) [# m^-2 or kg m^-2       ]
+	! iflx         => plastic variables: suspended plastics infiltrative flux (+into bed) [# m^-2 or kg m^-2       ]
 	! cdis         => plastic variables: concentration of MP at river source 		      [# m^-3 or kg m^-3       ]
 	! cflx         => plastic variables: store advective flux at open boundry 		      [# m^-2 or kg m^-2	   ]
 	! cobc         => plastic variables: user specd open boundry concentration 	          [# m^-3 or kg m^-3       ]
@@ -177,20 +181,25 @@ Module Mod_Plast
 	! erate        => plastic variables: bed surface erosion mass flux         	          [kg m^-1 s^-1            ]
 	! prate 	   => plastic variables: free surface precipitation rate                  [# m^-3 s^-3             ]
 	! zactv        => plastic variables: active layer thickness                           [m^-1                    ]
-	! tconc_b	   => bond toxic variables: bonded toxic concentration				      [kg m^-3                 ]
-	! tmass_b	   => bond toxic variables: bottom bonded toxic						      [kg m^-2		           ]
-	! teflx_b	   => bond toxic variables: erosion flux of bonded toxic 				  [kg m^-2		           ]
-	! tdflx_b	   => bond toxic variables: deposition flux of bonded toxic 			  [kg m^-2		           ]
-	! tcdis_b	   => bond toxic variables: bonded toxic concentration at river 		  [kg m^-3                 ]
-	! tcobc_b	   => bond toxic variables: open boundary bonded toxic concentration      [kg m^-3                 ]
-	! tcflx_b      => bond toxic variables: bonded toxic flux at river				      [kg m^-2		           ]
-	! tfrac_b      => bond toxic variables: fraction of bonded toxic in active layer      [-                       ]
+	! tconc_b	   => embedded toxic variables: embedded toxic concentration			  [kg m^-3                 ]
+	! tmass_b	   => embedded toxic variables: bottom embedded toxic					  [kg m^-2		           ]
+	! tconc_b_sed  => embedded toxic variables: embedded toxic concentration in sediment  [kg m^-3                 ]
+	! teflx_b	   => embedded toxic variables: erosion flux of embedded toxic 		      [kg m^-2		           ]
+	! tdflx_b	   => embedded toxic variables: deposition flux of embedded toxic 		  [kg m^-2		           ]
+	! tiflx_b      => embedded toxic variables: embedded toxic flux infiltrated into bed  [kg m^-2		           ]
+	! tcdis_b	   => embedded toxic variables: embedded toxic concentration at river 	  [kg m^-3                 ]
+	! tcobc_b	   => embedded toxic variables: open boundary embedded toxic concentration[kg m^-3                 ]
+	! tcflx_b      => embedded toxic variables: embedded toxic flux at river			  [kg m^-2		           ]
+	! tfrac_b      => embedded toxic variables: fraction of embedded toxic in active layer[-                       ]
 	! tconc_f      => free toxic variables: free toxic concentration					  [kg m^-3                 ]
+	! tconc_f_sed  => free toxic variables: free toxic concentration in sediment	      [kg m^-3                 ]
 	! tcdis_f	   => free toxic variables: free toxic concentration at river		      [kg m^-3                 ]
 	! tcnew_f      => free toxic variables: free toxic concentration during update	      [kg m^-3                 ]
 	! tcflx_f 	   => free toxic variables: free toxic flux at river				      [kg m^-2 	               ]
 	! tcobc_f      => free toxic variables: open boundary free toxic concentration        [kg m^-3                 ]
 	! tbdflx_f	   => free toxic variables: bottom free toxic diffusion flux			  [kg m^-2 	               ]
+	! tiflx_f      => free toxic variables: free toxic flux infiltrated into bed          [kg m^-2                 ]
+	! tiflx_f_deep => free toxic variables: free toxic flux infiltrated into deep bed     [kg m^-2                 ]
 	! arraysize    => spatial size of plastic arrays
 	!---------------------------------------------------------------------------------------------
 
@@ -219,14 +228,18 @@ Module Mod_Plast
 		real(sp)          :: tox_gen_k
 		real(sp) 		  :: tox_r
 		real(sp)          :: theta_s
+		real(sp)		  :: A_Hamaker
+		real(sp)          :: ws_sed
 		real(sp)          :: D_plast
 		real(sp)          :: unit_factor
 		real(sp), allocatable :: conc(:,:)
 		real(sp), allocatable :: cnew(:,:)
 		real(sp), allocatable :: mass(:)
+		real(sp), allocatable :: conc_sed(:,:)
 		real(sp), allocatable :: frac(:)
         real(sp), allocatable :: eflx(:)        
 		real(sp), allocatable :: dflx(:)
+		real(sp), allocatable :: iflx(:)
 		real(sp), allocatable :: pflx(:)
 		real(sp), allocatable :: fflx(:)        
 		real(sp), allocatable :: cdis(:)
@@ -234,19 +247,24 @@ Module Mod_Plast
 		real(sp), allocatable :: cobc(:)
 		real(sp), allocatable :: tconc_b(:,:)
 		real(sp), allocatable :: tcnew_b(:,:)
+		real(sp), allocatable :: tconc_b_sed(:,:)
 		real(sp), allocatable :: tcdis_b(:)
 		real(sp), allocatable :: tcflx_b(:,:)
 		real(sp), allocatable :: tmass_b(:)
 		real(sp), allocatable :: tcobc_b(:)
 		real(sp), allocatable :: teflx_b(:)
+		real(sp), allocatable :: tiflx_b(:)
 		real(sp), allocatable :: tdflx_b(:)
 		real(sp), allocatable :: tfrac_b(:)
 		real(sp), allocatable :: tconc_f(:,:)
 		real(sp), allocatable :: tcnew_f(:,:)
+		real(sp), allocatable :: tconc_f_sed(:,:)
 		real(sp), allocatable :: tcdis_f(:)
 		real(sp), allocatable :: tcflx_f(:,:)
 		real(sp), allocatable :: tcobc_f(:)
-		real(sp), allocatable :: tbdflx_f(:) 
+		real(sp), allocatable :: tbdflx_f(:)
+		real(sp), allocatable :: tiflx_f(:)
+		real(sp), allocatable :: tiflx_f_deep(:)
 		real(sp), allocatable :: wset(:,:) 
 		real(sp), allocatable :: zactv(:)
 		real(sp), allocatable :: erate(:)
@@ -270,6 +288,7 @@ Module Mod_Plast
 	! plast_nudge		: switch of plastic OBC nudging
 	! plast_source		: switch of plastic point sources
 	! plast_bedset      : switch of plastic bed-setting
+	! plast_infil		: switch of plastic infiltration
 	! plast_hot_start	: switch of plastic restart
 	! tox_vector		: switch of toxic-vector functional
 	! tox_leaching      : switch of toxin decaying model, it can take the value of
@@ -317,6 +336,7 @@ Module Mod_Plast
 	logical  :: plast_nudge
 	logical  :: PLAST_dumpbot 
 	logical  :: PLAST_source
+	logical  :: PLAST_infil
 	logical  :: plast_hot_start
 	logical  :: tox_vector
 	integer  :: nplast
@@ -354,15 +374,20 @@ Module Mod_Plast
 	!   idens  =>  Median plastic grain density. 				 (kg/m3)   !
 	!   imudp  =>  Mud Potion.  					  			 (-)       !
 	!   iporo  =>  plastic porosity 							 (-)       !
+	!   iTsed  =>  sediment temperature 						 (K)       !
+	!   iwDcy  =>  vertical Darcy speed 						 (m/s)     !
+	!   iLsed  =>  sediment layer thickness 					 (m)       !
 	!																	   !
 	! global bed characteristics:										   !
 	!   n_bot_vars:  number of bed characteristics						   !
+	!   N_sed: number of sediment layers								   !
 	!	bot_snames:   bottom characteristics name list					   !
 	!	bot_lnames:   bottom characteristics long name list				   !
 	!	bot_units: 	  bottom characteristics unit list                     !
 	!----------------------------------------------------------------------!
 
-	integer, parameter    :: n_bot_vars  = 4
+	integer, parameter    :: n_bot_vars  = 7
+	integer, parameter    :: N_sed = 1
 	character(len=80), dimension(n_bot_vars) :: bot_snames = &
 	(/"bot_sd50","bot_dens","bot_mudp","bot_poro"/)
 	character(len=80), dimension(n_bot_vars) :: bot_lnames = &
@@ -370,10 +395,13 @@ Module Mod_Plast
 	character(len=80), dimension(n_bot_vars) :: bot_units = &
 	(/"m","kg/m^3","dimensionless","dimensionless"/)
 
-	integer, parameter    :: isd50  = 1  
+	integer, parameter    :: isd50  = 1
 	integer, parameter    :: idens  = 2
 	integer, parameter    :: imudp  = 3
-	integer, parameter    :: iporo  = 4 
+	integer, parameter    :: iporo  = 4
+	integer, parameter    :: iTsed  = 5
+	integer, parameter    :: iwDcy  = 6
+	integer, parameter    :: iLsed  = 7
 
 	real(sp), allocatable, target :: bottom(:,:)
 
