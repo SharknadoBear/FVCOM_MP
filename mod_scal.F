@@ -674,7 +674,6 @@ Subroutine Adv_Scal(f,fn,d_fdis,fdis,d_fflux,fflux_obc,deltat,source)
     !  Set up Diagonals of Matrix (lower=au,diag=bu,upper=cu)
     !----------------------------------------------------------------
     
-
     !Surface
     au(1) = 0.0
     cu(1)=      - deltat*(kh(i,2)+umol)/(dzz(i,1)*dz(i,1)*dsqrd)
@@ -762,6 +761,71 @@ Subroutine Adv_Scal(f,fn,d_fdis,fdis,d_fflux,fflux_obc,deltat,source)
 
   End Subroutine Vdif_Scal
 
+!==============================================================================|
+! Vertical Diffusion of Scalar in Sediment Matrix                             |
+!==============================================================================|
+  Subroutine Vdif_Scal_Sed(f,deltat,diff_rate)
+
+  use mTridiagonal_scal
+  use all_vars 
+
+  Implicit None 
+  Real(sp), intent(inout) :: f(0:mt,kb)
+  Real(sp), intent(in   ) :: deltat
+  Real(sp), intent(in   ) :: diff_rate     ! Custom diffusivity [m^2/s]
+  !--local--------------------
+  integer  :: i,k
+  real(sp) :: dsqrd
+  real(sp) :: fsol(0:kb)
+
+  call init_tridiagonal_scal(kb)
+
+  Do i=1,m
+     dsqrd = d(i)*d(i)
+
+    !----------------------------------------------------------------
+    !  Set up Diagonals of Matrix (lower=au,diag=bu,upper=cu)
+    !----------------------------------------------------------------
+    
+    !Surface
+    au(1) = 0.0
+    cu(1)=      - deltat*diff_rate/(dzz(i,1)*dz(i,1)*dsqrd)
+    bu(1)=  1.0 - cu(1) 
+
+    !Interior
+    do k=2,kbm1-1
+      au(k) =     - deltat*diff_rate/(dzz(i,k-1)*dz(i,k)*dsqrd)
+      cu(k) =     - deltat*diff_rate/(dzz(i,k  )*dz(i,k)*dsqrd)
+      bu(k) = 1.0 - cu(k) - au(k) 
+    end do
+
+    !Bottom
+     au(kbm1) =     - deltat*diff_rate/(dzz(i,kbm1-1)*dz(i,kbm1)*dsqrd)
+     cu(kbm1) = 0.0
+     bu(kbm1) = 1.0 - au(kbm1) 
+
+    !----------------------------------------------------------------
+    ! Set up RHS forcing vector and boundary conditions 
+    !----------------------------------------------------------------
+    do k=1,kbm1
+      du(k) = f(i,k)
+    end do
+
+    !Free Surface: No flux
+    !Bottom: No flux
+      
+    !----------------------------------------------------------------
+    ! Solve 
+    !----------------------------------------------------------------
+
+     call tridiagonal_scal(kb,1,kbm1,fsol)
+    
+     !Transfer
+     f(i,1:kbm1) = fsol(1:kbm1)
+
+  End Do
+
+  End Subroutine Vdif_Scal_Sed
 
 !==============================================================================|
 ! Set Point Source Conditions for Scalar Function                              |

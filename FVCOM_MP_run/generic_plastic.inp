@@ -20,6 +20,7 @@
 ! Plastic Module Dynamics Parameters
 !	PLAST_ONED: switch of 1D model
 !	PLAST_NUDGE: switch of OBC nudging
+!   PLAST_INFIL: switch of plastic infiltration submodule
 !   PLAST_ALPHA: plastic nudging relaxation factor
 !	PLAST_RAMP: number of iterations over which to ramp plastic nudging
 !	PLAST_START: start interval for plastic model
@@ -51,6 +52,7 @@
 
 PLAST_ONED = F
 PLAST_NUDGE = F
+PLAST_INFIL = F
 PLAST_ALPHA = 0.5
 PLAST_RAMP  = 1
 PLAST_START = 361
@@ -92,11 +94,13 @@ PLAST_DUMPBOT = F
 !	PLAST_BAXI:   medium axis of the plastics	    				 [mm     ]
 !	PLAST_CAXI:   shortest axis of the plastics         			 [mm     ]
 !   PLAST_PRHO:   plastic density                                    [kg/m^3 ]
+!   PLAST_AHAMA:  plastic Hamaker constant in the solid matrix       [J      ]
+!   PLAST_WSSED:  plastic settling velocity in the solid matrix      [m/s    ]
 !
 ! Toxic vector module: 
 ! If toxic vector module is turned-on. The first-order consecutive chemical 
 ! reaction processes will be included as the micro-plastic transport. The 
-! chemcial will be release as tracer.
+! chemical will be release as tracer.
 !
 !   TOX_VECTOR: the switch for turning on or off the toxic vector module
 !   TOX_MOD: Toxic leaching mode 'SFOK'/'SI-FOK'/'SIR-FOK'
@@ -118,6 +122,8 @@ PLAST_BAXI = 0.040
 PLAST_CAXI = 0.040
 PLAST_PRHO = 1025.
 PLAST_PRAT = 0.0
+PLAST_AHAMA = 1E-6
+PLAST_WSSED = 0.01
 TOX_NAME = tox1
 TOX_CKL = 0.3
 TOX_CKD = 0.0
@@ -134,15 +140,27 @@ TOX_INR = 0.001
 !   SED_MUDP:   mud portion in the sediment	(if set constant)		 [-      ]	
 !   AMBIENT_DEN: ambient water density 								 [kg/m^3 ]								  
 !   INI_MASS:	initial plastic mass on each grid point 	 		 [kg     ]
-!	INF_PLAST:  infinite mass switch
+!	INF_PLAST:  infinite plastic mass switch                         [-      ]
+!
+!   Infiltration parameters (when PLAST_INFIL = T):
+!   SED_LNUM:           sediment layer number                        [-      ]
+!   SED_TEMP:           sediment temperature                         [K      ]
+!   SED_TORT:           tortuosity factor (uniform)                  [-      ]
+!   SED_DARV:           pore water velocity (uniform, -=downward)    [m/s    ]
+!   INFIL_MAX_DEPTH:    maximum infiltration depth (uniform)         [m      ]
 !-------------------------------------------------------------------------------!
 
 SED_SRHO = 1025.
 SED_PORS = .5
 SED_SD50 = 0.5
 SED_MUDP = 0.1
+SED_TORT = 2.0
+SED_TEMP = 293
+SED_DARV = -1.0e-6
+SED_LNUM = 5
 
 AMBIENT_DEN = 1025.
 
 INI_MASS = 0.0001
 INF_PLAST = F
+INFIL_MAX_DEPTH = 1.0

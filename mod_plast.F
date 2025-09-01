@@ -110,7 +110,7 @@
 !				2) River sources for sediment/plastic/toxins are now correctly configured
 !				3) Merge with latest fixing on the transport equation including five modes on bottom treatment
 !				4) Now all the input/output of either MP or toxin data are in the SI unit
-!   July 1, 2025 [Work on-going...]: Some preliminary flocs function is added-in:
+!   October 1, 2025 [Work on-going...]: Some preliminary flocs function is added-in:
 !				1) Communication between sediment and plastic module, passing sediment concentration in
 !				2) Commonication between hydrodynamic part and plastic module, passing the turbulence kinetic energy in
 !				3) 2-tracer model, when consider flocs, the MP concentration is computed through 2 parts
@@ -153,8 +153,7 @@ Module Mod_Plast
 	! tox_leach_k  => model parameter: bonded toxic releasing rate				          [1/s                     ]
 	! tox_decay_k  => model parameter: free tox decaying rate                             [1/s                     ]
 	! tox_gen_k    => model parameter: tox generation rate							      [1/s                     ]
-	! tox_r	       => model parameter: mass ratio of bottom toxin comparing to MP mass    [-                       ]
-	! D_plast      => model parameter: solid internal diffusivity of MP                   [m^2/s                   ]
+	! tox_r	       => model parameter: mass ratio of bottom toxin comparing to MP mass    [-                       ]	
 	! theta_s      => model parameter: equivalent boundary layer thickness of MP          [m                       ]
 	! A_Hamaker    => model parameter: Hamaker constant                                   [J m^-2                  ]
 	! ws_sed       => model parameter: sediment settling/rising velocity with in sediment [m/s                     ]
@@ -169,10 +168,13 @@ Module Mod_Plast
 	! cnew         => plastic variables: plastics concentration during update   	      [# m^-3 or kg m^-3       ]
 	! mass         => plastic variables: plastics mass density in at the bottom           [kg m^-2                 ]
 	! conc_sed     => plastic variables: plastics concentration in sediment               [# m^-3 or kg m^-3       ]
+	! conc_sed_s   => plastic variables: plastics concentration stopped in sediment       [# m^-3 or kg m^-3       ]
+	! conc_sed_p   => plastic variables: plastics concentration can pass in sediment      [# m^-3 or kg m^-3       ]
 	! frac         => plastic variables: plastics fraction in active layer 	              [-                       ]
 	! eflx         => plastic variables: suspended plastics erosive flux (+out of bed)    [# m^-2 or kg m^-2       ]
 	! dflx         => plastic variables: suspended plastics depositional flux (+into bed) [# m^-2 or kg m^-2       ]
 	! iflx         => plastic variables: suspended plastics infiltrative flux (+into bed) [# m^-2 or kg m^-2       ]
+	! bflx         => plastic variables: suspended plastics burial flux (+into bed)       [# m^-2 or kg m^-2       ]
 	! cdis         => plastic variables: concentration of MP at river source 		      [# m^-3 or kg m^-3       ]
 	! cflx         => plastic variables: store advective flux at open boundry 		      [# m^-2 or kg m^-2	   ]
 	! cobc         => plastic variables: user specd open boundry concentration 	          [# m^-3 or kg m^-3       ]
@@ -181,12 +183,18 @@ Module Mod_Plast
 	! erate        => plastic variables: bed surface erosion mass flux         	          [kg m^-1 s^-1            ]
 	! prate 	   => plastic variables: free surface precipitation rate                  [# m^-3 s^-3             ]
 	! zactv        => plastic variables: active layer thickness                           [m^-1                    ]
+	! D_plast      => plastic variables: solid internal diffusivity of MP                 [m^2/s                   ]
+	! D_toxin      => plastic variables: solid internal diffusivity of MP associated tox  [XXX]
+	! lambda_plast => plastic variables: solid internal retention rate of MP              [XXX]
 	! tconc_b	   => embedded toxic variables: embedded toxic concentration			  [kg m^-3                 ]
 	! tmass_b	   => embedded toxic variables: bottom embedded toxic					  [kg m^-2		           ]
-	! tconc_b_sed  => embedded toxic variables: embedded toxic concentration in sediment  [kg m^-3                 ]
+	! tconc_b_sed  => embedded toxic variables: total embedded toxic in sediment  		  [kg m^-3                 ]
+	! tconc_b_sed_s=> embedded toxic variables: stopped embedded toxic in sediment		  [kg m^-3                 ]
+	! tconc_b_sed_p=> embedded toxic variables: passing embedded toxic in sediment  	  [kg m^-3                 ]
 	! teflx_b	   => embedded toxic variables: erosion flux of embedded toxic 		      [kg m^-2		           ]
 	! tdflx_b	   => embedded toxic variables: deposition flux of embedded toxic 		  [kg m^-2		           ]
 	! tiflx_b      => embedded toxic variables: embedded toxic flux infiltrated into bed  [kg m^-2		           ]
+	! tiflx_b_deep => free toxic variables: free toxic flux infiltrated into deep bed     [kg m^-2                 ]
 	! tcdis_b	   => embedded toxic variables: embedded toxic concentration at river 	  [kg m^-3                 ]
 	! tcobc_b	   => embedded toxic variables: open boundary embedded toxic concentration[kg m^-3                 ]
 	! tcflx_b      => embedded toxic variables: embedded toxic flux at river			  [kg m^-2		           ]
@@ -230,24 +238,31 @@ Module Mod_Plast
 		real(sp)          :: theta_s
 		real(sp)		  :: A_Hamaker
 		real(sp)          :: ws_sed
-		real(sp)          :: D_plast
 		real(sp)          :: unit_factor
 		real(sp), allocatable :: conc(:,:)
 		real(sp), allocatable :: cnew(:,:)
 		real(sp), allocatable :: mass(:)
 		real(sp), allocatable :: conc_sed(:,:)
+		real(sp), allocatable :: conc_sed_s(:,:)
+		real(sp), allocatable :: conc_sed_p(:,:)
 		real(sp), allocatable :: frac(:)
         real(sp), allocatable :: eflx(:)        
 		real(sp), allocatable :: dflx(:)
 		real(sp), allocatable :: iflx(:)
+		real(sp), allocatable :: bflx(:)
 		real(sp), allocatable :: pflx(:)
 		real(sp), allocatable :: fflx(:)        
 		real(sp), allocatable :: cdis(:)
 		real(sp), allocatable :: cflx(:,:)		
 		real(sp), allocatable :: cobc(:)
+		real(sp), allocatable :: D_plast(:)
+		real(sp), allocatable :: D_toxin(:)
+		real(sp), allocatable :: lambda_plast(:,:)
 		real(sp), allocatable :: tconc_b(:,:)
 		real(sp), allocatable :: tcnew_b(:,:)
 		real(sp), allocatable :: tconc_b_sed(:,:)
+		real(sp), allocatable :: tconc_b_sed_s(:,:)
+		real(sp), allocatable :: tconc_b_sed_p(:,:)
 		real(sp), allocatable :: tcdis_b(:)
 		real(sp), allocatable :: tcflx_b(:,:)
 		real(sp), allocatable :: tmass_b(:)
@@ -322,7 +337,11 @@ Module Mod_Plast
 	! dens0				: constant plastic density in the bottom
 	! mudp0             : constant mud portion in the bottom
 	! poro0             : constant porosity in the bottom
+	! tort0             : tortuosity factor for uniform sediment [-] 
+	! temp0             : temperature for uniform sediment [K]
+	! darv0             : pore water velocity for uniform sediment [m/s]
 	! rho_water			: seawater density can be constant or spatial varying
+	! infil_max_depth	: maximum infiltration depth for uniform sediment [m]
 	!-------------------------------------------------------------------------
 
 	character(len=120), parameter :: PLAST_model_version = "FVCOM-MP_v0.5: toxin-leaching"
@@ -332,13 +351,13 @@ Module Mod_Plast
 	character(len=20)  :: plast_unit
 	character(len=20)  :: cshields
 	logical  :: inf_bed
-	logical  :: oned_model
-	logical  :: plast_nudge
-	logical  :: PLAST_dumpbot 
-	logical  :: PLAST_source
-	logical  :: PLAST_infil
-	logical  :: plast_hot_start
-	logical  :: tox_vector
+	logical  :: oned_model = .false.
+	logical  :: plast_nudge = .false.
+	logical  :: PLAST_dumpbot = .false.
+	logical  :: PLAST_source = .false.
+	logical  :: PLAST_infil = .false.
+	logical  :: plast_hot_start = .false.
+	logical  :: tox_vector = .false.
 	integer  :: nplast
 	integer  :: n_report
 	integer  :: Nobc
@@ -359,41 +378,51 @@ Module Mod_Plast
 	real(sp) :: dens0 = 2400
 	real(sp) :: mudp0 = 0.1
 	real(sp) :: poro0 = 0.5
+	real(sp) :: tort0 = 1.0
+	real(sp) :: temp0 = 298.15
+	real(sp) :: darv0 = 0.0
+	real(sp) :: infil_max_depth = 1.0
 	real(sp), allocatable, target :: rho_water(:,:)
 	real(sp), allocatable, target :: taub(:)
 	real(sp), allocatable, target :: tauf(:)
 
-	!----------------------------------------------------------------------!
-	!  BOTTOM properties indices:                                          !
-	!																	   !
-	!  data --> bottom(horizontal,prototype)						       !
-	!  size --> bottom(0:mt,n_bot_vars)   				           		   !
-	!																	   !
-	! with proptype indices:											   !
-	!   isd50  =>  Median plastic grain diameter.				 (m)       !
-	!   idens  =>  Median plastic grain density. 				 (kg/m3)   !
-	!   imudp  =>  Mud Potion.  					  			 (-)       !
-	!   iporo  =>  plastic porosity 							 (-)       !
-	!   iTsed  =>  sediment temperature 						 (K)       !
-	!   iwDcy  =>  vertical Darcy speed 						 (m/s)     !
-	!   iLsed  =>  sediment layer thickness 					 (m)       !
-	!																	   !
-	! global bed characteristics:										   !
-	!   n_bot_vars:  number of bed characteristics						   !
-	!   N_sed: number of sediment layers								   !
-	!	bot_snames:   bottom characteristics name list					   !
-	!	bot_lnames:   bottom characteristics long name list				   !
-	!	bot_units: 	  bottom characteristics unit list                     !
-	!----------------------------------------------------------------------!
+	!-------------------------------------------------------------------------------!
+	!  BOTTOM properties indices:                                          			!
+	!																	   			!
+	!  data --> bottom(horizontal,prototype)						       			!
+	!  size --> bottom(0:mt,n_bot_vars)   				           		   			!
+	!																	   			!
+	! with proptype indices:											   			!
+	!   isd50  =>  Median plastic grain diameter.				 (m)       			!
+	!   idens  =>  Median plastic grain density. 				 (kg/m3)   			!
+	!   imudp  =>  Mud Potion.  					  			 (-)       			!
+	!   iporo  =>  plastic porosity 							 (-)       			!
+	!   iTsed  =>  sediment temperature 						 (K)       			!
+	!   iwDcy  =>  vertical Darcy speed 						 (m/s)     			!
+	!   iLsed  =>  sediment layer thickness 					 (m)       			!
+	!																	   			!
+	! global bed characteristics:										   			!
+	!   n_bot_vars:  number of bed characteristics, will be re-allocated if needed. !
+	!   N_sed_layer: number of sediment layers								   		!
+	!	bot_snames:   bottom characteristics name list					   			!
+	!	bot_lnames:   bottom characteristics long name list				   			!
+	!	bot_units: 	  bottom characteristics unit list                     			!
+	!-------------------------------------------------------------------------------!
 
 	integer, parameter    :: n_bot_vars  = 7
-	integer, parameter    :: N_sed = 1
+	integer, parameter    :: N_sed_layer = 3
 	character(len=80), dimension(n_bot_vars) :: bot_snames = &
-	(/"bot_sd50","bot_dens","bot_mudp","bot_poro"/)
-	character(len=80), dimension(n_bot_vars) :: bot_lnames = &
-	(/"bot_sd50","bot_dens","bot_mudp","bot_poro"/)
+	(/"bot_sd50","bot_dens","bot_mudp","bot_poro","bot_Tsed","bot_wDcy","bot_Lsed"/)
+	character(len=120), dimension(n_bot_vars) :: bot_lnames = &
+	(/"bottom_sediment_d50", &
+	"bottom_density", &
+	"bottom_mud_portion", &
+	"bottom_porosity", &
+	"bottom_temperature", &
+	"bottom_vertical_darcy_speed", &
+	"bottom_layer_thickness"/)
 	character(len=80), dimension(n_bot_vars) :: bot_units = &
-	(/"m","kg/m^3","dimensionless","dimensionless"/)
+	(/"m","kg/m^3","dimensionless","dimensionless","K","m/s","m"/)
 
 	integer, parameter    :: isd50  = 1
 	integer, parameter    :: idens  = 2
@@ -414,12 +443,34 @@ Module Mod_Plast
 	contains
 
 !==========================================================================
-! Allocate Data, Initialize Concentration Fields and Bed Parameters       
+! Main submodules of FVCOM-MP modules:
+!
+! Setup_PLAST           - Initialize plastic model, allocate arrays, and 
+!                         configure parameters
+! Convert_PLAST_Params   - Convert plastic parameters from non-standard 
+!                         units (mm) to MKS units
+! Read_PLAST_Params      - Read plastic model parameters from input 
+!                         configuration file
+! Advance_plast          - Advance plastic transport model by one time step 
+!                         including advection diffusion settling all source
+!                          terms and kinetics
+! Alloc_Plast_Vars       - Allocate memory for all plastic model variables 
+!                         and arrays
+! Report_PLAST_Setup     - Report plastic model setup parameters and initial 
+!                         conditions to screen
+! PLAST_Report           - Monitor and report plastic model statistics during 
+!                         simulation
+! Setup_PLAST_OBC        - Setup open boundary conditions and nudging for 
+!                         plastic concentrations
 !==========================================================================
   
- Subroutine Setup_PLAST(fname,Nin,Nin_gl,N_plast,N_plast_Max,Plast_Names, &
+Subroutine Setup_PLAST(fname,Nin,Nin_gl,N_plast,N_plast_Max,Plast_Names, &
 		Toxb_Names,Toxf_Names,Tox_switch) 
 	
+	!==========================================================================
+	! Allocate Data, Initialize Concentration Fields and Bed Parameters       
+	!==========================================================================
+
 	use control, only : msr,casename,input_dir
 	use lims,    only : m, kbm1
 	use Mod_Utils, only: pstop
@@ -511,15 +562,16 @@ Module Mod_Plast
 			end if
 		end do
 		
-		if(dbg_set(dbg_sbr)) write(ipt,*) "End: setup_plast" 
+	if(dbg_set(dbg_sbr)) write(ipt,*) "End: setup_plast" 
 
 end Subroutine Setup_PLAST
 
-!=======================================================================
-!Convert Sed Params from nonstandard (mm, etc) to mks units
-!=======================================================================
 Subroutine Convert_PLAST_Params 
 	
+	!=======================================================================
+	!Convert Sed Params from nonstandard (mm, etc) to mks units
+	!=======================================================================
+
 	Implicit None
 	integer :: i
 
@@ -539,11 +591,11 @@ Subroutine Convert_PLAST_Params
 
 End Subroutine Convert_PLAST_Params
 
-!=======================================================================
-!Read plastic Parameters From plastic Input File
-!=======================================================================
 Subroutine Read_PLAST_Params
   
+  	!=======================================================================
+	!Read plastic Parameters From plastic Input File
+	!=======================================================================
   Use Input_Util
   
   Implicit None
@@ -580,6 +632,26 @@ Subroutine Read_PLAST_Params
   
   !read in plast bed settings
   Call Get_Val(plast_bedset,plastfile,'PLAST_BEDSET',line=linenum,echo=.false.)
+
+  !read infiltration control switch
+  Call Get_Val(plast_infil,plastfile,'PLAST_INFIL',line=linenum,echo=.false.)
+
+  !read infiltration parameters only if enabled
+  if (plast_infil) then
+    ! Global infiltration parameters (uniform sediment properties)
+    Call Get_Val(infil_max_depth,plastfile,'INFIL_MAX_DEPTH',line=linenum,echo=.false.) 
+    Call Get_Val(tort0,plastfile,'SED_TORT',line=linenum,echo=.false.)
+    Call Get_Val(temp0,plastfile,'SED_TEMP',line=linenum,echo=.false.)
+    Call Get_Val(darv0,plastfile,'SED_DARV',line=linenum,echo=.false.)
+	Call Get_Val(N_sed_layer,plastfile,'SED_LNUM',line=linenum,echo=.false.)
+
+    ! Validate parameters
+    if (infil_max_depth <= 0.0) then
+        write(*,*)'error: INFIL_MAX_DEPTH must be > 0'
+        write(*,*)'you entered: ',infil_max_depth
+        stop
+    endif
+  endif
 
   !read in nudging relaxation factor 
   if(plast_nudge) then
@@ -764,18 +836,30 @@ Subroutine Read_PLAST_Params
 			plast(i)%tox_r = ftemp
 			
 		end if
+
+		!read species-specific infiltration parameters if enabled
+		if (plast_infil) then
+		    ! Read species-specific infiltration parameters
+		    Call Get_Val(ftemp,plastfile,'PLAST_AHAMA',line=linenum,echo=.false.,start=k1)
+		    plast(i)%A_Hamaker = ftemp
+		    
+		    Call Get_Val(ftemp,plastfile,'PLAST_WSSED',line=linenum,echo=.false.,start=k1)
+		    plast(i)%ws_sed = ftemp
+		    
+		end if
 		
 	end do
  
  if(dbg_set(dbg_sbr)) write(ipt,*) "End: Read_PLAST_Params " 
  
- End Subroutine Read_PLAST_Params 
+End Subroutine Read_PLAST_Params 
      
-!=======================================================================
-! Advance plastic Model by time step DTplast 
-!=======================================================================
 Subroutine Advance_plast(DTin,Tin,taub_in,s_in,t_in)  
   
+    !=======================================================================
+	! Advance plastic Model by time step DTplast 
+	!=======================================================================
+
   Use Input_Util
   Use Scalar
   Use ALL_VARS
@@ -846,11 +930,25 @@ Subroutine Advance_plast(DTin,Tin,taub_in,s_in,t_in)
   !calculate erosive flux (resuspension function is called here)
   call calc_erosion
 
+  !calculate infiltration and blockage
+  if (PLAST_infil) then
+	Call Calc_Infiltration
+	Call Calc_Blockage
+	do iplast=1,nplast
+		do i=1,m
+			do k=1,N_sed_layer
+				plast(iplast)%conc_sed(i,k)=plast(iplast)%conc_sed_p(i,k)+plast(iplast)%conc_sed_s(i,k)
+				plast(iplast)%tconc_b_sed(i,k)=plast(iplast)%tconc_b_sed_p(i,k)+plast(iplast)%tconc_b_sed_s(i,k)
+			end do
+		end do
+	end do
+  end if
+
   !adjust bottom properties
   call update_bottom
 
   !------------------------------------------------------
-  !3D Advection of Sediment Concentration 
+  !3D Advection of Plastic Concentration
   !------------------------------------------------------
   if(.not. oned_model)then
      d_cdis = 1
@@ -885,7 +983,7 @@ Subroutine Advance_plast(DTin,Tin,taub_in,s_in,t_in)
   endif 
 
   !------------------------------------------------------
-  !Vertical Diffusion of Sediment Concentrations
+  !Vertical Diffusion of Plastic Concentrations
   !------------------------------------------------------
   do i=1,nplast
     call vdif_scal(plast(i)%cnew,DTplast) 
@@ -976,16 +1074,31 @@ Subroutine Advance_plast(DTin,Tin,taub_in,s_in,t_in)
 		!Bonded and free toxic concentration updating
 	do iplast=1,nplast
 				
-			!Leaching kinetic terms for bonded and free toxin
+			!Leaching kinetic terms for bonded and free toxin in the water column
 			do i=1,m
 				do k=1,kb
 					plast(iplast)%tcnew_f(i,k)=plast(iplast)%tcnew_f(i,k)+DTplast*plast(iplast)%tox_leach_k*plast(iplast)%tcnew_b(i,k)
 					plast(iplast)%cnew(i,k)=plast(iplast)%cnew(i,k)-DTplast*plast(iplast)%tox_leach_k*plast(iplast)%tcnew_b(i,k)
-					plast(iplast)%tcnew_b(i,k)=plast(iplast)%tcnew_b(i,k)*(1.0-DTplast*plast(iplast)%tox_leach_k)
+					plast(iplast)%tcnew_b(i,k)=plast(iplast)%tcnew_b(i,k)-DTplast*plast(iplast)%tox_leach_k*plast(iplast)%tcnew_b(i,k)
 				end do
 			end do
+
+			!Leaching kinetic terms for bonded and free toxin in the sediment column
+			if (PLAST_infil) then
+				do i=1,m
+					do k=1,N_sed_layer
+						plast(iplast)%tconc_f_sed(i,k)=plast(iplast)%tconc_f_sed(i,k)+DTplast*plast(iplast)%tox_leach_k*plast(iplast)%tconc_b_sed(i,k)
+						plast(iplast)%conc_sed(i,k)=plast(iplast)%conc_sed(i,k)-DTplast*plast(iplast)%tox_leach_k*plast(iplast)%tconc_b_sed(i,k)
+						plast(iplast)%conc_sed_s(i,k)=plast(iplast)%conc_sed_s(i,k)-DTplast*plast(iplast)%tox_leach_k*plast(iplast)%tconc_b_sed_s(i,k)
+						plast(iplast)%conc_sed_p(i,k)=plast(iplast)%conc_sed_p(i,k)-DTplast*plast(iplast)%tox_leach_k*plast(iplast)%tconc_b_sed_p(i,k)
+						plast(iplast)%tconc_b_sed(i,k)=plast(iplast)%tconc_b_sed(i,k)-DTplast*plast(iplast)%tox_leach_k*plast(iplast)%tconc_b_sed(i,k)
+						plast(iplast)%tconc_b_sed_s(i,k)=plast(iplast)%tconc_b_sed_s(i,k)-DTplast*plast(iplast)%tox_leach_k*plast(iplast)%tconc_b_sed_s(i,k)
+						plast(iplast)%tconc_b_sed_p(i,k)=plast(iplast)%tconc_b_sed_p(i,k)-DTplast*plast(iplast)%tox_leach_k*plast(iplast)%tconc_b_sed_p(i,k)
+					end do
+				end do
+			end if
 				
-			!generation kinetic terms for bonded toxin
+			!generation kinetic terms for bonded toxin in the water column
             if (plast(iplast)%tox_gen_k > 0.0) then
 				do i=1,m
 					do k=1,kb
@@ -993,8 +1106,19 @@ Subroutine Advance_plast(DTin,Tin,taub_in,s_in,t_in)
 					end do
 				end do
 			end if
+
+			!generation kinetic terms for bonded toxin in the sediment column
+			if (PLAST_infil) then
+				if (plast(iplast)%tox_gen_k > 0.0) then
+					do i=1,m
+						do k=1,N_sed_layer
+							plast(iplast)%tconc_f_sed(i,k)=plast(iplast)%tconc_f_sed(i,k)*(1.0+DTplast*plast(iplast)%tox_gen_k)
+						end do
+					end do
+				end if
+			end if
 				
-			!decay kinetic terms for free Toxin
+			!decay kinetic terms for free Toxin in the water column
            if (plast(iplast)%tox_decay_k > 0.0) then
 			do i=1,m
 				do k=1,kb
@@ -1002,6 +1126,18 @@ Subroutine Advance_plast(DTin,Tin,taub_in,s_in,t_in)
 				end do
 			end do
 		   end if
+
+			!decay kinetic terms for free Toxin in the sediment column
+			if (PLAST_infil) then
+				if (plast(iplast)%tox_decay_k > 0.0) then
+					do i=1,m
+						do k=1,N_sed_layer
+							plast(iplast)%tconc_f_sed(i,k)=plast(iplast)%tconc_f_sed(i,k)*(1.0-DTplast*plast(iplast)%tox_decay_k)
+						end do
+					end do
+				end do
+			end if
+		   
 				
 	end do
 
@@ -1132,16 +1268,17 @@ Subroutine Advance_plast(DTin,Tin,taub_in,s_in,t_in)
   !------------------------------------------------------
   if(mod(PLAST_its,n_report)==0) call PLAST_report
 
-!  call layer_report(1)
+ !  call layer_report(1)
   if(dbg_set(dbg_sbr)) write(ipt,*) "End: Advance_Plast "
 
- End Subroutine Advance_Plast
+End Subroutine Advance_Plast
 
-!=======================================================================
-! Allocate plastic Variables                      
-!=======================================================================
 Subroutine Alloc_Plast_Vars
   
+	!=======================================================================
+	! Allocate plastic Variables                      
+	!=======================================================================
+
 	use lims,     only: nt,mt,kb,kbm1
   
 	implicit none
@@ -1158,6 +1295,8 @@ Subroutine Alloc_Plast_Vars
 
 	do i=1,nplast
 		plast(i)%arraysize = mt+1
+
+		! Allocate basic plastic transport variables
 		allocate(plast(i)%conc(0:mt,kb  ))      ; plast(i)%conc = 0.0
 		allocate(plast(i)%cnew(0:mt,kb  ))      ; plast(i)%cnew = 0.0
 		allocate(plast(i)%mass(0:mt     ))      ; plast(i)%mass = 0.0
@@ -1169,46 +1308,81 @@ Subroutine Alloc_Plast_Vars
 		allocate(plast(i)%cdis(500      ))      ; plast(i)%cdis = 0.0
 		allocate(plast(i)%cflx(tmp1,kbm1))      ; plast(i)%cflx = 0.0
 		allocate(plast(i)%cobc(tmp2     ))      ; plast(i)%cobc = 0.0
-		allocate(plast(i)%tconc_b(0:mt,kb))		; plast(i)%tconc_b = 0.0
-		allocate(plast(i)%tcnew_b(0:mt,kb))		; plast(i)%tcnew_b = 0.0
-		allocate(plast(i)%tcdis_b(500	))		; plast(i)%tcdis_b = 0.0
-		allocate(plast(i)%tcflx_b(tmp1,kbm1))	; plast(i)%tcflx_b = 0.0
-		allocate(plast(i)%tmass_b(0:mt	))		; plast(i)%tmass_b = 0.0
-		allocate(plast(i)%tcobc_b(tmp2	))		; plast(i)%tcobc_b = 0.0
-		allocate(plast(i)%teflx_b(0:mt	))		; plast(i)%teflx_b = 0.0
-		allocate(plast(i)%tdflx_b(0:mt	))		; plast(i)%tdflx_b = 0.0
-		allocate(plast(i)%tfrac_b(0:mt	))		; plast(i)%tfrac_b = 0.0
-		allocate(plast(i)%tconc_f(0:mt,kb))		; plast(i)%tconc_f = 0.0
-		allocate(plast(i)%tcnew_f(0:mt,kb))		; plast(i)%tcnew_f = 0.0
-		allocate(plast(i)%tcdis_f(500	))		; plast(i)%tcdis_f = 0.0
-		allocate(plast(i)%tcflx_f(tmp1,kbm1))	; plast(i)%tcflx_f = 0.0
-		allocate(plast(i)%tcobc_f(tmp2  ))	    ;plast(i)%tcobc_f = 0.0
-		allocate(plast(i)%tbdflx_f(0:mt ))		; plast(i)%tbdflx_f= 0.0
 		allocate(plast(i)%wset(0:mt,kbm1))      ; plast(i)%wset = 0.0
 		allocate(plast(i)%zactv(0:mt    ))      ; plast(i)%zactv = 0.0
 		allocate(plast(i)%erate(0:mt    ))      ; plast(i)%erate = 0.0
 		allocate(plast(i)%tau_ce(0:mt   ))      ; plast(i)%tau_ce = 0.0
+
+		! Allocate toxic leaching arrays if enabled
+		if (tox_vector) then
+		    allocate(plast(i)%tconc_b(0:mt,kb))		; plast(i)%tconc_b = 0.0
+			allocate(plast(i)%tcnew_b(0:mt,kb))		; plast(i)%tcnew_b = 0.0
+			allocate(plast(i)%tcdis_b(500	))		; plast(i)%tcdis_b = 0.0
+			allocate(plast(i)%tcflx_b(tmp1,kbm1))	; plast(i)%tcflx_b = 0.0
+			allocate(plast(i)%tmass_b(0:mt	))		; plast(i)%tmass_b = 0.0
+			allocate(plast(i)%tcobc_b(tmp2	))		; plast(i)%tcobc_b = 0.0
+			allocate(plast(i)%teflx_b(0:mt	))		; plast(i)%teflx_b = 0.0
+			allocate(plast(i)%tdflx_b(0:mt	))		; plast(i)%tdflx_b = 0.0
+			allocate(plast(i)%tfrac_b(0:mt	))		; plast(i)%tfrac_b = 0.0
+			allocate(plast(i)%tconc_f(0:mt,kb))		; plast(i)%tconc_f = 0.0
+			allocate(plast(i)%tcnew_f(0:mt,kb))		; plast(i)%tcnew_f = 0.0
+			allocate(plast(i)%tcdis_f(500	))		; plast(i)%tcdis_f = 0.0
+			allocate(plast(i)%tcflx_f(tmp1,kbm1))	; plast(i)%tcflx_f = 0.0
+			allocate(plast(i)%tcobc_f(tmp2  ))	    ;plast(i)%tcobc_f = 0.0
+			allocate(plast(i)%tbdflx_f(0:mt ))		; plast(i)%tbdflx_f= 0.0
+		endif
+
+		! Allocate infiltration arrays if enabled
+		if (plast_infil) then
+		    ! Plastic/toxic concentration arrays (species-specific)
+		    allocate(plast(i)%conc_sed(0:mt, N_sed_layer)); plast(i)%conc_sed = 0.0
+			allocate(plast(i)%conc_sed_s(0:mt, N_sed_layer)); plast(i)%conc_sed_s = 0.0
+		    allocate(plast(i)%conc_sed_p(0:mt, N_sed_layer)); plast(i)%conc_sed_p = 0.0
+			if (tox_vector) then
+		        allocate(plast(i)%tconc_b_sed(0:mt, N_sed_layer)); plast(i)%tconc_b_sed = 0.0
+				allocate(plast(i)%tconc_b_sed_s(0:mt, N_sed_layer)); plast(i)%tconc_b_sed_s = 0.0
+				allocate(plast(i)%tconc_b_sed_p(0:mt, N_sed_layer)); plast(i)%tconc_b_sed_p = 0.0
+		        allocate(plast(i)%tconc_f_sed(0:mt, N_sed_layer)); plast(i)%tconc_f_sed = 0.0
+		    endif
+		    
+		    ! Infiltration flux arrays (nodal)
+		    allocate(plast(i)%iflx(0:mt)); plast(i)%iflx = 0.0
+			allocate(plast(i)%D_plast(0:mt)); plast(i)%D_plast = 0.0
+			allocate(plast(i)%lambda_plast(0:mt, N_sed_layer)); plast(i)%lambda_plast = 0.0
+		    if (tox_vector) then
+				allocate(plast(i)%D_toxin(0:mt)); plast(i)%D_toxin = 0.0
+		        allocate(plast(i)%tiflx_b(0:mt)); plast(i)%tiflx_b = 0.0
+		        allocate(plast(i)%tiflx_f(0:mt)); plast(i)%tiflx_f = 0.0
+		        allocate(plast(i)%tiflx_f_deep(0:mt)); plast(i)%tiflx_f_deep = 0.0
+		    endif
+		endif
 	end do
 
-	!allocate bottom shear stress array 
-	allocate(taub(0:mt)) ; taub = 0.0
-	allocate(tauf(0:mt)) ; tauf = 0.0
+		!allocate bottom shear stress array 
+		allocate(taub(0:mt)) ; taub = 0.0
+		allocate(tauf(0:mt)) ; tauf = 0.0
 
-	!allocate bottom array
-	allocate(bottom(0:mt , n_bot_vars)) ; bottom = 0.0
-	
-	!allocate the water density array
-	allocate(rho_water(0:mt,kbm1)); rho_water = 0.0
+		!allocate bottom array
+		if (plast_infil) then
+			n_bot_vars = 7
+		else
+			n_bot_vars = 4
+		end if
+		allocate(bottom(0:mt , n_bot_vars)) ; bottom = 0.0
+		
+		!allocate the water density array
+		allocate(rho_water(0:mt,kbm1)); rho_water = 0.0
 
 	if(dbg_set(dbg_sbr)) write(ipt,*) "End: Alloc_PLAST_Vars "
 
- End Subroutine Alloc_PLAST_Vars
+End Subroutine Alloc_PLAST_Vars
 
-!==========================================================================
-! Report plastic Setup To Screen 
-!==========================================================================
 Subroutine Report_PLAST_Setup
   
+	!==========================================================================
+	! Report plastic Setup To Screen 
+	!==========================================================================
+
 	use control, only: msr 
   
 	implicit none
@@ -1285,13 +1459,14 @@ Subroutine Report_PLAST_Setup
 
   if(dbg_set(dbg_sbr)) write(ipt,*) "End: Report_PLAST_Setup "
 
-  End Subroutine Report_PLAST_Setup
+End Subroutine Report_PLAST_Setup
 
-!==========================================================================
-! Monitor plastic Model: Compute and Write Statistics to Screen
-!==========================================================================
 Subroutine PLAST_Report  
   
+	!==========================================================================
+	! Monitor plastic Model: Compute and Write Statistics to Screen
+	!==========================================================================
+
   use control, only: msr ,par, mpi_fvcom_group
   use lims   , only: m,mt,kbm1, msrid
   
@@ -1381,24 +1556,159 @@ Subroutine PLAST_Report
 
   if(dbg_set(dbg_sbr)) write(ipt,*) "End: PLAST_Report "
 
-  End Subroutine PLAST_Report  
+End Subroutine PLAST_Report  
+
+Subroutine Setup_PLAST_OBC
+
+	!==========================================================================
+	!  Setup open boundary nudging for plastic obc
+	!   - check for existence of sed nudging file
+	!   - read data (concentration of each sed type at each obc)
+	!==========================================================================
+  
+  Use Control,  only : casename,input_dir,msr,serial,par
+ !  Use Mod_OBCs, only : iobcn,i_obc_gl,iobcn_gl
+  Use Mod_Utils, only: pstop
+# if defined (MULTIPROCESSOR)
+  Use Mod_Par,  only : nlid
+# endif
+
+  integer :: i,j,tmp,ncnt,i1
+  integer,  allocatable :: vtmp(:),atemp(:,:)
+  real(sp), allocatable :: PLAST_obc_gl(:,:)
+  integer, parameter    :: plastobc = 81
+  character(len=120)    :: fname
+  logical :: fexist
+  
+
+  if(dbg_set(dbg_sbr)) write(ipt,*) "Start: Setup_PLAST_OBC "
+
+  !------------------------------------------------------
+  ! make sure plastic nudging data file exists 
+  !------------------------------------------------------
+  fname = "./"//trim(input_dir)//"/"//trim(casename)//"_plast_nudge.dat"
+
+  inquire(file=trim(fname),exist=fexist)
+  if(msr .and. .not.fexist)then
+    write(*,*)'plastic nudging data: ',fname,' does not exist'
+    write(*,*)'halting.....'
+    call pstop
+  end if
+
+  open(unit=plastobc,file=fname,form='formatted')
+  !------------------------------------------------------
+  ! allocate global data
+  !------------------------------------------------------
+  allocate(PLAST_obc_gl(Nobc_gl,nplast)) ; PLAST_obc_gl = 0.
+
+  !header
+  read(plastobc,*)
+  read(plastobc,*)
+  read(plastobc,*)
+
+  !# obc nodes
+  read(plastobc,*) tmp 
+
+  if(tmp /= Nobc_gl .and. msr)then
+    write(*,*)'number of open boundary nodes for plastic nudging: ',tmp
+    write(*,*)'this is not consistent with number of open boundary nodes in'
+    write(*,*)'the model: ',Nobc_gl
+    write(*,*)'halting'
+    call pstop
+  endif
+
+  allocate(vtmp(Nobc_gl))
+  do i=1,Nobc_gl  
+    read(plastobc,*) i1,vtmp(i),(PLAST_obc_gl(i,j),j=1,nplast)
+  end do
+  close(plastobc)
+    
+  !---------------------------------------------------------
+  ! shift plastic nudging data to local open boundary nodes
+  !---------------------------------------------------------
+
+  if(serial)then
+    do i=1,Nobc_gl
+      do j=1,nplast
+        plast(j)%cobc(i) = PLAST_obc_gl(i,j)
+      end do
+    end do
+  endif
+
+# if defined (MULTIPROCESSOR)
+  if(par)then
+    allocate(atemp(Nobc_gl,nplast))
+    ncnt = 0
+    !!set up local open boundary nodes
+    do i=1,Nobc_gl
+      i1 = nlid( vtmp(i) )
+      if(i1 /= 0)then
+        ncnt = ncnt + 1
+        do j=1,nplast
+          atemp(ncnt,j) = PLAST_obc_gl(i,j)
+        end do
+      end if
+    end do
+
+    !transfer plastic nudging data global --> local
+    if(ncnt > 0)then
+      do j=1,nplast
+        plast(j)%cobc(1:ncnt) = atemp(1:ncnt,j)
+      end do
+    end if
+
+    deallocate(atemp) 
+  end if
+# endif
+
+  if(msr)write(*,*)'obc setup for plastic model: complete'
+
+  !---------------------------------------------------------
+  ! cleanup 
+  !---------------------------------------------------------
+  deallocate(PLAST_obc_gl)
+
+  if(dbg_set(dbg_sbr)) write(ipt,*) "End: Setup_PLAST_OBC "
+
+End Subroutine Setup_PLAST_OBC
 
 !==========================================================================
-! Calculate Erosion Rate (kg/m^2) 
-! Calculate erosion rate using the method of Ariathurai and Arulanandan (1978)
-!    -Erosion rates of cohesive soils. J. Hydraulics Division, ASCE, 104(2),279-282.-
-!    surface_mass_flux[i] = erate[i]*(1-porosity)*bfrac[i]*(tau_w/tau_crit[i] - 1)
-!      where
-!      iplast            = index of plastic type
-!      bfrac[i]        = fraction of bed composed by plastic i
-!      erate[i]        = bed erodibility constant
-!      porosity        = volume of voids/total volume in the top layer
-!      tau_w           = shear stress on the bed
-!      tau_ce          = critical shear stress of plastic
+! Water column plastic/toxic vertical transport submodules:
+!
+! Calc_Erosion            - Calculate plastic erosion flux from bed using 
+!                         critical shear stress and erodibility parameters
+! Calc_critial_shear_WS   - Calculate critical shear stress for plastic and 
+!                         sediment erosion using Shields parameter
+! Calc_Erosion_Rate       - Calculate erosion rate coefficients based on 
+!                         bottom properties and shear stress conditions
+! Calc_Deposition         - Calculate plastic depositional flux and update 
+!                         concentrations from particle settling
+! Calc_Wset_Plastic       - Calculate plastic particle settling velocity 
+!                         based on size, density and water properties
+! Settle_Flux_new         - Calculate settling flux using SLIP limiter for 
+!                         plastic concentration transport in water column
+! Settle_tFlux_new        - Calculate toxic settling flux using SLIP limiter 
+!                         for bonded toxic concentration transport
+! Lim                     - Calculate LED limiter function for numerical 
+!                         flux limiting in advection schemes
 !==========================================================================
 
 Subroutine Calc_Erosion
-  
+    
+	!==========================================================================
+	! Calculate Erosion 
+	! Calculate erosion process using the method of Ariathurai and Arulanandan (1978)
+	!    -Erosion rates of cohesive soils. J. Hydraulics Division, ASCE, 104(2),279-282.-
+	!    surface_mass_flux[i] = erate[i]*(1-porosity)*bfrac[i]*(tau_w/tau_crit[i] - 1)
+	!      where
+	!      iplast          = index of plastic type
+	!      bfrac[i]        = fraction of bed composed by plastic i
+	!      erate[i]        = bed erodibility constant
+	!      porosity        = volume of voids/total volume in the top layer
+	!      tau_w           = shear stress on the bed
+	!      tau_ce          = critical shear stress of plastic
+	!==========================================================================
+
   use all_vars
   
   implicit none
@@ -1495,11 +1805,11 @@ Subroutine Calc_Erosion
 
 End Subroutine Calc_Erosion
 
-!==========================================================================
-! Calculate critical shear stress used for both plastic and sediment
-!==========================================================================
+Subroutine Calc_critial_shear_WS(m,rho_wb,dsed,dequ,rho_s,rho_p,tau_c_s,tau_c_p)
 
-  Subroutine Calc_critial_shear_WS(m,rho_wb,dsed,dequ,rho_s,rho_p,tau_c_s,tau_c_p)
+	!==========================================================================
+    ! Calculate critical shear stress used for both plastic and sediment
+    !==========================================================================
 
 	implicit none
 	
@@ -1612,10 +1922,6 @@ End Subroutine Calc_Erosion
 				tau_c_p(i)=0.05
 				tau_c_s(i)=0.1
 			
-			case ('burial_bottom')
-				!UNDER DEVELOPMENT....just give some none zero value here
-				tau_c_p(i)=0.05
-				tau_c_s(i)=0.1
 			case DEFAULT
 				!just give some none zero value here
 				tau_c_p(i)=0.05
@@ -1625,14 +1931,14 @@ End Subroutine Calc_Erosion
 		
 	end do
 	
-  End Subroutine Calc_critial_shear_WS
+End Subroutine Calc_critial_shear_WS
 
-!==========================================================================
-! Calculate the erosion rate base on Perera et al. 2020 
-!==========================================================================
-
-  Subroutine Calc_Erosion_Rate(m,taub,tau_c_p,tau_c_s,rho_p,ufact,mass,zactv,frac,Erate)
+Subroutine Calc_Erosion_Rate(m,taub,tau_c_p,tau_c_s,rho_p,ufact,mass,zactv,frac,Erate)
 	
+	!==========================================================================
+	! Calculate the erosion rate base on Perera et al. 2020 
+	!==========================================================================
+
 	implicit none
 	
 	!Input/Output variables
@@ -1682,24 +1988,19 @@ End Subroutine Calc_Erosion
 			do i=1,m
 				Erate(i)=0.
 			end do
-		case ('burial_bottom')
-			! UNDER DEVELOPMENT....
-			do i=1,m
-				Erate(i)=0.
-			end do
 		case DEFAULT
 			do i=1,m
 				Erate(i)=0.
 			end do
 	end select
 
-  End Subroutine Calc_Erosion_Rate
-
-!==========================================================================
-! Calculate Depositional Flux and Update Concentration from Settling
-!==========================================================================
+End Subroutine Calc_Erosion_Rate
 
 Subroutine Calc_Deposition
+  
+  !==========================================================================
+  ! Calculate Depositional Flux and Update Concentration from Settling
+  !==========================================================================
   
   use all_vars
   
@@ -1712,11 +2013,12 @@ Subroutine Calc_Deposition
 
   eps = epsilon(eps)
 
-  !Loop over plastic Class       
+  !Loop over plastic classes and spatial points       
   do iplast=1,nplast
     do i=1,m
   
       ! no calculation when dry nodes
+
 # if defined (WET_DRY)
       if (iswetn(i)/=1) cycle  
 # endif
@@ -1724,6 +2026,9 @@ Subroutine Calc_Deposition
       !initialize flux
       dflux = 0.0
 	  fflux = 0.0
+	  if (Tox_vector) then
+		tfluxb = 0.0
+	  end if
 
       !setup 1D concentration and grid arrays
       c(1:kbm1) = plast(iplast)%conc(i,1:kbm1)
@@ -1785,14 +2090,25 @@ Subroutine Calc_Deposition
 
   if(dbg_set(dbg_sbr)) write(ipt,*) "End: Calc_Deposition "
 
-  End Subroutine Calc_Deposition
+End Subroutine Calc_Deposition
 
-!==========================================================================
-! Calculate settling velocity of plastic using the method of
-!    Mehta, 2021
-!==========================================================================
- 
 Subroutine Calc_Wset_Plastic(n,rhow,rhop,da,db,dc,wset) 
+
+	!==========================================================================
+	! Calculate Settling Flux and Update plastic Concentration in Water Column 
+	!   use the SLIP limiter
+	!   Jameson, A., Analysis and Design of Numerical Schemes for Gas Dynamics I
+	!      Artificial Diffusion, Upwind Biasing, Limiters, and their effects
+	!      on Accuracy and Multigrid Convergence, International Journal of 
+	!      Computational Fluid Dynamics, Vol 4, 171-218, 1995.
+	!
+	!      -second order accurate in smooth regions
+	!      -guaranteed local extremum diminishing
+	!      
+	!   conv:  convective flux
+	!   diss:  dissipative flux
+	!   
+	!==========================================================================
 	
 	implicit none
 	
@@ -1837,26 +2153,27 @@ Subroutine Calc_Wset_Plastic(n,rhow,rhop,da,db,dc,wset)
 		wset(i)=sign(Ws*(g*abs(R)*nu)**(0.3333),R)
 	enddo
   
- End Subroutine Calc_Wset_Plastic
+End Subroutine Calc_Wset_Plastic
   
-!==========================================================================
-! Calculate Settling Flux and Update plastic Concentration in Water Column 
-!   use the SLIP limiter
-!   Jameson, A., Analysis and Design of Numerical Schemes for Gas Dynamics I
-!      Artificial Diffusion, Upwind Biasing, Limiters, and their effects
-!      on Accuracy and Multigrid Convergence, International Journal of 
-!      Computational Fluid Dynamics, Vol 4, 171-218, 1995.
-!
-!      -second order accurate in smooth regions
-!      -guaranteed local extremum diminishing
-!      
-!   conv:  convective flux
-!   diss:  dissipative flux
-!   
-!==========================================================================
- Subroutine Settle_Flux_new(n,c,dx,wset,dflux,fflux,deltat) 
+Subroutine Settle_Flux_new(n,c,dx,wset,dflux,fflux,deltat) 
 
-		implicit none
+	!==========================================================================
+	! Calculate Settling Flux and Update plastic Concentration in Water Column 
+	!   use the SLIP limiter
+	!   Jameson, A., Analysis and Design of Numerical Schemes for Gas Dynamics I
+	!      Artificial Diffusion, Upwind Biasing, Limiters, and their effects
+	!      on Accuracy and Multigrid Convergence, International Journal of 
+	!      Computational Fluid Dynamics, Vol 4, 171-218, 1995.
+	!
+	!      -second order accurate in smooth regions
+	!      -guaranteed local extremum diminishing
+	!      
+	!   conv:  convective flux
+	!   diss:  dissipative flux
+	!   
+	!==========================================================================
+
+	   implicit none
 	  integer , intent(in   ) :: n
 		  real(sp), intent(inout) ::  c(n)
 		  real(sp), intent(in   ) :: dx(n)
@@ -1924,18 +2241,6 @@ Subroutine Calc_Wset_Plastic(n,rhow,rhop,da,db,dc,wset)
 				win(n+1) = -win(n)
 				win(n+2) = -win(n)
 			end if	
-		case ('burial_bottom')
-			if (win(n)>0.0) then
-				cin(n+1) = cin(n) 
-				cin(n+2) = cin(n)
-				win(n+1) = win(n)
-				win(n+2) = win(n)
-			else
-				cin(n+1) = -cin(n) 
-				cin(n+2) = -cin(n)
-				win(n+1) = -win(n)
-				win(n+2) = -win(n)
-			end if	
 		case DEFAULT
 			if (win(n)>0.0) then
 				cin(n+1) = cin(n) 
@@ -1982,12 +2287,6 @@ Subroutine Calc_Wset_Plastic(n,rhow,rhop,da,db,dc,wset)
 			else
 				conv(n+1) = 0. ; diss(n+1) = 0.
 			end if
-		case ('burial_bottom')
-			if (win(n)>0.0) then
-				conv(n+1) = conv(n+1) ; diss(n+1) = diss(n+1)
-			else
-				conv(n+1) = 0. ; diss(n+1) = 0.
-			end if
 		case DEFAULT
 			if (win(n)>0.0) then
 				conv(n+1) = conv(n+1) ; diss(n+1) = diss(n+1)
@@ -2007,9 +2306,25 @@ Subroutine Calc_Wset_Plastic(n,rhow,rhop,da,db,dc,wset)
 
 	  if(dbg_set(dbg_sbr)) write(ipt,*) "End: Settle_Flux "
 
- End Subroutine Settle_Flux_new
+End Subroutine Settle_Flux_new
  
- Subroutine Settle_tFlux_new(n,c,dx,wset,dflux,deltat) 
+Subroutine Settle_tFlux_new(n,c,dx,wset,dflux,deltat) 
+
+	!==========================================================================
+	! Calculate Settling Flux and Update plastic Concentration in Water Column 
+	!   use the SLIP limiter
+	!   Jameson, A., Analysis and Design of Numerical Schemes for Gas Dynamics I
+	!      Artificial Diffusion, Upwind Biasing, Limiters, and their effects
+	!      on Accuracy and Multigrid Convergence, International Journal of 
+	!      Computational Fluid Dynamics, Vol 4, 171-218, 1995.
+	!
+	!      -second order accurate in smooth regions
+	!      -guaranteed local extremum diminishing
+	!      
+	!   conv:  convective flux
+	!   diss:  dissipative flux
+	!   
+	!==========================================================================
 
 	implicit none
 	  integer , intent(in   ) :: n
@@ -2079,18 +2394,6 @@ Subroutine Calc_Wset_Plastic(n,rhow,rhop,da,db,dc,wset)
 				win(n+1) = -win(n)
 				win(n+2) = -win(n)
 			end if	
-		case ('burial_bottom')
-			if (win(n)>0.0) then
-				cin(n+1) = cin(n) 
-				cin(n+2) = cin(n)
-				win(n+1) = win(n)
-				win(n+2) = win(n)
-			else
-				cin(n+1) = -cin(n) 
-				cin(n+2) = -cin(n)
-				win(n+1) = -win(n)
-				win(n+2) = -win(n)
-			end if	
 		case DEFAULT
 			if (win(n)>0.0) then
 				cin(n+1) = cin(n) 
@@ -2137,12 +2440,6 @@ Subroutine Calc_Wset_Plastic(n,rhow,rhop,da,db,dc,wset)
 			else
 				conv(n+1) = 0. ; diss(n+1) = 0.
 			end if
-		case ('burial_bottom')
-			if (win(n)>0.0) then
-				conv(n+1) = conv(n+1) ; diss(n+1) = diss(n+1)
-			else
-				conv(n+1) = 0. ; diss(n+1) = 0.
-			end if
 		case DEFAULT
 			if (win(n)>0.0) then
 				conv(n+1) = conv(n+1) ; diss(n+1) = diss(n+1)
@@ -2161,12 +2458,14 @@ Subroutine Calc_Wset_Plastic(n,rhow,rhop,da,db,dc,wset)
 
 	  if(dbg_set(dbg_sbr)) write(ipt,*) "End: Settle_Flux "
 
- End Subroutine Settle_tFlux_new
+End Subroutine Settle_tFlux_new
 
-!==========================================================================
-! Calculate LED Limiter L(u,v)  
-!==========================================================================
 Function Lim(a,b)
+	  
+	!==========================================================================
+	! Calculate LED Limiter L(u,v)  
+	!==========================================================================
+	  
 	  real(sp) lim,a,b
 	  real(sp) q,R
 	  real(sp) eps
@@ -2183,13 +2482,198 @@ Function Lim(a,b)
 End Function Lim
 
 !==========================================================================
-! Update Surface Bed Properties Due to SusLoad Flux 
-! Change:
-!   plast(:)%mass(:,1)   to reflect increased/decrease mass (kg)
-!   bed(:,1,itchk)     to reflect changed bed thickness properties
+! Sediment column plastic/toxic vertical transport submodules:
+!
+! Calc_Infiltration       - Calculate plastic infiltration into sediment bed 
+!                         layers with transport and retention processes
+! Calc_Retention          - Calculate plastic retention coefficients and 
+!                         filtration processes in sediment layers
+! Update_Bottom           - Update surface bed properties due to erosion, 
+!                         deposition infiltration and mass flux changes
+! Calc_Plastic_Fraction   - Calculate plastic mass fraction in active layer 
+!                         for resuspension flux calculations
+! Calc_Toxic_Fraction     - Calculate toxic mass fraction relative to plastic 
+!                         mass for resuspension processes
+! Settle_Flux_sed_new     - Calculate settling flux with infiltration and 
+!                         burial terms for sediment bed interactions
+! Calc_Active_Layer       - Calculate active layer thickness using Harris and 
+!                         Wiberg method based on bottom shear stress
 !==========================================================================
 
+Subroutine Calc_Infiltration
+
+	use all_vars
+  
+  	implicit none
+
+	integer  :: iplast ,i,mcyc,ncyc,k
+	real(sp) :: wset_sed_plastic(N_sed_layer), wset_sed_toxic(N_sed_layer), c_sed_p(N_sed_layer), ctb_sed_p(N_sed_layer), ctf_sed(N_sed_layer)
+	real(sp) :: dx(N_sed_layer), iflx, bflx, itflxb, itflxf, btflxb, btflxf, DTmax, DTdep
+	real(sp) :: eps
+	logical(sp) :: isfloat_toxic
+
+	eps = epsilon(eps)
+
+	if(dbg_set(dbg_sbr)) write(ipt,*) "Start: Calc_Infiltration "
+
+	!Loop over plastic classes and spatial points for advection    
+  	do iplast=1,nplast
+    	do i=1,m
+		
+		!initialize flux
+      	iflx = 0.0
+	  	bflx = 0.0
+		if (Tox_vector) then
+			itflxb = 0.0
+			itflxf = 0.0
+			btflxb = 0.0
+			btflxf = 0.0
+		end if
+
+		!setup 1D concentration and grid arrays
+		c_sed_p(1:N_sed_layer) = plast(iplast)%conc_sed_p(i,1:N_sed_layer)
+		if (Tox_vector) then
+			ctb_sed_p(1:N_sed_layer) = plast(iplast)%tconc_b_sed_p(i,1:N_sed_layer)
+			ctf_sed(1:N_sed_layer) = plast(iplast)%tconc_f_sed(i,1:N_sed_layer)
+		end if
+		dx(1:N_sed_layer) = infil_max_depth/N_sed_layer
+
+		!Read in settling velocity 
+# if defined (WET_DRY)
+      	if (iswetn(i)/=1) then
+			wset_sed_plastic(1:N_sed_layer) = ws_sed
+		else
+			wset_sed_plastic(1:N_sed_layer) = ws_sed+darv0
+		end if
+
+		if (iswetn(i)/=1) then
+			wset_sed_toxic(1:N_sed_layer) = 0.0
+			isfloat_toxic = .true.
+		else
+			wset_sed_toxic(1:N_sed_layer) = darv0
+			isfloat_toxic = .false.
+		end if
+# else
+		wset_sed_plastic(1:N_sed_layer) = ws_sed+darv0
+		wset_sed_toxic(1:N_sed_layer) = darv0
+		isfloat_toxic = .false.
+# endif
+
+		!Set first sediment layer plastic/toxin concentration = bottom water plastic/toxin concentration
+		c_sed_p(1) = plast(iplast)%conc_sed_p(i,kbm1)
+		if (Tox_vector) then
+			ctb_sed_p(1) = plast(iplast)%tconc_b(i,kbm1)
+			ctf_sed(1) = plast(iplast)%tconc_f(i,kbm1)
+		end if
+
+		if(dbg_set(dbg_sbr)) write(ipt,*) "Start: Settling advection in sediment"
+			!set up cycles (use max(CFL) == 1)
+			DTmax = Settle_CFL*minval(dx(1:N_sed_layer)/wset_sed_plastic(1:N_sed_layer))
+			mcyc = int(DTplast/DTmax + 1. - eps)
+			DTdep = DTplast/float(mcyc)
+
+			!call flux-limited settling equation
+			do ncyc = 1,mcyc
+				call settle_flux_sed_new(N_sed_layer,c_sed_p,dx,wset_sed_plastic,iflx,bflx,DTdep)
+			end do
+
+			!store solution in 3D array
+			plast(iplast)%conc_sed_p(i,1:N_sed_layer) = c_sed_p(1:N_sed_layer)
+
+			!store infiltration flux
+			plast(iplast)%iflx(i) = iflx
+
+			!store burial flux
+			plast(iplast)%bflx(i) = bflx
+
+			if (Tox_vector) then
+				do ncyc = 1,mcyc
+					call settle_flux_sed_new(N_sed_layer,ctb_sed_p,dx,wset_sed_plastic,itflxb,btflxb,DTdep)
+					if (.not. isfloat_toxic) then
+						! Handle free toxic case
+						call settle_flux_sed_new(N_sed_layer,ctf_sed,dx,wset_sed_toxic,itflxf,btflxf,DTdep)
+					end if
+				end do
+
+				!store toxic solution in 3D array
+				plast(iplast)%tconc_b_sed_p(i,1:N_sed_layer) = ctb_sed_p(1:N_sed_layer)
+				plast(iplast)%tconc_f_sed(i,1:N_sed_layer) = ctf_sed(1:N_sed_layer)
+
+				!store toxic infiltration flux
+				plast(iplast)%tiflx_b(i) = itflxb
+				plast(iplast)%tiflx_f(i) = itflxf
+
+				!store toxic burial flux
+				plast(iplast)%tiflx_b_deep(i) = btflxb
+				plast(iplast)%tiflx_f_deep(i) = btflxf
+
+			end if
+
+		if(dbg_set(dbg_sbr)) write(ipt,*) "End: Settling advection in sediment"
+
+		end do
+	end do
+			
+	if(dbg_set(dbg_sbr)) write(ipt,*) "End: Calc_Infiltration "
+
+End Subroutine Calc_Infiltration
+
+Subroutine Calc_Blockage
+
+	use all_vars
+  
+  	implicit none
+
+	integer  :: iplast ,i,k,w
+	real	 :: 
+
+# if defined (WET_DRY)
+      	if (iswetn(i)/=1) then
+			w = abs(ws_sed)
+		else
+			w = abs(ws_sed+darv0)
+		end if
+
+		if (iswetn(i)/=1) then
+			w = 0.0
+		else
+			w = abs(darv0)
+		end if
+# else
+		w = abs(ws_sed+darv0)
+		w = abs(darv0)
+# endif
+
+	if(dbg_set(dbg_sbr)) write(ipt,*) "Start: Calc_Infiltration "
+
+		!Calculation of lambda
+		Call Calc_Blockage_Rate
+
+		!Loop over plastic classes and spatial points for kinetics updating    
+		do iplast=1,nplast
+			do i=1,m
+				do k=1,N_sed_layer
+					plast(iplast)%conc_sed_p(i,k)=plast(iplast)%conc_sed_p(i,k)-DTplast*plast(iplast)%lambda_plast(i)*w*plast(iplast)%conc_sed_p(i,k)
+					plast(iplast)%conc_sed_s(i,k)=plast(iplast)%conc_sed_s(i,k)+DTplast*plast(iplast)%lambda_plast(i)*w*plast(iplast)%conc_sed_p(i,k)
+					plast(iplast)%tconc_b_sed_p(i,k)=plast(iplast)%tconc_b_sed_p(i,k)-DTplast*plast(iplast)%lambda_plast(i)*w*plast(iplast)%tconc_b_sed_p(i,k)
+					plast(iplast)%tconc_b_sed_s(i,k)=plast(iplast)%tconc_b_sed_s(i,k)+DTplast*plast(iplast)%lambda_plast(i)*w*plast(iplast)%tconc_b_sed_p(i,k)
+				end do 
+			end do
+		end do
+
+	if(dbg_set(dbg_sbr)) write(ipt,*) "End: Calc_Infiltration "
+
+End subroutine Calc_Blockage
+
 Subroutine Update_Bottom
+	
+	!==========================================================================
+	! Update Surface Bed Properties Due to ReSuspension Load Flux
+	! Change:
+	!   plast(:)%mass(:,1)   to reflect increased/decrease mass (kg)
+	!   bed(:,1,itchk)     to reflect changed bed thickness properties
+	!==========================================================================
+
   use lims, only: m
   implicit none
   real(sp) :: dz,accum,flux,tflux_b,eps
@@ -2201,33 +2685,65 @@ Subroutine Update_Bottom
 
 	  eps = epsilon(eps)
 	  
-	  !Updating the surface bed mass (mass deposition)
-	  if(dbg_set(dbg_sbr)) write(ipt,*) "Start: Mass depositing"
-	  
-	  do i=1,m
-		do iplast=1,nplast
-		  flux = (plast(iplast)%eflx(i)-plast(iplast)%dflx(i))
+	  !Updating the surface bed mass (mass deposition and infiltrating)
+	  if (PLAST_infil) then
+	
+		if(dbg_set(dbg_sbr)) write(ipt,*) "Start: Mass depositing and infiltrating"
 
-		  !change top layer bed mass of each plastic type 
-		  accum  = plast(iplast)%mass(i) - flux 
-		  plast(iplast)%mass(i) = max(accum,0.0) 
+		do i=1,m
+			do iplast=1,nplast
+			flux = (plast(iplast)%eflx(i)+plast(iplast)%iflx(i)-plast(iplast)%dflx(i))
+
+			!change top layer bed mass of each plastic type 
+			accum  = plast(iplast)%mass(i) - flux 
+			plast(iplast)%mass(i) = max(accum,0.0) 
+			end do
 		end do
+
+		if (tox_vector) then
+			do i=1,m
+				do iplast=1,nplast
+					tflux_b = (plast(iplast)%teflx_b(i)+plast(iplast)%tiflx_b(i)-plast(iplast)%tdflx_b(i))
+					
+					!change top layer bed mass of each plastic type
+					accum = plast(iplast)%tmass_b(i) - tflux_b
+					plast(iplast)%tmass_b(i) = max(accum,0.0)
+				end do
+			end do
+		endif
+
+		if(dbg_set(dbg_sbr)) write(ipt,*) "End: Mass depositing and infiltrating"
+
+	  else
+
+		if(dbg_set(dbg_sbr)) write(ipt,*) "Start: Mass depositing"
+		
+		do i=1,m
+			do iplast=1,nplast
+			flux = (plast(iplast)%eflx(i)-plast(iplast)%dflx(i))
+
+			!change top layer bed mass of each plastic type 
+			accum  = plast(iplast)%mass(i) - flux 
+			plast(iplast)%mass(i) = max(accum,0.0) 
+			end do
+		end do
+		
+		if (tox_vector) then
+			do i=1,m
+				do iplast=1,nplast
+					tflux_b = (plast(iplast)%teflx_b(i)-plast(iplast)%tdflx_b(i))
+					
+					!change top layer bed mass of each plastic type
+					accum = plast(iplast)%tmass_b(i) - tflux_b
+					plast(iplast)%tmass_b(i) = max(accum,0.0)
+				end do
+			end do
+		endif
+
+		if(dbg_set(dbg_sbr)) write(ipt,*) "End: Mass depositing"
+
 	  end do
 	  
-	  if (tox_vector) then
-		do i=1,m
-		  do iplast=1,nplast
-			tflux_b = (plast(iplast)%teflx_b(i)-plast(iplast)%tdflx_b(i))
-			
-			!change top layer bed mass of each plastic type
-			accum = plast(iplast)%tmass_b(i) - tflux_b
-			plast(iplast)%tmass_b(i) = max(accum,0.0)
-		  enddo
-		enddo
-	  endif
-	  
-	  if(dbg_set(dbg_sbr)) write(ipt,*) "End: Mass depositing"
-  
 	  !Updating the surface fractions
 	  if(dbg_set(dbg_sbr)) write(ipt,*) "Start: Fraction computation"
 	  
@@ -2252,22 +2768,23 @@ Subroutine Update_Bottom
 				
 			!do iplast=1,nplast
 					
-			   !Kinetics on bottom embedded toxin mass
-			 !  Call Calc_Linear_Bottom_Kinetics(DTplast,m,plast(iplast)%tox_leach_k, &
-			!		plast(iplast)%tmass_b,tmass_b)
-			!   do i=1,m
-			!	  plast(iplast)%tbdflx_f(i)=tmass_b(i)-plast(iplast)%tmass_b(i)
-			!	  plast(iplast)%tmass_b(i)=tmass_b(i)
-			!   end do
-						
-			   !Kinetics on free toxin mass
-			!   Call Calc_Linear_Bottom_Kinetics(DTplast,m,-plast(iplast)%tox_gen_k, &
-			!		plast(iplast)%tmass_b,tmass_b)
-			!   do i=1,m
-			!	  plast(iplast)%tmass_b(i)=tmass_b(i)
-			!   end do
+				!Kinetics on bottom embedded toxin mass
+				!  Call Calc_Linear_Bottom_Kinetics(DTplast,m,plast(iplast)%tox_leach_k, &
+				!		plast(iplast)%tmass_b,tmass_b)
+				!   do i=1,m
+				!	  plast(iplast)%tbdflx_f(i)=tmass_b(i)-plast(iplast)%tmass_b(i)
+				!	  plast(iplast)%tmass_b(i)=tmass_b(i)
+				!   end do
+							
+				!Kinetics on free toxin mass
+				!   Call Calc_Linear_Bottom_Kinetics(DTplast,m,-plast(iplast)%tox_gen_k, &
+				!		plast(iplast)%tmass_b,tmass_b)
+				!   do i=1,m
+				!	  plast(iplast)%tmass_b(i)=tmass_b(i)
+				!   end do
 					
 			!end do
+
 		if(dbg_set(dbg_sbr)) write(ipt,*) "End: Toxic mass updating"
 	  end if
   
@@ -2275,14 +2792,15 @@ Subroutine Update_Bottom
 
 End Subroutine Update_Bottom
 
-!==========================================================================
-! Calculate the Plastic Fraction for resuspension flux:
-!	The method plastic resuspension treat the plastic as a portion of 
-!sediment. The potion is by the plastic mass/total sediment + plastic mass 
-!in the active layer.
-!==========================================================================
- 
-  Subroutine Calc_Plastic_Fraction
+Subroutine Calc_Plastic_Fraction
+	  
+	  !==========================================================================
+	! Calculate the Plastic Fraction for resuspension flux:
+	!	The method plastic resuspension treat the plastic as a portion of 
+	!sediment. The potion is by the plastic mass/total sediment + plastic mass 
+	!in the active layer.
+	!==========================================================================
+	  
 	  use lims,     only: m
 	  implicit none
 	
@@ -2326,14 +2844,6 @@ End Subroutine Update_Bottom
 			 end do
 			end do
 		
-		case ('burial_bottom')
-		
-			do iplast=1,nplast
-			 do i=1,m
-				plast(iplast)%frac(i) = 1.0
-			 end do
-			end do
-		
 		case DEFAULT
 		
 			do iplast=1,nplast
@@ -2344,14 +2854,15 @@ End Subroutine Update_Bottom
 	  
 	  end select
 
-  End Subroutine Calc_Plastic_Fraction
-
-!==========================================================================
-! Calculate the Toxic Fraction for resuspension flux:
-!	The toxic fraction is a mass fraction of toxic vs the plastics.
-!==========================================================================
+End Subroutine Calc_Plastic_Fraction
 
 Subroutine Calc_Toxic_Fraction(mass_p,mass_t,bfrac)
+	
+	!==========================================================================
+	! Calculate the Toxic Fraction for resuspension flux:
+	!	The toxic fraction is a mass fraction of toxic vs the plastics.
+	!==========================================================================
+	
 	use lims,     only: m
 	implicit none
 	
@@ -2373,39 +2884,40 @@ Subroutine Calc_Toxic_Fraction(mass_p,mass_t,bfrac)
 
 End Subroutine Calc_Toxic_Fraction
 
-!==========================================================================
-! Update Active Layer Thickness 
-!   Use method of Harris and Wiberg (1997):
-!   -Approaches to quantifying long-term continental shelf plastic transport
-!   -with an example from the northern California STRESS mid-shelf site.
-!   [Continental Shelf REsearch, 17, 1389-1418]
-!
-!   z_a = max[k_1*(tau_bot - tau_ce)*rho_0 , 0] + k_2 * D_50
-!       where
-!       k_1 = .007 (empirical constant)
-!       k_2 = 6.0  (empirical constant)
-!       tau_bot = shear stress on the bed
-!       tau_ce  = critical shear stress for erosion of the bed (averaged over
-!                 plastic classes)
-!       D_50    = median grain diameter of the surface plastic
-!       note: our shear stresses are nondimensionalized by rho, so
-!             rho does not appear in actual calculation (below)
-!==========================================================================
+Subroutine Calc_Active_Layer 
 
- Subroutine Calc_Active_Layer 
+	!==========================================================================
+	! Update Active Layer Thickness 
+	!   Use method of Harris and Wiberg (1997):
+	!   -Approaches to quantifying long-term continental shelf plastic transport
+	!   -with an example from the northern California STRESS mid-shelf site.
+	!   [Continental Shelf REsearch, 17, 1389-1418]
+	!
+	!   z_a = max[k_1*(tau_bot - tau_ce)*rho_0 , 0] + k_2 * D_50
+	!       where
+	!       k_1 = .007 (empirical constant)
+	!       k_2 = 6.0  (empirical constant)
+	!       tau_bot = shear stress on the bed
+	!       tau_ce  = critical shear stress for erosion of the bed (averaged over
+	!                 plastic classes)
+	!       D_50    = median grain diameter of the surface plastic
+	!       note: our shear stresses are nondimensionalized by rho, so
+	!             rho does not appear in actual calculation (below)
+	!==========================================================================
+
 	use lims,     only: m
 	implicit none
 	
 	!Local variables
 	integer  :: i,iplast
-	real     :: A, Ap
-	real     :: B, Bp
-	real     :: C, Cp
-	real     :: Delta, Deltap
-	real     :: zstar
+	real(sp)     :: A, Ap
+	real(sp)     :: B, Bp
+	real(sp)     :: C, Cp
+	real(sp)     :: Delta, Deltap
+	real(sp)     :: zstar
 	
-	real, parameter :: alpha_e=6.0    !coefficient for the shape factor nc
-	real, parameter :: alpha_f=0.007  !coefficient for the shape factor nc
+	real(sp), parameter :: alpha_e=6.0    !coefficient for the shape factor nc
+	real(sp), parameter :: alpha_f=0.007  !coefficient for the shape factor nc
 	
 	do iplast=1,Nplast
 		do i=1,m
@@ -2458,24 +2970,323 @@ End Subroutine Calc_Toxic_Fraction
 				case ('bedload_bottom')
 					!UNDER DEVELOPMENT....
 					plast(iplast)%zactv(i) = 0.0
-				case ('burial_bottom')
-					!UNDER DEVELOPMENT....
-					plast(iplast)%zactv(i) = 0.0
+
 				case DEFAULT
 					plast(iplast)%zactv(i) = 0.0
 			end select
 	
 		end do
 	end do
+End Subroutine Calc_Active_Layer
 
-  End Subroutine Calc_Active_Layer
+Subroutine Calc_Mechanical_Diffusivity(r_tracer,D_mech)
+
+	use lims,     only: m
   
+  	implicit none
+
+	integer  :: i, j
+	real(sp), intent(in) :: r_tracer
+	real(sp), intent(inout) :: D_mech(:)
+	real(sp)     :: w,tau,eta
+	real(sp)     :: D_m
+	real(sp)     :: T_norm, rho_norm, mu0, delta_mu, sum_term
+	real(sp), parameter :: c=0.1   			!Emperical free parameter for mechanical diffusivity in solid matrix
+	real(sp), parameter :: k_B=1.380649E-23 !Boltzmann constant
+	real(sp), parameter :: PI=3.14159265359 !PI
+	real(sp), parameter :: mu_star = 1.0E-6     ! Reference viscosity [Pa⋅s] [IAPWS 2008 viscosity formulation parameters (Huber et al.)]
+	real(sp), parameter :: T_star = 647.067     ! Critical temperature [K] [IAPWS 2008 viscosity formulation parameters (Huber et al.)]
+	real(sp), parameter :: rho_star = 322.0     ! Critical density [kg/m3] [IAPWS 2008 viscosity formulation parameters (Huber et al.)]
+	real(sp), parameter :: H0(0:3) = [1.67752, 2.20462, 0.6366564, -0.241605] ! H0 coefficients [IAPWS 2008 viscosity formulation parameters (Huber et al.)]
+	
+
+# if defined (WET_DRY)
+      	if (iswetn(i)/=1) then
+			w = abs(ws_sed)
+		else
+			w = abs(ws_sed+darv0)
+		end if
+
+		if (iswetn(i)/=1) then
+			w = 0.0
+		else
+			w = abs(darv0)
+		end if
+# else
+		w = abs(ws_sed+darv0)
+		w = abs(darv0)
+# endif
+
+	if(dbg_set(dbg_sbr)) write(ipt,*) "Start: Calc_Mechanical_Diffusivity "
+
+		do i=1,m
+
+			!Tortuosity computation []
+			tau=bottom(i,iporo)**(0.5)
+
+			!Dynamical viscosity of water [IAPWS 2008 viscosity formulation Huber et al.]
+			! Assuming 1 atm pressure and using temperature from bottom(i,iTsed)
+				
+			T_norm = bottom(i,iTsed) / T_star
+			rho_norm = 1000.0 / rho_star  ! Water density at 1 atm ≈ 1000 kg/m³
+				
+			! Calculate mu0 (viscosity in the limit of zero density)
+			sum_term = 0.0
+			do j = 0, 3
+				sum_term = sum_term + H0(j) / (T_norm**j)
+			end do
+			mu0 = 100.0 * sqrt(T_norm) / sum_term
+				
+			! For liquid water at 1 atm, delta_mu contribution is small, approximated as 1.0
+			delta_mu = 1.0
+				
+			! Final viscosity calculation [Pa⋅s]
+			eta = mu_star * mu0 * delta_mu
+
+			!Molecular diffusivity at given temperature computation [Stokes-Einstein treatment]
+			D_m = (k_B*bottom(i,iTsed))/(6*PI*eta*r_tracer)
+
+			!Mechanical diffusivity estimation
+			D_mech(i)=c*w*bottom(i,isd50)+D_m/tau
+
+		end do
+
+	if(dbg_set(dbg_sbr)) write(ipt,*) "End: Calc_Mechanical_Diffusivity "
+
+End Subroutine Calc_Mechanical_Diffusivity
+
+Subroutine Calc_Blockage_Rate
+	
+	use lims,     only: m
+  
+  	implicit none
+
+	integer  :: iplast ,i, j, k
+	real(sp)     :: lambda_DLVO, lambda_strain, alpha_primary, w, eps
+	real(sp)     :: eta, eta_D, eta_I, eta_G, gamma, phi, d_g, d_MP
+	real(sp)     :: A_S, N_R, N_Pe, N_vdW, N_A, N_G
+	real(sp)     :: k_str, psi_str, dz
+	real(sp)     :: Z_level(1:N_sed_layer)
+	real(sp), parameter :: k_B=1.380649E-23 !Boltzmann constant
+	real(sp), parameter :: PI=3.14159265359 !PI
+	real(sp), parameter :: mu_star = 1.0E-6     ! Reference viscosity [Pa⋅s] [IAPWS 2008 viscosity formulation parameters (Huber et al.)]
+	real(sp), parameter :: T_star = 647.067     ! Critical temperature [K] [IAPWS 2008 viscosity formulation parameters (Huber et al.)]
+	real(sp), parameter :: rho_star = 322.0     ! Critical density [kg/m3] [IAPWS 2008 viscosity formulation parameters (Huber et al.)]
+	real(sp), parameter :: H0(0:3) = [1.67752, 2.20462, 0.6366564, -0.241605] ! H0 coefficients [IAPWS 2008 viscosity formulation parameters (Huber et al.)]
+
+	eps = epsilon(eps)
+
+# if defined (WET_DRY)
+      	if (iswetn(i)/=1) then
+			w = abs(ws_sed)
+		else
+			w = abs(ws_sed+darv0)
+		end if
+
+		if (iswetn(i)/=1) then
+			w = 0.0
+		else
+			w = abs(darv0)
+		end if
+# else
+		w = abs(ws_sed+darv0)
+		w = abs(darv0)
+# endif
+
+	if(dbg_set(dbg_sbr)) write(ipt,*) "Start: Calc_Blockage_Rate "
+
+		do iplast=1,nplast
+			
+			!Read MP diameter
+			d_MP=plast(iplast)%dequ
+
+			!Read Hamaker parameter
+			AH=plast(iplast)%A_Hamaker
+
+			!Estimate the alpha_primary
+			if (A_Hamaker>0.0) then
+				alpha_primary = 1.0
+			else
+				alpha_primary = 0.0
+			end if
+
+			!Compute diffusivity
+			r_tracer = plast(iplast)%dequ/2.0
+			Call Calc_Mechanical_Diffusivity(r_tracer,plast(iplast)%D_plast)
+			
+			do i=1,m
+
+				!Establish level vector
+				dz=bottom(i,iLsed)/N_sed_layer
+				do k=1, N_sed_layer
+					Z_level(k)=dz/2.0+(k-1)*dz
+				end do
+
+				!Dynamical viscosity of water [IAPWS 2008 viscosity formulation Huber et al.]
+				! Assuming 1 atm pressure and using temperature from bottom(i,iTsed)
+				T_norm = bottom(i,iTsed) / T_star
+				rho_norm = 1000.0 / rho_star  ! Water density at 1 atm ≈ 1000 kg/m³
+					
+				! Calculate mu0 (viscosity in the limit of zero density)
+				sum_term = 0.0
+				do j = 0, 3
+					sum_term = sum_term + H0(j) / (T_norm**j)
+				end do
+				mu0 = 100.0 * sqrt(T_norm) / sum_term
+					
+				! For liquid water at 1 atm, delta_mu contribution is small, approximated as 1.0
+				delta_mu = 1.0
+					
+				! Final viscosity calculation [Pa⋅s]
+				eta = mu_star * mu0 * delta_mu
+
+				!Dimensionless parameter computation fro lambda_DLVO
+				d_g=bottom(i,isd50)
+				phi=bottom(i,iporo)
+				gamma=(1-phi)**(0.33333333)
+				A_S=2*(1-gamma**5.0)/(2.0-3.0*gamma+3.0*gamma**5.0-2.0*gamma**6.0)
+				N_R=d_MP/d_g
+				N_Pe=abs(darv0)*d_g/plast(iplast)%D_plast(i)
+				N_G=abs(ws_sed)/(abs(darv0)+eps)
+				N_vdW=AH/(k_B*bottom(i,iTsed))
+				N_A=AH/(12.0*PI*eta*(d_MP/2)**2.0*abs(darv0+eps))
+
+				!Retention coefficient computation
+				eta_D=2.4*A_S**(0.33333333)*N_R**(-0.081)*N_Pe**(-0.715)*N_vdW**(0.052)
+				eta_I=0.55*A_S*N_R**(1.675)*N_A**(0.125)
+				eta_G=0.22*N_R^(-0.24)*N_G**(1.11)*N_vdW**(0.053)
+
+				!lambda_DLVO computation
+				lambda_DLVO = 3*(1-phi)/(2*d_g)*(eta_D+eta_I+eta_G)*alpha_primary
+
+				!lambda_strain computation and combined lambda computation
+				k_str=269.7*(d_MP/d_g)**(1.42)
+
+				do k=1,N_sed_layer
+					psi_str=((d_MP+Z_level(k))/d_MP)**(-0.43)
+					lambda_strain=k_str*psi_str/w
+					plast(iplast)%lambda_plast(i,k)=lambda_strain+lambda_DLVO
+				end do
+
+			end do
+		end do
+
+	if(dbg_set(dbg_sbr)) write(ipt,*) "End: Calc_Blockage_Rate "
+
+End Subroutine Calc_Blockage_Rate
+
+Subroutine Settle_Flux_sed_new(n,c,dx,wset,iflux,bflux,deltat) 
+
+	!==========================================================================
+	! Calculate Settling Flux and Update plastic Concentration in Sediment Column 
+	!   use the SLIP limiter
+	!   Jameson, A., Analysis and Design of Numerical Schemes for Gas Dynamics I
+	!      Artificial Diffusion, Upwind Biasing, Limiters, and their effects
+	!      on Accuracy and Multigrid Convergence, International Journal of 
+	!      Computational Fluid Dynamics, Vol 4, 171-218, 1995.
+	!
+	!      -second order accurate in smooth regions
+	!      -guaranteed local extremum diminishing
+	!      
+	!   conv:  convective flux
+	!   diss:  dissipative flux
+	!   
+	!==========================================================================
+
+	  implicit none
+	  integer , intent(in   ) :: n
+		  real(sp), intent(inout) ::  c(n)
+		  real(sp), intent(in   ) :: dx(n)
+		  real(sp), intent(in   ) :: wset(n)
+		  real(sp), intent(inout) :: dflux, fflux 
+		  real(sp), intent(in   ) :: deltat 
+		  real(sp) :: conv(n+1),diss(n+1)
+		  real(sp) :: cin(-1:n+2)
+		  real(sp) :: win(-1:n+2)
+		  real(sp) :: dis4,wvel
+	  integer  :: i
+
+	  if(dbg_set(dbg_sbr)) write(ipt,*) "Start: Settle_Flux "
+
+	  !transfer to working array
+	  cin(1:n) = c(1:n)
+	  win(1:n) = wset(1:n) 
+
+	  !surface bcs (extrapolate/zero flux)
+	  if (win(1)>0.0) then
+			cin(0)  =  cin(1) 
+			cin(-1) =  cin(1)
+			win(0)  =  wset(1)
+			win(-1) =  wset(1)
+	  else
+			cin(0)  =  -cin(1) 
+			cin(-1) =  -cin(1)
+			win(0)  =  -wset(1)
+			win(-1) =  -wset(1)
+	  end if
+
+	  !bottom bcs (extrapolate/zero flux)
+	  if (win(n)>0.0) then
+			cin(n+1) = cin(n) 
+			cin(n+2) = cin(n)
+			win(n+1) = win(n)
+			win(n+2) = win(n)
+	  else
+			cin(n+1) = -cin(n) 
+			cin(n+2) = -cin(n)
+			win(n+1) = -win(n)
+			win(n+2) = -win(n)
+	  end if
+
+	  !flux computation
+	  do i=1,n+1
+		wvel    = .5*(win(i)+win(i-1))  !settle velocity at interface
+		dis4    = abs(wvel)/2.
+		conv(i) = wvel*(cin(i)+cin(i-1))/2. 
+		diss(i) = dis4*(cin(i)-cin(i-1)-lim(cin(i+1)-cin(i),cin(i-1)-cin(i-2))) 
+	  end do
+
+	  !re-set boundary flux
+	  if (win(1)>0.0) then
+		  conv(1) = conv(1) ; diss(1) = diss(1)
+	  else
+		  conv(1) = 0. ; diss(1) = 0.
+	  end if
+
+	  if (win(n)>0.0) then
+		  conv(n+1) = conv(n+1) ; diss(n+1) = diss(n+1)
+	  else
+		  conv(n+1) = 0. ; diss(n+1) = 0.
+	  end if
+
+	  !update
+	  do i=1,n
+		c(i) = cin(i) + (deltat/dx(i))*(-conv(i+1)+conv(i) + diss(i+1)-diss(i)) 
+	  end do
+
+	  !set bottom flux (> 0 = deposition)
+	  iflux = iflux + deltat*(conv(1)-diss(1))
+	  bflux = bflux + deltat*(conv(n+1)-diss(n+1))
+
+	  if(dbg_set(dbg_sbr)) write(ipt,*) "End: Settle_Flux "
+
+End Subroutine Settle_Flux_sed_new
+
 !==========================================================================
-! Toxin leaching rate: In this subroutine, the toxin leaching rate for the
-! given MP particle is computed with shape factor considered.
-!========================================================================== 
+! Plastic-toxic interaction related submodules:
+!
+! Calc_Toxin_Leach_Rate_SI    - Calculate shape-impacted toxin leaching rate 
+!                              for microplastic particles with geometric factors
+! Calc_Linear_Bottom_Kinetics - Calculate first-order kinetic decay or growth 
+!                              terms for bottom plastic and toxic processes
+!==========================================================================
 
 Subroutine Calc_Toxin_Leach_Rate_SI(sname,a,b,c,theta,D_p,k)
+
+	!==========================================================================
+	! Toxin leaching rate: In this subroutine, the toxin leaching rate for the
+	! given MP particle is computed with shape factor considered.
+	!========================================================================== 
 
 	Implicit None
 	
@@ -2591,19 +3402,19 @@ Subroutine Calc_Toxin_Leach_Rate_SI(sname,a,b,c,theta,D_p,k)
 	end if
 
 End Subroutine Calc_Toxin_Leach_Rate_SI
-  
-!==========================================================================
-! Generic first order kinetic term:
-!	This subroutine applies the linear decaying kinetic term to each grid
-! cell, the decay is using the plastic integrating step size. If the decay_rate
-! -input is a positive value (default value for MP is referring to A. Charms 
-! et al. 2020), it represents the exponential decaying processes. If the 
-! decay_rate-input is a negative value, it represents the chemical reaction 
-! source term (exponential growth).
-!=========================================================================
 
 Subroutine Calc_Linear_Bottom_Kinetics(dT,mb,decay_rate,ms,mm)
 	
+	!==========================================================================
+	! Generic first order kinetic term:
+	!	This subroutine applies the linear decaying kinetic term to each grid
+	! cell, the decay is using the plastic integrating step size. If the decay_rate
+	! -input is a positive value (default value for MP is referring to A. Charms 
+	! et al. 2020), it represents the exponential decaying processes. If the 
+	! decay_rate-input is a negative value, it represents the chemical reaction 
+	! source term (exponential growth).
+	!=========================================================================
+
 	implicit none
 	integer, intent(in)		:: mb
 	real(sp), intent(out)   :: mm(:)
@@ -2624,124 +3435,17 @@ Subroutine Calc_Linear_Bottom_Kinetics(dT,mb,decay_rate,ms,mm)
 End Subroutine Calc_Linear_Bottom_Kinetics
 
 !==========================================================================
-!  Setup open boundary nudging for plastic obc
-!   - check for existence of sed nudging file
-!   - read data (concentration of each sed type at each obc)
-!==========================================================================
-
-Subroutine Setup_PLAST_OBC
-
-  Use Control,  only : casename,input_dir,msr,serial,par
-!  Use Mod_OBCs, only : iobcn,i_obc_gl,iobcn_gl
-  Use Mod_Utils, only: pstop
-# if defined (MULTIPROCESSOR)
-  Use Mod_Par,  only : nlid
-# endif
-
-  integer :: i,j,tmp,ncnt,i1
-  integer,  allocatable :: vtmp(:),atemp(:,:)
-  real(sp), allocatable :: PLAST_obc_gl(:,:)
-  integer, parameter    :: plastobc = 81
-  character(len=120)    :: fname
-  logical :: fexist
-  
-
-  if(dbg_set(dbg_sbr)) write(ipt,*) "Start: Setup_PLAST_OBC "
-
-  !------------------------------------------------------
-  ! make sure plastic nudging data file exists 
-  !------------------------------------------------------
-  fname = "./"//trim(input_dir)//"/"//trim(casename)//"_plast_nudge.dat"
-
-  inquire(file=trim(fname),exist=fexist)
-  if(msr .and. .not.fexist)then
-    write(*,*)'plastic nudging data: ',fname,' does not exist'
-    write(*,*)'halting.....'
-    call pstop
-  end if
-
-  open(unit=plastobc,file=fname,form='formatted')
-  !------------------------------------------------------
-  ! allocate global data
-  !------------------------------------------------------
-  allocate(PLAST_obc_gl(Nobc_gl,nplast)) ; PLAST_obc_gl = 0.
-
-  !header
-  read(plastobc,*)
-  read(plastobc,*)
-  read(plastobc,*)
-
-  !# obc nodes
-  read(plastobc,*) tmp 
-
-  if(tmp /= Nobc_gl .and. msr)then
-    write(*,*)'number of open boundary nodes for plastic nudging: ',tmp
-    write(*,*)'this is not consistent with number of open boundary nodes in'
-    write(*,*)'the model: ',Nobc_gl
-    write(*,*)'halting'
-    call pstop
-  endif
-
-  allocate(vtmp(Nobc_gl))
-  do i=1,Nobc_gl  
-    read(plastobc,*) i1,vtmp(i),(PLAST_obc_gl(i,j),j=1,nplast)
-  end do
-  close(plastobc)
-    
-  !---------------------------------------------------------
-  ! shift plastic nudging data to local open boundary nodes
-  !---------------------------------------------------------
-
-  if(serial)then
-    do i=1,Nobc_gl
-      do j=1,nplast
-        plast(j)%cobc(i) = PLAST_obc_gl(i,j)
-      end do
-    end do
-  endif
-
-# if defined (MULTIPROCESSOR)
-  if(par)then
-    allocate(atemp(Nobc_gl,nplast))
-    ncnt = 0
-    !!set up local open boundary nodes
-    do i=1,Nobc_gl
-      i1 = nlid( vtmp(i) )
-      if(i1 /= 0)then
-        ncnt = ncnt + 1
-        do j=1,nplast
-          atemp(ncnt,j) = PLAST_obc_gl(i,j)
-        end do
-      end if
-    end do
-
-    !transfer plastic nudging data global --> local
-    if(ncnt > 0)then
-      do j=1,nplast
-        plast(j)%cobc(1:ncnt) = atemp(1:ncnt,j)
-      end do
-    end if
-
-    deallocate(atemp) 
-  end if
-# endif
-
-  if(msr)write(*,*)'obc setup for plastic model: complete'
-
-  !---------------------------------------------------------
-  ! cleanup 
-  !---------------------------------------------------------
-  deallocate(PLAST_obc_gl)
-
-  if(dbg_set(dbg_sbr)) write(ipt,*) "End: Setup_PLAST_OBC "
-
-  End Subroutine Setup_PLAST_OBC
-  
-!==========================================================================
-!  Ambient density calculation using the 'dens2' function:
+! Utility submodules:
+!
+! AMBI_DENS              - Ambient water density computing base on salinity
+!                        and temperature at each nodes.
 !==========================================================================
   
-  SUBROUTINE AMBI_DENS(mb,kb,MYS,MYT,MYRHO)               
+SUBROUTINE AMBI_DENS(mb,kb,MYS,MYT,MYRHO)               
+
+	!==========================================================================
+	!  Ambient density calculation using the 'dens2' function:
+	!==========================================================================
 
     !==============================================================================|
     IMPLICIT NONE
@@ -2815,8 +3519,8 @@ Subroutine Setup_PLAST_OBC
 	End Do
 	End Do
 
-  END SUBROUTINE AMBI_DENS
+END SUBROUTINE AMBI_DENS
   
 # endif
    
-End Module Mod_Plast 
+End Module Mod_Plast
