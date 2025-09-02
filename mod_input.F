@@ -2436,6 +2436,77 @@ SUBROUTINE LOAD_INIT_PLAST_CONC(conc)
 	
 END SUBROUTINE LOAD_INIT_PLAST_CONC
 
+SUBROUTINE LOAD_INIT_PLAST_SED_CONC(conc_sed,conc_sed_s,conc_sed_p)
+	USE CONTROL
+	IMPLICIT NONE
+	REAL(SP), ALLOCATABLE :: conc_sed(:,:,:)
+	REAL(SP), ALLOCATABLE :: conc_sed_s(:,:,:)
+	REAL(SP), ALLOCATABLE :: conc_sed_p(:,:,:)
+	TYPE(NCFILE), POINTER :: NCF
+    TYPE(NCVAR),  POINTER :: VAR
+    TYPE(NCDIM),  POINTER :: DIM1
+    TYPE(NCDIM),  POINTER :: DIM2
+	TYPE(NCDIM),  POINTER :: DIM3
+    integer status,I,IERR
+
+    LOGICAL FOUND
+	
+	! FIND THE SEDIMENT CONCENTRATION FILE OBJECT
+	NCF => FIND_FILE(FILEHEAD,trim(INIT_PLAST_SED_CONC_FILE),FOUND)
+    IF(.not. FOUND) CALL FATAL_ERROR &
+         & ("COULD NOT FIND INIT PLASTIC SEDIMENT CONCENTRATION FILE OBJECT",&
+         & "FILE NAME: "//TRIM(INIT_PLAST_SED_CONC_FILE)) 
+
+    DIM1 => FIND_DIM(NCF,'node',FOUND)
+    IF(.not. FOUND) CALL FATAL_ERROR &
+         & ("COULD NOT FIND INIT PLASTIC SEDIMENT CONCENTRATION FILE DIMENSION 'node' in:",&
+         & "FILE NAME: "//TRIM(INIT_PLAST_SED_CONC_FILE))
+    IF (DIM1%DIM /= MGL)CALL FATAL_ERROR &
+         & ("Dimension 'node' in the INIT PLASTIC SEDIMENT CONCENTRATION FILE does not match MGL for this model?",&
+         & "FILE NAME: "//TRIM(INIT_PLAST_SED_CONC_FILE))
+		 
+    DIM2 => FIND_DIM(NCF,'N_sed_layer',FOUND)
+    IF(.not. FOUND) CALL FATAL_ERROR &
+         & ("COULD NOT FIND INIT PLASTIC SEDIMENT CONCENTRATION FILE DIMENSION 'N_sed_layer' in:",&
+         & "FILE NAME: "//TRIM(INIT_PLAST_SED_CONC_FILE))
+		 
+	DIM3 => FIND_DIM(NCF,'nplast',FOUND)
+    IF(.not. FOUND) CALL FATAL_ERROR &
+         & ("COULD NOT FIND INIT PLASTIC SEDIMENT CONCENTRATION FILE DIMENSION 'nplast' in:",&
+         & "FILE NAME: "//TRIM(INIT_PLAST_SED_CONC_FILE))
+	
+	! FIND THE 'init_conc_sed' VARIABLE (total sediment concentration)
+	VAR => FIND_VAR(NCF,'init_conc_sed',FOUND)
+    IF(.not. FOUND) CALL FATAL_ERROR &
+         & ("COULD NOT FIND VARIABLE 'init_conc_sed' in:",&
+         & "FILE NAME: "//TRIM(INIT_PLAST_SED_CONC_FILE))
+
+    CALL NC_CONNECT_AVAR(VAR,conc_sed)
+    CALL NC_READ_VAR(VAR)
+    CALL NC_DISCONNECT(VAR)
+
+	! FIND THE 'init_conc_sed_s' VARIABLE (stopped sediment concentration)
+	VAR => FIND_VAR(NCF,'init_conc_sed_s',FOUND)
+    IF(.not. FOUND) CALL FATAL_ERROR &
+         & ("COULD NOT FIND VARIABLE 'init_conc_sed_s' in:",&
+         & "FILE NAME: "//TRIM(INIT_PLAST_SED_CONC_FILE))
+
+    CALL NC_CONNECT_AVAR(VAR,conc_sed_s)
+    CALL NC_READ_VAR(VAR)
+    CALL NC_DISCONNECT(VAR)
+
+	! FIND THE 'init_conc_sed_p' VARIABLE (passing sediment concentration)
+	VAR => FIND_VAR(NCF,'init_conc_sed_p',FOUND)
+    IF(.not. FOUND) CALL FATAL_ERROR &
+         & ("COULD NOT FIND VARIABLE 'init_conc_sed_p' in:",&
+         & "FILE NAME: "//TRIM(INIT_PLAST_SED_CONC_FILE))
+
+    CALL NC_CONNECT_AVAR(VAR,conc_sed_p)
+    CALL NC_READ_VAR(VAR)
+    CALL NC_DISCONNECT(VAR)
+	
+END SUBROUTINE LOAD_INIT_PLAST_SED_CONC
+
 SUBROUTINE LOAD_INIT_TOXIN_CONC(tconc_b,tconc_f)
 	USE CONTROL
 	IMPLICIT NONE
@@ -2499,6 +2570,88 @@ SUBROUTINE LOAD_INIT_TOXIN_CONC(tconc_b,tconc_f)
 	
 END SUBROUTINE LOAD_INIT_TOXIN_CONC
 
+SUBROUTINE LOAD_INIT_TOXIN_SED_CONC(tconc_b_sed,tconc_b_sed_s,tconc_b_sed_p,tconc_f_sed)
+	USE CONTROL
+	IMPLICIT NONE
+	REAL(SP), ALLOCATABLE :: tconc_b_sed(:,:,:)
+	REAL(SP), ALLOCATABLE :: tconc_b_sed_s(:,:,:)
+	REAL(SP), ALLOCATABLE :: tconc_b_sed_p(:,:,:)
+	REAL(SP), ALLOCATABLE :: tconc_f_sed(:,:,:)
+	TYPE(NCFILE), POINTER :: NCF
+    TYPE(NCVAR),  POINTER :: VAR
+    TYPE(NCDIM),  POINTER :: DIM1
+    TYPE(NCDIM),  POINTER :: DIM2
+	TYPE(NCDIM),  POINTER :: DIM3
+    integer status,I,IERR
+
+    LOGICAL FOUND
+	
+	! FIND THE TOXIN SEDIMENT CONCENTRATION FILE OBJECT
+	NCF => FIND_FILE(FILEHEAD,trim(INIT_TOXIN_SED_CONC_FILE),FOUND)
+    IF(.not. FOUND) CALL FATAL_ERROR &
+         & ("COULD NOT FIND INIT TOXIN SEDIMENT CONCENTRATION FILE OBJECT",&
+         & "FILE NAME: "//TRIM(INIT_TOXIN_SED_CONC_FILE)) 
+
+    DIM1 => FIND_DIM(NCF,'node',FOUND)
+    IF(.not. FOUND) CALL FATAL_ERROR &
+         & ("COULD NOT FIND INIT TOXIN SEDIMENT CONCENTRATION FILE DIMENSION 'node' in:",&
+         & "FILE NAME: "//TRIM(INIT_TOXIN_SED_CONC_FILE))
+    IF (DIM1%DIM /= MGL)CALL FATAL_ERROR &
+         & ("Dimension 'node' in the INIT TOXIN SEDIMENT CONCENTRATION FILE does not match MGL for this model?",&
+         & "FILE NAME: "//TRIM(INIT_TOXIN_SED_CONC_FILE))
+		 
+    DIM2 => FIND_DIM(NCF,'N_sed_layer',FOUND)
+    IF(.not. FOUND) CALL FATAL_ERROR &
+         & ("COULD NOT FIND INIT TOXIN SEDIMENT CONCENTRATION FILE DIMENSION 'N_sed_layer' in:",&
+         & "FILE NAME: "//TRIM(INIT_TOXIN_SED_CONC_FILE))
+		 
+	DIM3 => FIND_DIM(NCF,'nplast',FOUND)
+    IF(.not. FOUND) CALL FATAL_ERROR &
+         & ("COULD NOT FIND INIT TOXIN SEDIMENT CONCENTRATION FILE DIMENSION 'nplast' in:",&
+         & "FILE NAME: "//TRIM(INIT_TOXIN_SED_CONC_FILE))
+	
+	! FIND THE 'init_tconc_b_sed' VARIABLE (bonded toxin in sediment)
+	VAR => FIND_VAR(NCF,'init_tconc_b_sed',FOUND)
+    IF(.not. FOUND) CALL FATAL_ERROR &
+         & ("COULD NOT FIND VARIABLE 'init_tconc_b_sed' in:",&
+         & "FILE NAME: "//TRIM(INIT_TOXIN_SED_CONC_FILE))
+
+    CALL NC_CONNECT_AVAR(VAR,tconc_b_sed)
+    CALL NC_READ_VAR(VAR)
+    CALL NC_DISCONNECT(VAR)
+
+	! FIND THE 'init_tconc_b_sed_s' VARIABLE (bonded toxin stopped in sediment)
+	VAR => FIND_VAR(NCF,'init_tconc_b_sed_s',FOUND)
+    IF(.not. FOUND) CALL FATAL_ERROR &
+         & ("COULD NOT FIND VARIABLE 'init_tconc_b_sed_s' in:",&
+         & "FILE NAME: "//TRIM(INIT_TOXIN_SED_CONC_FILE))
+
+    CALL NC_CONNECT_AVAR(VAR,tconc_b_sed_s)
+    CALL NC_READ_VAR(VAR)
+    CALL NC_DISCONNECT(VAR)
+
+	! FIND THE 'init_tconc_b_sed_p' VARIABLE (bonded toxin passing in sediment)
+	VAR => FIND_VAR(NCF,'init_tconc_b_sed_p',FOUND)
+    IF(.not. FOUND) CALL FATAL_ERROR &
+         & ("COULD NOT FIND VARIABLE 'init_tconc_b_sed_p' in:",&
+         & "FILE NAME: "//TRIM(INIT_TOXIN_SED_CONC_FILE))
+
+    CALL NC_CONNECT_AVAR(VAR,tconc_b_sed_p)
+    CALL NC_READ_VAR(VAR)
+    CALL NC_DISCONNECT(VAR)
+
+	! FIND THE 'init_tconc_f_sed' VARIABLE (free toxin in sediment)
+	VAR => FIND_VAR(NCF,'init_tconc_f_sed',FOUND)
+    IF(.not. FOUND) CALL FATAL_ERROR &
+         & ("COULD NOT FIND VARIABLE 'init_tconc_f_sed' in:",&
+         & "FILE NAME: "//TRIM(INIT_TOXIN_SED_CONC_FILE))
+
+    CALL NC_CONNECT_AVAR(VAR,tconc_f_sed)
+    CALL NC_READ_VAR(VAR)
+    CALL NC_DISCONNECT(VAR)
+	
+END SUBROUTINE LOAD_INIT_TOXIN_SED_CONC
+
 SUBROUTINE LOAD_AMBIENT_DENSITY(rho_water)
 	USE CONTROL
 	IMPLICIT NONE
@@ -2545,13 +2698,16 @@ SUBROUTINE LOAD_AMBIENT_DENSITY(rho_water)
 	
 END SUBROUTINE LOAD_AMBIENT_DENSITY
 
-SUBROUTINE LOAD_BOTTOM_FEATURES(sd50,dens,mudp,poro)
+SUBROUTINE LOAD_BOTTOM_FEATURES(sd50,dens,mudp,poro,Tsed,wDcy,Lsed)
 	USE CONTROL
 	IMPLICIT NONE
 	REAL(SP), ALLOCATABLE :: sd50(:)
 	REAL(SP), ALLOCATABLE :: dens(:)
 	REAL(SP), ALLOCATABLE :: mudp(:)
 	REAL(SP), ALLOCATABLE :: poro(:)
+	REAL(SP), ALLOCATABLE :: Tsed(:)
+	REAL(SP), ALLOCATABLE :: wDcy(:)
+	REAL(SP), ALLOCATABLE :: Lsed(:)
 	TYPE(NCFILE), POINTER :: NCF
     TYPE(NCVAR),  POINTER :: VAR
     TYPE(NCDIM),  POINTER :: DIM1
@@ -2610,6 +2766,36 @@ SUBROUTINE LOAD_BOTTOM_FEATURES(sd50,dens,mudp,poro)
          & "FILE NAME: "//TRIM(BOTTOM_FEATURES_FILE))
 
     CALL NC_CONNECT_AVAR(VAR,poro)
+    CALL NC_READ_VAR(VAR)
+    CALL NC_DISCONNECT(VAR)
+
+	! FIND THE 'Tsed' VARIABLE (sediment temperature)
+	VAR => FIND_VAR(NCF,'Tsed',FOUND)
+    IF(.not. FOUND) CALL FATAL_ERROR &
+         & ("COULD NOT FIND BOTTOM_FEATURES_FILE VARIABLE 'Tsed' in:",&
+         & "FILE NAME: "//TRIM(BOTTOM_FEATURES_FILE))
+
+    CALL NC_CONNECT_AVAR(VAR,Tsed)
+    CALL NC_READ_VAR(VAR)
+    CALL NC_DISCONNECT(VAR)
+
+	! FIND THE 'wDcy' VARIABLE (vertical Darcy speed)
+	VAR => FIND_VAR(NCF,'wDcy',FOUND)
+    IF(.not. FOUND) CALL FATAL_ERROR &
+         & ("COULD NOT FIND BOTTOM_FEATURES_FILE VARIABLE 'wDcy' in:",&
+         & "FILE NAME: "//TRIM(BOTTOM_FEATURES_FILE))
+
+    CALL NC_CONNECT_AVAR(VAR,wDcy)
+    CALL NC_READ_VAR(VAR)
+    CALL NC_DISCONNECT(VAR)
+
+	! FIND THE 'Lsed' VARIABLE (sediment layer thickness)
+	VAR => FIND_VAR(NCF,'Lsed',FOUND)
+    IF(.not. FOUND) CALL FATAL_ERROR &
+         & ("COULD NOT FIND BOTTOM_FEATURES_FILE VARIABLE 'Lsed' in:",&
+         & "FILE NAME: "//TRIM(BOTTOM_FEATURES_FILE))
+
+    CALL NC_CONNECT_AVAR(VAR,Lsed)
     CALL NC_READ_VAR(VAR)
     CALL NC_DISCONNECT(VAR)
 	

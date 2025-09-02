@@ -8240,7 +8240,7 @@ FUNCTION PLAST_FILE_OBJECT() RESULT(NCF)
 		ATT  => NC_MAKE_ATT(name='long_name',values=TRIM('Suspended Plastic Concentration of '//TRIM(plast(ii)%pname))) 
 		VAR  => ADD(VAR,ATT)
 
-		ATT  => NC_MAKE_ATT(name='units',values='mg/L') 
+		ATT  => NC_MAKE_ATT(name='units',values='kg/m^3') 
 		VAR  => ADD(VAR,ATT)
 
 		ATT  => NC_MAKE_ATT(name='grid',values='fvcom_grid') 
@@ -8286,7 +8286,7 @@ FUNCTION PLAST_FILE_OBJECT() RESULT(NCF)
 		ATT  => NC_MAKE_ATT(name='long_name',values=TRIM('Deposition mass density of '//TRIM(plast(ii)%pname))) 
 		VAR  => ADD(VAR,ATT)
 
-		ATT  => NC_MAKE_ATT(name='units',values='g/m^2') 
+		ATT  => NC_MAKE_ATT(name='units',values='kg/m^2') 
 		VAR  => ADD(VAR,ATT)
 
 		ATT  => NC_MAKE_ATT(name='grid',values='fvcom_grid') 
@@ -8355,7 +8355,7 @@ FUNCTION PLAST_FILE_OBJECT() RESULT(NCF)
 		ATT  => NC_MAKE_ATT(name='long_name',values=TRIM('Critical shear stress of '//TRIM(plast(ii)%pname))) 
 		VAR  => ADD(VAR,ATT)
 
-		ATT  => NC_MAKE_ATT(name='units',values='N m-2') 
+		ATT  => NC_MAKE_ATT(name='units',values='N m^-2') 
 		VAR  => ADD(VAR,ATT)
 
 		ATT  => NC_MAKE_ATT(name='grid',values='fvcom_grid') 
@@ -8422,7 +8422,7 @@ FUNCTION PLAST_FILE_OBJECT() RESULT(NCF)
 	ATT  => NC_MAKE_ATT(name='long_name',values=TRIM('Ambient water density')) 
 	VAR  => ADD(VAR,ATT)
 	
-	ATT  => NC_MAKE_ATT(name='units',values='kg/m3') 
+	ATT  => NC_MAKE_ATT(name='units',values='kg/m^3') 
 	VAR  => ADD(VAR,ATT)
 	
 	ATT  => NC_MAKE_ATT(name='grid',values='fvcom_grid') 
@@ -8441,7 +8441,7 @@ FUNCTION PLAST_FILE_OBJECT() RESULT(NCF)
 	ATT  => NC_MAKE_ATT(name='long_name',values=TRIM('Bottom current shear stress')) 
 	VAR  => ADD(VAR,ATT)
 	
-	ATT  => NC_MAKE_ATT(name='units',values='kg m-1s-1') 
+	ATT  => NC_MAKE_ATT(name='units',values='kg m^-1s^-1') 
 	VAR  => ADD(VAR,ATT)
 	
 	ATT  => NC_MAKE_ATT(name='grid',values='fvcom_grid') 
@@ -8464,7 +8464,7 @@ FUNCTION PLAST_FILE_OBJECT() RESULT(NCF)
 		ATT  => NC_MAKE_ATT(name='long_name',values=TRIM('Suspended Bonded Toxic Concentration of '//TRIM(plast(ii)%tname_b))) 
 		VAR  => ADD(VAR,ATT)
 
-		ATT  => NC_MAKE_ATT(name='units',values='microgram/L') 
+		ATT  => NC_MAKE_ATT(name='units',values='kg/m^3') 
 		VAR  => ADD(VAR,ATT)
 
 		ATT  => NC_MAKE_ATT(name='grid',values='fvcom_grid') 
@@ -8486,7 +8486,7 @@ FUNCTION PLAST_FILE_OBJECT() RESULT(NCF)
 		ATT  => NC_MAKE_ATT(name='long_name',values=TRIM('Suspended Free Toxic Concentration of '//TRIM(plast(ii)%tname_f))) 
 		VAR  => ADD(VAR,ATT)
 
-		ATT  => NC_MAKE_ATT(name='units',values='mg/L') 
+		ATT  => NC_MAKE_ATT(name='units',values='kg/m^3') 
 		VAR  => ADD(VAR,ATT)
 
 		ATT  => NC_MAKE_ATT(name='grid',values='fvcom_grid') 
@@ -8509,7 +8509,7 @@ FUNCTION PLAST_FILE_OBJECT() RESULT(NCF)
 		ATT  => NC_MAKE_ATT(name='long_name',values=TRIM('Critical shear stress of '//TRIM(plast(ii)%tname_b))) 
 		VAR  => ADD(VAR,ATT)
 
-		ATT  => NC_MAKE_ATT(name='units',values='microgram m^-2') 
+		ATT  => NC_MAKE_ATT(name='units',values='kg m^-2') 
 		VAR  => ADD(VAR,ATT)
 
 		ATT  => NC_MAKE_ATT(name='grid',values='fvcom_grid') 
@@ -8520,9 +8520,169 @@ FUNCTION PLAST_FILE_OBJECT() RESULT(NCF)
 		NULLIFY(BLD_P)
 	
 		End do
-		
-	
   End if
+
+   if (plast_infil) then
+
+      Do II=1,nplast
+      
+      SLD_P => plast(ii)%conc_sed(1:m,1:N_sed_layer) 
+
+		VAR  => NC_MAKE_PVAR(name=TRIM(plast(ii)%pname),&
+			& values=SLD_P, DIM1= DIM_node, DIM2= DIM_siglay, DIM3 = DIM_time)
+
+		ATT  => NC_MAKE_ATT(name='long_name',values=TRIM('Total Concentration of plastics '//TRIM(plast(ii)%pname))) 
+		VAR  => ADD(VAR,ATT)
+
+		ATT  => NC_MAKE_ATT(name='units',values='kg/m^3') 
+		VAR  => ADD(VAR,ATT)
+
+		ATT  => NC_MAKE_ATT(name='grid',values='fvcom_grid') 
+		VAR  => ADD(VAR,ATT)
+
+		NCF  => ADD(NCF,VAR)
+
+		NULLIFY(SLD_P)
+
+      End do
+
+      Do II=1,nplast
+      
+      SLD_P => plast(ii)%conc_sed_p(1:m,1:N_sed_layer) 
+
+		VAR  => NC_MAKE_PVAR(name=TRIM(plast(ii)%pname),&
+			& values=SLD_P, DIM1= DIM_node, DIM2= DIM_siglay, DIM3 = DIM_time)
+
+		ATT  => NC_MAKE_ATT(name='long_name',values=TRIM('Movable Concentration of plastics in sediment '//TRIM(plast(ii)%pname))) 
+		VAR  => ADD(VAR,ATT)
+
+		ATT  => NC_MAKE_ATT(name='units',values='kg/m^3') 
+		VAR  => ADD(VAR,ATT)
+
+		ATT  => NC_MAKE_ATT(name='grid',values='fvcom_grid') 
+		VAR  => ADD(VAR,ATT)
+
+		NCF  => ADD(NCF,VAR)
+
+		NULLIFY(SLD_P)
+
+      End do
+
+      Do II=1,nplast
+      
+      SLD_P => plast(ii)%conc_sed_s(1:m,1:N_sed_layer) 
+
+		VAR  => NC_MAKE_PVAR(name=TRIM(plast(ii)%pname),&
+			& values=SLD_P, DIM1= DIM_node, DIM2= DIM_siglay, DIM3 = DIM_time)
+
+		ATT  => NC_MAKE_ATT(name='long_name',values=TRIM('Immovable Concentration of plastics in sediment '//TRIM(plast(ii)%pname))) 
+		VAR  => ADD(VAR,ATT)
+
+		ATT  => NC_MAKE_ATT(name='units',values='kg/m^3') 
+		VAR  => ADD(VAR,ATT)
+
+		ATT  => NC_MAKE_ATT(name='grid',values='fvcom_grid') 
+		VAR  => ADD(VAR,ATT)
+
+		NCF  => ADD(NCF,VAR)
+
+		NULLIFY(SLD_P)
+
+      End do
+
+      if (PLAST_infil) then
+
+         Do II=1,nplast
+
+         SLD_P => plast(ii)%tconc_b_sed(1:m,1:N_sed_layer) 
+
+         VAR  => NC_MAKE_PVAR(name=TRIM(plast(ii)%tname_b),&
+            & values=SLD_P, DIM1= DIM_node, DIM2= DIM_siglay, DIM3 = DIM_time)
+
+         ATT  => NC_MAKE_ATT(name='long_name',values=TRIM('Total Bonded Toxic Concentration of '//TRIM(plast(ii)%tname_b))) 
+         VAR  => ADD(VAR,ATT)
+
+         ATT  => NC_MAKE_ATT(name='units',values='kg/m^3') 
+         VAR  => ADD(VAR,ATT)
+
+         ATT  => NC_MAKE_ATT(name='grid',values='fvcom_grid') 
+         VAR  => ADD(VAR,ATT)
+
+         NCF  => ADD(NCF,VAR)
+
+         NULLIFY(SLD_P)
+         
+         End do
+
+         Do II=1,nplast
+
+         SLD_P => plast(ii)%tconc_b_sed_p(1:m,1:N_sed_layer) 
+
+         VAR  => NC_MAKE_PVAR(name=TRIM(plast(ii)%tname_b),&
+            & values=SLD_P, DIM1= DIM_node, DIM2= DIM_siglay, DIM3 = DIM_time)
+
+         ATT  => NC_MAKE_ATT(name='long_name',values=TRIM('Movable Bonded Toxic Concentration of '//TRIM(plast(ii)%tname_b))) 
+         VAR  => ADD(VAR,ATT)
+
+         ATT  => NC_MAKE_ATT(name='units',values='kg/m^3') 
+         VAR  => ADD(VAR,ATT)
+
+         ATT  => NC_MAKE_ATT(name='grid',values='fvcom_grid') 
+         VAR  => ADD(VAR,ATT)
+
+         NCF  => ADD(NCF,VAR)
+
+         NULLIFY(SLD_P)
+         
+         End do
+
+         Do II=1,nplast
+
+         SLD_P => plast(ii)%tconc_b_sed_s(1:m,1:N_sed_layer) 
+
+         VAR  => NC_MAKE_PVAR(name=TRIM(plast(ii)%tname_b),&
+            & values=SLD_P, DIM1= DIM_node, DIM2= DIM_siglay, DIM3 = DIM_time)
+
+         ATT  => NC_MAKE_ATT(name='long_name',values=TRIM('Immovable Bonded Toxic Concentration of '//TRIM(plast(ii)%tname_b))) 
+         VAR  => ADD(VAR,ATT)
+
+         ATT  => NC_MAKE_ATT(name='units',values='kg/m^3') 
+         VAR  => ADD(VAR,ATT)
+
+         ATT  => NC_MAKE_ATT(name='grid',values='fvcom_grid') 
+         VAR  => ADD(VAR,ATT)
+
+         NCF  => ADD(NCF,VAR)
+
+         NULLIFY(SLD_P)
+         
+         End do
+
+         Do II=1,nplast
+
+         SLD_P => plast(ii)%tconc_f_sed(1:m,1:N_sed_layer) 
+
+         VAR  => NC_MAKE_PVAR(name=TRIM(plast(ii)%tname_f),&
+            & values=SLD_P, DIM1= DIM_node, DIM2= DIM_siglay, DIM3 = DIM_time)
+
+         ATT  => NC_MAKE_ATT(name='long_name',values=TRIM('Free Toxic Concentration of '//TRIM(plast(ii)%tname_f))) 
+         VAR  => ADD(VAR,ATT)
+
+         ATT  => NC_MAKE_ATT(name='units',values='kg/m^3') 
+         VAR  => ADD(VAR,ATT)
+
+         ATT  => NC_MAKE_ATT(name='grid',values='fvcom_grid') 
+         VAR  => ADD(VAR,ATT)
+
+         NCF  => ADD(NCF,VAR)
+
+         NULLIFY(SLD_P)
+         
+         End do
+
+      end if
+
+   end if
 
   !Bottom output
   if(plast_dumpbot)then

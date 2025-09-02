@@ -182,10 +182,10 @@ Module Mod_Plast
 	! tau_ce       => plastic variables: critical shear stress for erosion 		          [N/m^2                   ]
 	! erate        => plastic variables: bed surface erosion mass flux         	          [kg m^-1 s^-1            ]
 	! prate 	   => plastic variables: free surface precipitation rate                  [# m^-3 s^-3             ]
-	! zactv        => plastic variables: active layer thickness                           [m^-1                    ]
+	! zactv        => plastic variables: active layer thickness                           [m                       ]
 	! D_plast      => plastic variables: solid internal diffusivity of MP                 [m^2/s                   ]
-	! D_toxin      => plastic variables: solid internal diffusivity of MP associated tox  [XXX]
-	! lambda_plast => plastic variables: solid internal retention rate of MP              [XXX]
+	! D_toxin      => plastic variables: solid internal diffusivity of MP associated tox  [m^2/s                   ]
+	! lambda_plast => plastic variables: solid internal retention rate of MP              [m^-1                    ]
 	! tconc_b	   => embedded toxic variables: embedded toxic concentration			  [kg m^-3                 ]
 	! tmass_b	   => embedded toxic variables: bottom embedded toxic					  [kg m^-2		           ]
 	! tconc_b_sed  => embedded toxic variables: total embedded toxic in sediment  		  [kg m^-3                 ]
@@ -337,7 +337,6 @@ Module Mod_Plast
 	! dens0				: constant plastic density in the bottom
 	! mudp0             : constant mud portion in the bottom
 	! poro0             : constant porosity in the bottom
-	! tort0             : tortuosity factor for uniform sediment [-] 
 	! temp0             : temperature for uniform sediment [K]
 	! darv0             : pore water velocity for uniform sediment [m/s]
 	! rho_water			: seawater density can be constant or spatial varying
@@ -378,7 +377,6 @@ Module Mod_Plast
 	real(sp) :: dens0 = 2400
 	real(sp) :: mudp0 = 0.1
 	real(sp) :: poro0 = 0.5
-	real(sp) :: tort0 = 1.0
 	real(sp) :: temp0 = 298.15
 	real(sp) :: darv0 = 0.0
 	real(sp) :: infil_max_depth = 1.0
