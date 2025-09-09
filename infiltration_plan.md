@@ -77,4 +77,4 @@ This document provides a comprehensive analysis of the FVCOM-MP codebase and out
 ### Phase 4: I/O and Advanced Features
 - ✓ Extend initialization file input to consider new bed properties
 - ✓ Extend initialization file input to initialize plastic/toxin inside bed layers
-- Extend NetCDF output for concentration profiles (conc_sed, tconc_b_sed, tconc_f_sed)
+- ✓ Extend NetCDF output for concentration profiles (conc_sed, tconc_b_sed, tconc_f_sed)

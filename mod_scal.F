@@ -772,7 +772,7 @@ Subroutine Adv_Scal(f,fn,d_fdis,fdis,d_fflux,fflux_obc,deltat,source)
   Implicit None 
   Real(sp), intent(inout) :: f(0:mt,kb)
   Real(sp), intent(in   ) :: deltat
-  Real(sp), intent(in   ) :: diff_rate     ! Custom diffusivity [m^2/s]
+  Real(sp), intent(in   ) :: diff_rate(0:mt)     ! Custom diffusivity [m^2/s]
   !--local--------------------
   integer  :: i,k
   real(sp) :: dsqrd
@@ -789,18 +789,18 @@ Subroutine Adv_Scal(f,fn,d_fdis,fdis,d_fflux,fflux_obc,deltat,source)
     
     !Surface
     au(1) = 0.0
-    cu(1)=      - deltat*diff_rate/(dzz(i,1)*dz(i,1)*dsqrd)
+    cu(1)=      - deltat*diff_rate(i)/(dzz(i,1)*dz(i,1)*dsqrd)
     bu(1)=  1.0 - cu(1) 
 
     !Interior
     do k=2,kbm1-1
-      au(k) =     - deltat*diff_rate/(dzz(i,k-1)*dz(i,k)*dsqrd)
-      cu(k) =     - deltat*diff_rate/(dzz(i,k  )*dz(i,k)*dsqrd)
+      au(k) =     - deltat*diff_rate(i)/(dzz(i,k-1)*dz(i,k)*dsqrd)
+      cu(k) =     - deltat*diff_rate(i)/(dzz(i,k  )*dz(i,k)*dsqrd)
       bu(k) = 1.0 - cu(k) - au(k) 
     end do
 
     !Bottom
-     au(kbm1) =     - deltat*diff_rate/(dzz(i,kbm1-1)*dz(i,kbm1)*dsqrd)
+     au(kbm1) =     - deltat*diff_rate(i)/(dzz(i,kbm1-1)*dz(i,kbm1)*dsqrd)
      cu(kbm1) = 0.0
      bu(kbm1) = 1.0 - au(kbm1) 
 

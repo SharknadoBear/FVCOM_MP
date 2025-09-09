@@ -109,6 +109,7 @@ PLAST_DUMPBOT = F
 !   TOX_CKD: Toxic decaying rate									 [1/s    ]
 !   TOX_CKG: Toxic generation rate									 [1/s    ]
 !   TOX_INR: Initial bottom toxic ratio								 [-		 ]
+!   TOX_MOLD: Diameter of toxic molecular                            [nm     ]
 !------------------------------------------------------------------------------!
 
 NPLAST = 1
@@ -129,6 +130,7 @@ TOX_CKL = 0.3
 TOX_CKD = 0.0
 TOX_CKG = 0.0
 TOX_INR = 0.001
+TOX_MOLD = 1
 
 !-------------------------------------------------------------------------------!
 !Ambient environment parameters, including the bed character (constant), and

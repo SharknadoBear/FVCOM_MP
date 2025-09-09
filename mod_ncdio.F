@@ -119,6 +119,36 @@ MODULE MOD_NCDIO
 !    VAR  => ADD(VAR,ATT)
 !# endif
 
+!==============================================================================!
+!  FVCOM-MP INFILTRATION DEVELOPMENT LOG                                       !
+!==============================================================================!
+!  Phase 1: Data Structure Setup (COMPLETED)                                  !
+!    - Extended plast_type with sediment concentration arrays                 !
+!    - Added infiltration flux tracking (iflx, tiflx_b, tiflx_f, tiflx_f_deep)!
+!    - Added DLVO physics parameters per species (A_Hamaker, ws_sed, D_plast)  !
+!    - Added global infiltration switch (plast_infil)                         !
+!                                                                              !
+!  Phase 2: Namelist and Parameter Implementation (COMPLETED)                 !
+!    - Added infiltration parameters to generic_plastic.inp                   !
+!    - Extended Setup_PLAST routine for array allocation within species loop  !
+!    - Updated Read_PLAST_Params using Get_Val calls                          !
+!    - Added global variable declarations to mod_plast.F public section       !
+!                                                                              !
+!  Phase 3: Core Physics Implementation (COMPLETED)                           !
+!    - Implemented Calc_Infiltration subroutine based on governing equations  !
+!    - Implemented vertical diffusion scalar solver                           !
+!    - Adapted 1D transport solver for movable/blocked phases                 !
+!    - Implemented DLVO+strain retention mechanisms                           !
+!    - Modified Advance_plast to call infiltration when plast_infil=T         !
+!    - Implemented toxic leaching mechanisms for deep sediment layers         !
+!    - Ensured mass conservation across water column-sediment interface       !
+!                                                                              !
+!  Phase 4: I/O and Advanced Features (IN PROGRESS)                           !
+!    - Extended initialization file input for new bed properties              !
+!    - Extended initialization file input for plastic/toxin inside bed layers !
+!    - TODO: Extend NetCDF output for concentration profiles                  !
+!           (conc_sed, tconc_b_sed, tconc_f_sed)                             !
+!==============================================================================!
 
   LOGICAL :: VISIT_CMD_DUMP
   LOGICAL :: NCNEST_CMD_DUMP
