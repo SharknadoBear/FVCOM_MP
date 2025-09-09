@@ -1,0 +1,187 @@
+\documentclass[11pt]{article}
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{geometry}
+\usepackage{algorithm}
+\usepackage{algorithmic}
+\usepackage{graphicx}
+
+\geometry{margin=1in}
+
+\title{Optimal Interpolation Algorithms from FVCOM Module}
+\author{Mathematical Formulation Summary}
+\date{\today}
+
+\begin{document}
+
+\maketitle
+
+\section{Introduction}
+
+This document presents the mathematical formulations and algorithms implemented in the FVCOM optimal interpolation module (\texttt{mod\_optimal\_interpolation.F}). The module performs n-dimensional optimal interpolation for data assimilation, originally based on work by Alexander Barth.
+
+The algorithm works by constructing an observation error matrix from input error variances for each observational point, and estimating a background covariance matrix using Gaussian distance correspondence between observation points, controlled by correlation length scale parameters $\boldsymbol{\lambda}$. Singular Value Decomposition (SVD) is then used to compute the pseudo-inverse of the innovation covariance matrix, which optimally weights observational values for interpolation at each grid point. This approach balances observation reliability, spatial correlation, and redundancy between observations to achieve statistically optimal interpolation.
+
+\section{Mathematical Framework}
+
+\subsection{Notation}
+
+Let us define the following notation:
+\begin{itemize}
+    \item $\mathbf{x} \in \mathbb{R}^n$ - spatial coordinate vector
+    \item $\mathbf{x}_o^{(i)} \in \mathbb{R}^n$ - observation location $i$
+    \item $\mathbf{x}_g^{(j)} \in \mathbb{R}^n$ - grid point location $j$
+    \item $f_o^{(i)}$ - observation value at location $i$
+    \item $f_g^{(j)}$ - interpolated field value at grid point $j$
+    \item $\sigma_o^{(i)}$ - observation error variance at location $i$
+    \item $\boldsymbol{\lambda}$ - correlation length scale parameters
+    \item $m$ - number of nearest observations to use
+\end{itemize}
+
+\subsection{Distance Metric}
+
+The weighted distance between two points $\mathbf{x}_1$ and $\mathbf{x}_2$ is computed as:
+\begin{equation}
+d(\mathbf{x}_1, \mathbf{x}_2) = \sum_{k=1}^{n} \left(\frac{x_1^{(k)} - x_2^{(k)}}{\lambda^{(k)}}\right)^2
+\end{equation}
+
+where $\lambda^{(k)}$ are the correlation length scale parameters for each dimension.
+
+\subsection{Background Covariance Function}
+
+The background error covariance between two points is modeled using a Gaussian correlation function:
+\begin{equation}
+C_b(\mathbf{x}_1, \mathbf{x}_2) = \exp\left(-d(\mathbf{x}_1, \mathbf{x}_2)\right) = \exp\left(-\sum_{k=1}^{n} \left(\frac{x_1^{(k)} - x_2^{(k)}}{\lambda^{(k)}}\right)^2\right)
+\end{equation}
+
+\subsection{Observation Error Covariance Matrix}
+
+The observation error covariance matrix $\mathbf{R}$ is assumed to be diagonal:
+\begin{equation}
+\mathbf{R} = \text{diag}(\sigma_o^{(1)}, \sigma_o^{(2)}, \ldots, \sigma_o^{(m)})
+\end{equation}
+
+where $\sigma_o^{(i)}$ represents the error variance of observation $i$.
+
+\section{Optimal Interpolation Algorithm}
+
+\subsection{Main Algorithm}
+
+For each grid point $\mathbf{x}_g^{(j)}$, the optimal interpolation algorithm performs the following steps:
+
+\begin{algorithm}
+\caption{Optimal Interpolation at Grid Point}
+\begin{algorithmic}[1]
+\STATE Select $m$ nearest observations based on weighted distance
+\STATE Construct observation error covariance matrix $\mathbf{R}$
+\STATE Construct background error covariance matrix $\mathbf{H}\mathbf{P}\mathbf{H}^T$
+\STATE Form innovation covariance matrix $\boldsymbol{\Sigma} = \mathbf{H}\mathbf{P}\mathbf{H}^T + \mathbf{R}$
+\STATE Compute pseudo-inverse $\boldsymbol{\Sigma}^{-1}$
+\STATE Calculate analysis field and error variance
+\end{algorithmic}
+\end{algorithm}
+
+\subsection{Detailed Mathematical Steps}
+
+\subsubsection{Step 1: Nearest Observation Selection}
+
+For grid point $\mathbf{x}_g^{(j)}$, select the $m$ observations with smallest weighted distances:
+\begin{equation}
+\{i_1, i_2, \ldots, i_m\} = \arg\min_{i} \{d(\mathbf{x}_g^{(j)}, \mathbf{x}_o^{(i)})\}_{i=1}^{N_{obs}}
+\end{equation}
+
+\subsubsection{Step 2: Background Error Covariance Matrix}
+
+Construct the $m \times m$ background error covariance matrix between selected observations:
+\begin{equation}
+(\mathbf{H}\mathbf{P}\mathbf{H}^T)_{kl} = C_b(\mathbf{x}_o^{(i_k)}, \mathbf{x}_o^{(i_l)}) \quad k,l = 1, 2, \ldots, m
+\end{equation}
+
+\subsubsection{Step 3: Background-Grid Covariance Vector}
+
+Construct the $m \times 1$ covariance vector between the grid point and selected observations:
+\begin{equation}
+(\mathbf{P}\mathbf{H}^T)_k = C_b(\mathbf{x}_g^{(j)}, \mathbf{x}_o^{(i_k)}) \quad k = 1, 2, \ldots, m
+\end{equation}
+
+\subsubsection{Step 4: Innovation Covariance Matrix}
+
+The innovation covariance matrix is:
+\begin{equation}
+\boldsymbol{\Sigma} = \mathbf{H}\mathbf{P}\mathbf{H}^T + \mathbf{R}
+\end{equation}
+
+\subsubsection{Step 5: Pseudo-Inverse Computation}
+
+The pseudo-inverse $\boldsymbol{\Sigma}^{-1}$ is computed using singular value decomposition:
+\begin{align}
+\boldsymbol{\Sigma} &= \mathbf{U}\boldsymbol{\Lambda}\mathbf{U}^T \\
+\boldsymbol{\Sigma}^{-1} &= \mathbf{U}\boldsymbol{\Lambda}^{-1}\mathbf{U}^T
+\end{align}
+
+where eigenvalues smaller than a tolerance ($10^{-5}$) are set to zero in $\boldsymbol{\Lambda}^{-1}$.
+
+\subsubsection{Step 6: Analysis Field}
+
+The interpolated field value at grid point $\mathbf{x}_g^{(j)}$ is:
+\begin{equation}
+f_g^{(j)} = (\mathbf{P}\mathbf{H}^T)^T \boldsymbol{\Sigma}^{-1} \mathbf{f}_o
+\end{equation}
+
+where $\mathbf{f}_o = [f_o^{(i_1)}, f_o^{(i_2)}, \ldots, f_o^{(i_m)}]^T$ is the vector of selected observation values.
+
+\subsubsection{Step 7: Analysis Error Variance}
+
+The error variance of the analysis at grid point $\mathbf{x}_g^{(j)}$ is:
+\begin{equation}
+\sigma_a^{2(j)} = 1 - (\mathbf{P}\mathbf{H}^T)^T \boldsymbol{\Sigma}^{-1} \mathbf{P}\mathbf{H}^T
+\end{equation}
+
+\section{Implementation Notes}
+
+\subsection{Computational Complexity}
+
+The algorithm has a computational complexity of $\mathcal{O}(N_g \times m^3)$ where:
+\begin{itemize}
+    \item $N_g$ is the number of grid points
+    \item $m$ is the number of nearest observations used (typically $m \ll N_{obs}$)
+    \item The $m^3$ factor comes from matrix inversion operations
+\end{itemize}
+
+\subsection{Parallelization}
+
+The implementation uses OpenMP parallelization over grid points, as each grid point analysis is independent:
+\begin{verbatim}
+!$omp parallel do
+DO I=1,N_grid
+   ! Optimal interpolation for grid point I
+END DO
+!$omp end parallel do
+\end{verbatim}
+
+\subsection{Numerical Stability}
+
+The pseudo-inverse computation includes a tolerance check to handle ill-conditioned matrices:
+\begin{equation}
+\lambda_i^{-1} = \begin{cases}
+1/\lambda_i & \text{if } \lambda_i > \text{tolerance} \\
+0 & \text{if } \lambda_i \leq \text{tolerance}
+\end{cases}
+\end{equation}
+
+where $\text{tolerance} = 10^{-5}$.
+
+\section{Summary}
+
+The optimal interpolation module implements a robust statistical interpolation method that:
+\begin{enumerate}
+    \item Uses spatially localized observations based on weighted distance
+    \item Employs Gaussian correlation functions for background error modeling
+    \item Provides both interpolated field values and associated error estimates
+    \item Handles numerical instabilities through pseudo-inverse techniques
+    \item Achieves computational efficiency through parallelization
+\end{enumerate}
+
+This formulation is particularly suitable for oceanographic and atmospheric data assimilation applications where observations are irregularly distributed and have varying error characteristics.
+
+\end{document}

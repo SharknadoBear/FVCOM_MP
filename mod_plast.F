@@ -153,10 +153,11 @@ Module Mod_Plast
 	!				  (for plastic it will be estimated by the equivalent diameter a/b/c axis)
 	! dequ_tox     => model parameter: equivalent toxic molecular size                    [nm                      ]
 	! Prho         => model parameter: plastic density 							          [kg/m^3		           ]
-	! tox_leach_k  => model parameter: bonded toxic releasing rate				          [1/s                     ]
 	! tox_decay_k  => model parameter: free tox decaying rate                             [1/s                     ]
 	! tox_gen_k    => model parameter: tox generation rate							      [1/s                     ]
-	! tox_r	       => model parameter: mass ratio of bottom toxin comparing to MP mass    [-                       ]	
+	! tox_r	       => model parameter: mass ratio of bottom toxin comparing to MP mass    [-                       ]
+	! Ea		   => model parameter: activation energy for toxin internal diffusion     [J/mol                   ]
+	! D0           => model parameter: prefactor of Arrhenius type of internal diffusion  [m^2/s                   ]
 	! theta_s      => model parameter: equivalent boundary layer thickness of MP          [m                       ]
 	! A_Hamaker    => model parameter: Hamaker constant                                   [J m^-2                  ]
 	! ws_sed       => model parameter: sediment settling/rising velocity with in sediment [m/s                     ]
@@ -188,6 +189,7 @@ Module Mod_Plast
 	! zactv        => plastic variables: active layer thickness                           [m                       ]
 	! D_plast      => plastic variables: solid internal diffusivity of MP                 [m^2/s                   ]
 	! D_toxin      => plastic variables: solid internal diffusivity of MP associated tox  [m^2/s                   ]
+	! tox_leach_k  => plastic variables: bonded toxic releasing rate				      [1/s                     ]
 	! lambda_plast => plastic variables: solid internal retention rate of MP              [m^-1                    ]
 	! tconc_b	   => embedded toxic variables: embedded toxic concentration			  [kg m^-3                 ]
 	! tmass_b	   => embedded toxic variables: bottom embedded toxic					  [kg m^-2		           ]
@@ -235,7 +237,8 @@ Module Mod_Plast
 		real(sp)		  :: dequ_tox
 		real(sp)		  :: Prho
 		real(sp)		  :: prate
-		real(sp) 		  :: tox_leach_k
+		real(sp)		  :: D0
+		real(sp)		  :: Ea
 		real(sp) 		  :: tox_decay_k
 		real(sp)          :: tox_gen_k
 		real(sp) 		  :: tox_r
@@ -259,8 +262,9 @@ Module Mod_Plast
 		real(sp), allocatable :: cdis(:)
 		real(sp), allocatable :: cflx(:,:)		
 		real(sp), allocatable :: cobc(:)
-		real(sp), allocatable :: D_plast(:)
-		real(sp), allocatable :: D_toxin(:)
+		real(sp), allocatable :: D_plast(:,:)
+		real(sp), allocatable :: tox_leach_k(:,:)
+		real(sp), allocatable :: D_toxin(:,:)
 		real(sp), allocatable :: lambda_plast(:,:)
 		real(sp), allocatable :: tconc_b(:,:)
 		real(sp), allocatable :: tcnew_b(:,:)
@@ -273,6 +277,7 @@ Module Mod_Plast
 		real(sp), allocatable :: tcobc_b(:)
 		real(sp), allocatable :: teflx_b(:)
 		real(sp), allocatable :: tiflx_b(:)
+		real(sp), allocatable :: tiflx_b_deep(:)
 		real(sp), allocatable :: tdflx_b(:)
 		real(sp), allocatable :: tfrac_b(:)
 		real(sp), allocatable :: tconc_f(:,:)
@@ -347,7 +352,7 @@ Module Mod_Plast
 	! infil_max_depth	: maximum infiltration depth for uniform sediment [m]
 	!-------------------------------------------------------------------------
 
-	character(len=120), parameter :: PLAST_model_version = "FVCOM-MP_v0.5: toxin-leaching"
+	character(len=120), parameter :: PLAST_model_version = "FVCOM-MP_v0.6: infiltration"
 	character(len=120) :: plastfile
 	character(len=120) :: plast_bedset
 	character(len=120) :: tox_leaching
@@ -383,6 +388,7 @@ Module Mod_Plast
 	real(sp) :: poro0 = 0.5
 	real(sp) :: temp0 = 298.15
 	real(sp) :: darv0 = 0.0
+	real(sp) :: tort0 = 0.71
 	real(sp) :: infil_max_depth = 1.0
 	real(sp), allocatable, target :: rho_water(:,:)
 	real(sp), allocatable, target :: taub(:)
@@ -411,11 +417,12 @@ Module Mod_Plast
 	!	bot_units: 	  bottom characteristics unit list                     			!
 	!-------------------------------------------------------------------------------!
 
-	integer, parameter    :: n_bot_vars  = 7
+	integer, parameter    :: n_bot_vars_max = 7
+	integer               :: n_bot_vars  = 7
 	integer :: N_sed_layer = 3
-	character(len=80), dimension(n_bot_vars) :: bot_snames = &
+	character(len=80), dimension(n_bot_vars_max) :: bot_snames = &
 	(/"bot_sd50","bot_dens","bot_mudp","bot_poro","bot_Tsed","bot_wDcy","bot_Lsed"/)
-	character(len=120), dimension(n_bot_vars) :: bot_lnames = &
+	character(len=120), dimension(n_bot_vars_max) :: bot_lnames = &
 	(/"bottom_sediment_d50", &
 	"bottom_density", &
 	"bottom_mud_portion", &
@@ -423,7 +430,7 @@ Module Mod_Plast
 	"bottom_temperature", &
 	"bottom_vertical_darcy_speed", &
 	"bottom_layer_thickness"/)
-	character(len=80), dimension(n_bot_vars) :: bot_units = &
+	character(len=80), dimension(n_bot_vars_max) :: bot_units = &
 	(/"m","kg/m^3","dimensionless","dimensionless","K","m/s","m"/)
 
 	integer, parameter    :: isd50  = 1
@@ -779,60 +786,26 @@ Subroutine Read_PLAST_Params
 			
 			Call Get_Val(stemp,plastfile,'TOX_NAME',line=linenum,echo=.false.,start=k1)
 			plast(i)%tname_f = TRIM(TRIM(stemp) // '_f')
-  
-			  select case (tox_leaching)
 
-				case ('SFOK')
-				
-					!read constant bonded toxin releasing rates
-					Call Get_Val(ftemp,plastfile,'TOX_CKL',line=linenum,echo=.false.,start=k1)
-					plast(i)%tox_leach_k = ftemp
-					
-					!read free toxic decaying rate
-					Call Get_Val(ftemp,plastfile,'TOX_CKD',line=linenum,echo=.false.,start=k1)
-					plast(i)%tox_decay_k = ftemp
-					
-					!set bonded toxin generation rates
-					Call Get_Val(ftemp,plastfile,'TOX_CKG',line=linenum,echo=.false.,start=k1)
-					plast(i)%tox_gen_k = ftemp
-				
-				case ('SI-FOK')
-				
-					!Compute shape-impacted leaching factor
-					Call Calc_Toxin_Leach_Rate_SI(plast(i)%MP_shape,plast(i)%aaxis,plast(i)%baxis,plast(i)%caxis,plast(i)%theta_s,plast(i)%D_plast,ftemp)
-					plast(i)%tox_leach_k = ftemp
-					
-					!read free toxic decaying rate
-					Call Get_Val(ftemp,plastfile,'TOX_CKD',line=linenum,echo=.false.,start=k1)
-					plast(i)%tox_decay_k = ftemp
-					
-					!set bonded toxin generation rates
-					Call Get_Val(ftemp,plastfile,'TOX_CKG',line=linenum,echo=.false.,start=k1)
-					plast(i)%tox_gen_k = ftemp
-				
-				case ('SIR-FOK')
-				
-					!Under-development!!!
-					!Compute shape-impacted leaching factor
-					Call Calc_Toxin_Leach_Rate_SI(plast(i)%MP_shape,plast(i)%aaxis,plast(i)%baxis,plast(i)%caxis,plast(i)%theta_s,plast(i)%D_plast,ftemp)
-					plast(i)%tox_leach_k = ftemp
-					
-					!read free toxic decaying rate
-					Call Get_Val(ftemp,plastfile,'TOX_CKD',line=linenum,echo=.false.,start=k1)
-					plast(i)%tox_decay_k = ftemp
-					
-					!set bonded toxin generation rates
-					Call Get_Val(ftemp,plastfile,'TOX_CKG',line=linenum,echo=.false.,start=k1)
-					plast(i)%tox_gen_k = ftemp
-				
-				case DEFAULT
+			!Initialize tox leach with a uniform estimation 
+			Call Get_Val(ftemp,plastfile,'TOX_CKL',line=linenum,echo=.false.,start=k1)
+			plast(i)%tox_leach_k = ftemp
+			
+			!read free toxic decaying rate
+			Call Get_Val(ftemp,plastfile,'TOX_CKD',line=linenum,echo=.false.,start=k1)
+			plast(i)%tox_decay_k = ftemp
+			
+			!set bonded toxin generation rates
+			Call Get_Val(ftemp,plastfile,'TOX_CKG',line=linenum,echo=.false.,start=k1)
+			plast(i)%tox_gen_k = ftemp
 
-					!Default is set to no leaching
-					plast(i)%tox_leach_k = 0.0
-					plast(i)%tox_decay_k = 0.0
-					plast(i)%tox_gen_k = 0.0
-						
-			  end select
+			!Read-in the toxin activation energy
+			Call Get_Val(ftemp,plastfile,'TOX_EAD',line=linenum,echo=.false.start=k1)
+			plast(i)%Ea = ftemp
+
+			!Read-in the toxin Arrhenius type 
+			Call Get_Val(ftemp,plastfile,'TOX_ADP',line=linenum,echo=.false.start=k1)
+			plast(i)%D0 = ftemp
 			
 			!read initial ratio of toxic in the MP (mass-rato) on the bed
 			Call Get_Val(ftemp,plastfile,'TOX_INR',line=linenum,echo=.false.,start=k1)
@@ -850,7 +823,7 @@ Subroutine Read_PLAST_Params
 		    plast(i)%ws_sed = ftemp
 
 			if (tox_vector) then
-				Call Get_Val(ftemp,plastfile,'TOX_MOLD',line=linenum,echo=.false.,start=k1)
+				Call Get_Val(ftemp,plastfile,'TOX_MOD',line=linenum,echo=.false.,start=k1)
 				plast(i)%dequ_tox = ftemp
 		    end if
 
@@ -915,6 +888,43 @@ Subroutine Advance_plast(DTin,Tin,taub_in,s_in,t_in)
   end if
 
   !------------------------------------------------------
+  !Toxin leaching rate field computing toxin-leaching 
+  !------------------------------------------------------
+
+  if (tox_vector) then
+	select case (tox_leaching)
+
+		case ('SFOK')
+		
+			!Pass here
+		
+		case ('SI-FOK')
+
+			!Compute the field of internal diffusivity
+			Call Calc_Internal_Diffusivity_Field(m,kbm1,plast(i)%D0,plast(i)%Ea,t_in(1:m,1:kbm1),plast(i)%D_plast)
+		
+			!Compute shape-impacted leaching factor
+			Call Calc_Toxin_Leach_Rate_SI(m,kbm1,plast(i)%MP_shape,plast(i)%aaxis,plast(i)%baxis,plast(i)%caxis,plast(i)%theta_s,plast(i)%D_plast,plast(i)%tox_leach_k)
+		
+		case ('SIR-FOK') !Under-development!!!
+
+			!Compute the field of internal diffusivity
+			Call Calc_Internal_Diffusivity_Field(m,kbm1,plast(i)%D0,plast(i)%Ea,t_in(1:m,1:kbm1),plast(i)%D_plast)
+			
+			!Compute shape-impacted leaching factor
+			Call Calc_Toxin_Leach_Rate_SI(m,kbm1,plast(i)%MP_shape,plast(i)%aaxis,plast(i)%baxis,plast(i)%caxis,plast(i)%theta_s,plast(i)%D_plast,plast(i)%tox_leach_k)
+		
+		case DEFAULT
+
+			!Default is set to no leaching
+			plast(i)%tox_leach_k = 0.0
+			plast(i)%tox_decay_k = 0.0
+			plast(i)%tox_gen_k = 0.0
+				
+	end select
+  end if
+
+  !------------------------------------------------------
   !Set up Model Forcing  -> time step and bottom shear 
   !Convert taux/tauy to node-based values
   !Convert Model tau/rho to tau [N/m^2]
@@ -951,10 +961,10 @@ Subroutine Advance_plast(DTin,Tin,taub_in,s_in,t_in)
 
 		!Computation of diffusivity
 		r_plast=plast(iplast)%dequ/2.0
-		r_tox=plast(iplast)%dequ_tox/2.0
-		Call Calc_Mechanical_Diffusivity(r_plast,D_mech_plast)
+		Call Calc_Mechanical_Diffusivity(r_plast,.false.,D_mech_plast)
 		if (tox_vector) then
-			Call Calc_Mechanical_Diffusivity(r_tox,D_mech_tox)
+			r_tox=plast(iplast)%dequ_tox/2.0
+			Call Calc_Mechanical_Diffusivity(r_tox,.true.,D_mech_tox)
 		end if
 
 		!Computation of the vertical diffussion
@@ -1113,9 +1123,9 @@ Subroutine Advance_plast(DTin,Tin,taub_in,s_in,t_in)
 			!Leaching kinetic terms for bonded and free toxin in the water column
 			do i=1,m
 				do k=1,kb
-					plast(iplast)%tcnew_f(i,k)=plast(iplast)%tcnew_f(i,k)+DTplast*plast(iplast)%tox_leach_k*plast(iplast)%tcnew_b(i,k)
-					plast(iplast)%cnew(i,k)=plast(iplast)%cnew(i,k)-DTplast*plast(iplast)%tox_leach_k*plast(iplast)%tcnew_b(i,k)
-					plast(iplast)%tcnew_b(i,k)=plast(iplast)%tcnew_b(i,k)-DTplast*plast(iplast)%tox_leach_k*plast(iplast)%tcnew_b(i,k)
+					plast(iplast)%tcnew_f(i,k)=plast(iplast)%tcnew_f(i,k)+DTplast*plast(iplast)%tox_leach_k(i,k)*plast(iplast)%tcnew_b(i,k)
+					plast(iplast)%cnew(i,k)=plast(iplast)%cnew(i,k)-DTplast*plast(iplast)%tox_leach_k(i,k)*plast(iplast)%tcnew_b(i,k)
+					plast(iplast)%tcnew_b(i,k)=plast(iplast)%tcnew_b(i,k)-DTplast*plast(iplast)%tox_leach_k(i,k)*plast(iplast)%tcnew_b(i,k)
 				end do
 			end do
 
@@ -1123,13 +1133,13 @@ Subroutine Advance_plast(DTin,Tin,taub_in,s_in,t_in)
 			if (PLAST_infil) then
 				do i=1,m
 					do k=1,N_sed_layer
-						plast(iplast)%tconc_f_sed(i,k)=plast(iplast)%tconc_f_sed(i,k)+DTplast*plast(iplast)%tox_leach_k*plast(iplast)%tconc_b_sed(i,k)
-						plast(iplast)%conc_sed(i,k)=plast(iplast)%conc_sed(i,k)-DTplast*plast(iplast)%tox_leach_k*plast(iplast)%tconc_b_sed(i,k)
-						plast(iplast)%conc_sed_s(i,k)=plast(iplast)%conc_sed_s(i,k)-DTplast*plast(iplast)%tox_leach_k*plast(iplast)%tconc_b_sed_s(i,k)
-						plast(iplast)%conc_sed_p(i,k)=plast(iplast)%conc_sed_p(i,k)-DTplast*plast(iplast)%tox_leach_k*plast(iplast)%tconc_b_sed_p(i,k)
-						plast(iplast)%tconc_b_sed(i,k)=plast(iplast)%tconc_b_sed(i,k)-DTplast*plast(iplast)%tox_leach_k*plast(iplast)%tconc_b_sed(i,k)
-						plast(iplast)%tconc_b_sed_s(i,k)=plast(iplast)%tconc_b_sed_s(i,k)-DTplast*plast(iplast)%tox_leach_k*plast(iplast)%tconc_b_sed_s(i,k)
-						plast(iplast)%tconc_b_sed_p(i,k)=plast(iplast)%tconc_b_sed_p(i,k)-DTplast*plast(iplast)%tox_leach_k*plast(iplast)%tconc_b_sed_p(i,k)
+						plast(iplast)%tconc_f_sed(i,k)=plast(iplast)%tconc_f_sed(i,k)+DTplast*plast(iplast)%tox_leach_k(i,k)*plast(iplast)%tconc_b_sed(i,k)
+						plast(iplast)%conc_sed(i,k)=plast(iplast)%conc_sed(i,k)-DTplast*plast(iplast)%tox_leach_k(i,k)*plast(iplast)%tconc_b_sed(i,k)
+						plast(iplast)%conc_sed_s(i,k)=plast(iplast)%conc_sed_s(i,k)-DTplast*plast(iplast)%tox_leach_k(i,k)*plast(iplast)%tconc_b_sed_s(i,k)
+						plast(iplast)%conc_sed_p(i,k)=plast(iplast)%conc_sed_p(i,k)-DTplast*plast(iplast)%tox_leach_k(i,k)*plast(iplast)%tconc_b_sed_p(i,k)
+						plast(iplast)%tconc_b_sed(i,k)=plast(iplast)%tconc_b_sed(i,k)-DTplast*plast(iplast)%tox_leach_k(i,k)*plast(iplast)%tconc_b_sed(i,k)
+						plast(iplast)%tconc_b_sed_s(i,k)=plast(iplast)%tconc_b_sed_s(i,k)-DTplast*plast(iplast)%tox_leach_k(i,k)*plast(iplast)%tconc_b_sed_s(i,k)
+						plast(iplast)%tconc_b_sed_p(i,k)=plast(iplast)%tconc_b_sed_p(i,k)-DTplast*plast(iplast)%tox_leach_k(i,k)*plast(iplast)%tconc_b_sed_p(i,k)
 					end do
 				end do
 			end if
@@ -1171,7 +1181,7 @@ Subroutine Advance_plast(DTin,Tin,taub_in,s_in,t_in)
 							plast(iplast)%tconc_f_sed(i,k)=plast(iplast)%tconc_f_sed(i,k)*(1.0-DTplast*plast(iplast)%tox_decay_k)
 						end do
 					end do
-				end do
+				end if
 			end if
 		   
 				
@@ -1366,8 +1376,9 @@ Subroutine Alloc_Plast_Vars
 			allocate(plast(i)%tcflx_f(tmp1,kbm1))	; plast(i)%tcflx_f = 0.0
 			allocate(plast(i)%tcobc_f(tmp2  ))	    ; plast(i)%tcobc_f = 0.0
 			allocate(plast(i)%tbdflx_f(0:mt ))		; plast(i)%tbdflx_f= 0.0
-			allocate(plast(i)%D_plast(0:mt)); 		; plast(i)%D_plast = 0.0
-			allocate(plast(i)%D_toxin(0:mt));       ; plast(i)%D_toxin = 0.0
+			allocate(plast(i)%D_plast(m,kbm1)) 		; plast(i)%D_plast = 0.0
+			allocate(plast(i)%D_toxin(m,kbm1))      ; plast(i)%D_toxin = 0.0
+			allocate(plast(i)%tox_leach_k(m,kbm1))  ; plast(i)%tox_leach_k = 0.0
 		endif
 
 		! Allocate infiltration arrays if enabled
@@ -1388,6 +1399,7 @@ Subroutine Alloc_Plast_Vars
 			allocate(plast(i)%lambda_plast(0:mt, N_sed_layer)); plast(i)%lambda_plast = 0.0
 		    if (tox_vector) then
 		        allocate(plast(i)%tiflx_b(0:mt)); plast(i)%tiflx_b = 0.0
+		        allocate(plast(i)%tiflx_b_deep(0:mt)); plast(i)%tiflx_b_deep = 0.0
 		        allocate(plast(i)%tiflx_f(0:mt)); plast(i)%tiflx_f = 0.0
 		        allocate(plast(i)%tiflx_f_deep(0:mt)); plast(i)%tiflx_f_deep = 0.0
 		    endif
@@ -2578,9 +2590,9 @@ Subroutine Calc_Infiltration
 		!Read in settling velocity 
 # if defined (WET_DRY)
       	if (iswetn(i)/=1) then
-			wset_sed_plastic(1:N_sed_layer) = ws_sed
+			wset_sed_plastic(1:N_sed_layer) = plast(iplast)%ws_sed
 		else
-			wset_sed_plastic(1:N_sed_layer) = ws_sed+darv0
+			wset_sed_plastic(1:N_sed_layer) = plast(iplast)%ws_sed+darv0
 		end if
 
 		if (Tox_vector) then
@@ -2599,7 +2611,7 @@ Subroutine Calc_Infiltration
 
 		end if
 # else
-		wset_sed_plastic(1:N_sed_layer) = ws_sed+darv0
+		wset_sed_plastic(1:N_sed_layer) = plast(iplast)%ws_sed+darv0
 
 		if (Tox_vector) then
 		
@@ -2701,9 +2713,9 @@ Subroutine Calc_Blockage
 
 # if defined (WET_DRY)
       	if (iswetn(i)/=1) then
-			w_p = abs(ws_sed)
+			w_p = abs(plast(iplast)%ws_sed)
 		else
-			w_p = abs(ws_sed+darv0)
+			w_p = abs(plast(iplast)%ws_sed+darv0)
 		end if
 
 		if (Tox_vector) then
@@ -2716,7 +2728,7 @@ Subroutine Calc_Blockage
 
 		end if
 # else
-		w_p = abs(ws_sed+darv0)
+		w_p = abs(plast(iplast)%ws_sed+darv0)
 
 		if (Tox_vector) then
 			w_t = abs(darv0)
@@ -3086,20 +3098,20 @@ Subroutine Calc_Mechanical_Diffusivity(r_tracer,tox_flag,D_mech)
 				if (tox_flag) then
 					w = 0.0
 				else
-					w = abs(ws_sed)
+					w = abs(plast(iplast)%ws_sed)
 				end if
 			else
 				if (tox_flag) then
 					w = abs(darv0)
 				else
-					w = abs(ws_sed+darv0)
+					w = abs(plast(iplast)%ws_sed+darv0)
 				end if
 			end if
 # else
 			if (tox_flag) then
 				w = abs(darv0)
 			else
-				w = abs(ws_sed+darv0)
+				w = abs(plast(iplast)%ws_sed+darv0)
 			end if
 # endif
 
@@ -3184,12 +3196,12 @@ Subroutine Calc_Blockage_Rate
 
 # if defined (WET_DRY)
       	if (iswetn(i)/=1) then
-			w = abs(ws_sed)
+			w = abs(plast(iplast)%ws_sed)
 		else
-			w = abs(ws_sed+darv0)
+			w = abs(plast(iplast)%ws_sed+darv0)
 		end if
 # else
-		w = abs(ws_sed+darv0)
+		w = abs(plast(iplast)%ws_sed+darv0)
 # endif
 
 				!Establish level vector
@@ -3223,14 +3235,14 @@ Subroutine Calc_Blockage_Rate
 				A_S=2*(1-gamma**5.0)/(2.0-3.0*gamma+3.0*gamma**5.0-2.0*gamma**6.0)
 				N_R=d_MP/d_g
 				N_Pe=abs(darv0)*d_g/D_mech(i)
-				N_G=abs(ws_sed)/(abs(darv0)+eps)
+				N_G=abs(plast(iplast)%ws_sed)/(abs(darv0)+eps)
 				N_vdW=AH/(k_B*bottom(i,iTsed))
 				N_A=AH/(12.0*PI*eta*(d_MP/2)**2.0*abs(darv0+eps))
 
 				!Retention coefficient computation
 				eta_D=2.4*A_S**(0.33333333)*N_R**(-0.081)*N_Pe**(-0.715)*N_vdW**(0.052)
 				eta_I=0.55*A_S*N_R**(1.675)*N_A**(0.125)
-				eta_G=0.22*N_R^(-0.24)*N_G**(1.11)*N_vdW**(0.053)
+				eta_G=0.22*N_R**(-0.24)*N_G**(1.11)*N_vdW**(0.053)
 
 				!lambda_DLVO computation
 				lambda_DLVO = 3*(1-phi)/(2*d_g)*(eta_D+eta_I+eta_G)*alpha_primary
@@ -3353,13 +3365,43 @@ End Subroutine Settle_Flux_sed_new
 !==========================================================================
 ! Plastic-toxic interaction related submodules:
 !
+! Calc_Internal_Diffusivity_Field - Calculate the internal toxin diffusivity
+!								impacted by the local temperature
 ! Calc_Toxin_Leach_Rate_SI    - Calculate shape-impacted toxin leaching rate 
 !                              for microplastic particles with geometric factors
 ! Calc_Linear_Bottom_Kinetics - Calculate first-order kinetic decay or growth 
 !                              terms for bottom plastic and toxic processes
 !==========================================================================
 
-Subroutine Calc_Toxin_Leach_Rate_SI(sname,a,b,c,theta,D_p,k)
+Subroutine Calc_Internal_Diffusivity_Field(m,kbm1,D0,Ea,TEMP,D_p)
+
+	!=========================================================================
+	! Internal diffusivity: In this subroutine, the interal diffusivty for
+	! given MP associated toxin is computed considering the local varation
+	! of temperature.
+	!=========================================================================
+
+	Implicit None
+
+	!Input variables
+	integer,  intent(in)    :: m
+	integer,  intent(in)    :: kbm1
+	real(sp), intent(inout) :: D_p(m,kbm1)
+	real(sp), intent(in)	:: TEMP(m,kbm1)
+	real(sp), intent(in)	:: D0	!Arrhenious prefactor
+	real(sp), intent(in)	:: Ea	!activation energy
+
+	real, parameter  :: R=8.31446261815324      !Universal Gas Constant
+
+	do i=1,m
+	 do k=1,kbm1
+		D_p(i,k)=D0*exp(-Ea/(TEMP(i,k)*R))
+	 end do
+	end do
+	
+End Subroutine Calc_Internal_Diffusivity_Field
+
+Subroutine Calc_Toxin_Leach_Rate_SI(m,kbm1,sname,a,b,c,theta,D_p,k)
 
 	!==========================================================================
 	! Toxin leaching rate: In this subroutine, the toxin leaching rate for the
@@ -3369,18 +3411,21 @@ Subroutine Calc_Toxin_Leach_Rate_SI(sname,a,b,c,theta,D_p,k)
 	Implicit None
 	
 	!Input variables
-	real(sp), intent(inout) :: k
+	integer,  intent(in)    :: m
+	integer,  intent(in)    :: kbm1
+	real(sp), intent(inout) :: k(m,kbm1)
+	real(sp), intent(in) 	:: D_p(m,kbm1)
 	character(len=20), intent(in)   :: sname
 	real(sp), intent(in) 	:: a
 	real(sp), intent(in) 	:: b
 	real(sp), intent(in) 	:: c
 	real(sp), intent(in) 	:: theta
-	real(sp), intent(in) 	:: D_p
 	
 	!Local variables
 	real			 :: Bim
 	real			 :: Bim_crit
 	real			 :: L_p
+	real			 :: D_p_temp
     real		     :: h_flux
 	real             :: e_ratio
 	real             :: lambda_1_sq
@@ -3401,83 +3446,91 @@ Subroutine Calc_Toxin_Leach_Rate_SI(sname,a,b,c,theta,D_p,k)
 	real, parameter  :: gamma_cuboid=0.3333
 	real, parameter  :: A_ellipsoid=1.1667
 	real, parameter  :: gamma_ellipsoid=1.3333
-	
-	L_p = (a*b*c)**(1.0/3.0)
-	Bim = (D_w/theta)*(L_p/2.0)/D_p
-	
-	!Large Bim Range 
-	if (Bim >= 1E3) then
-	
-		select case (sname)
-			case ('sphere')
-				lambda_1_sq=Pie**2.0
-			case ('cylinder')
-				lambda_1_sq=4.0*alpha_1**(2.0)*(a/b)**(2.0/3.0)+Pie**(2.0)*(b/a)**(4.0/3.0)
-			case ('cuboid')
-				lambda_1_sq=Pie**2.0*((L_p/a)**(2.0)+(L_p/b)**(2.0)+(L_p/c)**(2.0))
-			case ('ellipsoid')
-				lambda_1_sq=3.5*((L_p/a)**(2.0)+(L_p/b)**(2.0)+(L_p/c)**(2.0))
-			!case ('arbitrary')				
-			case DEFAULT
-				lambda_1_sq=Pie**2.0
-		end select
 
-	    f_L=lambda_1_sq
-		k=D_p/L_p**2.0*f_L
+	!Estimation of leaching rate 
+	do i=1,m
+		do j=1,kbm1
 
-	!Medium Bim Range
-	else if (Bim > 1E-3) then
-	
-		select case (sname)
-			case ('sphere')
-				lambda_1_sq=Pie**2.0
-				Bim_crit=A_sphere
-			case ('cylinder')
-				lambda_1_sq=4.0*alpha_1**(2.0)*(a/b)**(2.0/3.0)+Pie**(2.0)*(b/a)**(4.0/3.0)
-				phi_1=a/b
-				Bim_crit=(A_cylinder*phi_1**2.0+B_cylinder)/(C_cylinder*phi_1**gamma_cylinder*(1.0+D_cylinder*phi_1))
-			case ('cuboid')
-				lambda_1_sq=Pie**2.0*((L_p/a)**(2.0)+(L_p/b)**(2.0)+(L_p/c)**(2.0))
-				phi_1=a/b
-				phi_2=b/c
-				Bim_crit=A_cuboid*(phi_1/phi_2)**(gamma_cuboid)*(1.0/phi_1**2.0+1.0+phi_2**2.0)/(1.0/phi_1+1.0+phi_2)
-			case ('ellipsoid')
-				lambda_1_sq=3.5*((L_p/a)**(2.0)+(L_p/b)**(2.0)+(L_p/c)**(2.0))
-				phi_1=a/b
-				phi_2=b/c
-				Bim_crit=A_ellipsoid*(phi_1/phi_2)**(gamma_ellipsoid)*(1.0/phi_1**2.0+1.0+phi_2**2.0)/((phi_1**p+phi_2**(-p)+(phi_1/phi_2)**p)/3.0)**(1.0/p)
-			!case ('arbitrary')				
-			case DEFAULT
-				lambda_1_sq=Pie**2.0
-				Bim_crit=A_sphere
-		end select
+		D_p_temp=D_p(i,j)
+		L_p = (a*b*c)**(1.0/3.0)
+		Bim = (D_w/theta)*(L_p/2.0)/D_p_temp
 		
-		Bim_crit=Bim_crit/2.0
-		f_M=Bim/(Bim+Bim_crit)*lambda_1_sq
-		k=D_p/L_p**2.0*f_M
-	
-	!Small Bim Range
-	else
+		!Large Bim Range 
+		if (Bim >= 1E3) then
 		
-		select case (sname)
-			case ('sphere')
-				e_ratio=3.0/a
-			case ('cylinder')
-				e_ratio=2.0/a+4.0/b
-			case ('cuboid')
-				e_ratio=2.0*(1.0/a+1.0/b+1.0/c)
-			case ('ellipsoid')
-				e_ratio=3.0*(((a*b)**p+(b*c)**p+(c*a)**p)/3.0)**(1.0/p)/(a*b*c)
-			!case ('arbitrary')				
-			case DEFAULT
-				e_ratio=3.0/a
-		end select
+			select case (sname)
+				case ('sphere')
+					lambda_1_sq=Pie**2.0
+				case ('cylinder')
+					lambda_1_sq=4.0*alpha_1**(2.0)*(a/b)**(2.0/3.0)+Pie**(2.0)*(b/a)**(4.0/3.0)
+				case ('cuboid')
+					lambda_1_sq=Pie**2.0*((L_p/a)**(2.0)+(L_p/b)**(2.0)+(L_p/c)**(2.0))
+				case ('ellipsoid')
+					lambda_1_sq=3.5*((L_p/a)**(2.0)+(L_p/b)**(2.0)+(L_p/c)**(2.0))
+				!case ('arbitrary')				
+				case DEFAULT
+					lambda_1_sq=Pie**2.0
+			end select
+
+			f_L=lambda_1_sq
+			k(i,j)=D_p_temp/L_p**2.0*f_L
+
+		!Medium Bim Range
+		else if (Bim > 1E-3) then
 		
-		h_flux=D_w/theta
-		f_S=L_p**2.0/D_p*h_flux*e_ratio
-		k=D_p/L_p**2.0*f_S
+			select case (sname)
+				case ('sphere')
+					lambda_1_sq=Pie**2.0
+					Bim_crit=A_sphere
+				case ('cylinder')
+					lambda_1_sq=4.0*alpha_1**(2.0)*(a/b)**(2.0/3.0)+Pie**(2.0)*(b/a)**(4.0/3.0)
+					phi_1=a/b
+					Bim_crit=(A_cylinder*phi_1**2.0+B_cylinder)/(C_cylinder*phi_1**gamma_cylinder*(1.0+D_cylinder*phi_1))
+				case ('cuboid')
+					lambda_1_sq=Pie**2.0*((L_p/a)**(2.0)+(L_p/b)**(2.0)+(L_p/c)**(2.0))
+					phi_1=a/b
+					phi_2=b/c
+					Bim_crit=A_cuboid*(phi_1/phi_2)**(gamma_cuboid)*(1.0/phi_1**2.0+1.0+phi_2**2.0)/(1.0/phi_1+1.0+phi_2)
+				case ('ellipsoid')
+					lambda_1_sq=3.5*((L_p/a)**(2.0)+(L_p/b)**(2.0)+(L_p/c)**(2.0))
+					phi_1=a/b
+					phi_2=b/c
+					Bim_crit=A_ellipsoid*(phi_1/phi_2)**(gamma_ellipsoid)*(1.0/phi_1**2.0+1.0+phi_2**2.0)/((phi_1**p+phi_2**(-p)+(phi_1/phi_2)**p)/3.0)**(1.0/p)
+				!case ('arbitrary')				
+				case DEFAULT
+					lambda_1_sq=Pie**2.0
+					Bim_crit=A_sphere
+			end select
+			
+			Bim_crit=Bim_crit/2.0
+			f_M=Bim/(Bim+Bim_crit)*lambda_1_sq
+			k(i,j)=D_p_temp/L_p**2.0*f_M
 		
-	end if
+		!Small Bim Range
+		else
+			
+			select case (sname)
+				case ('sphere')
+					e_ratio=3.0/a
+				case ('cylinder')
+					e_ratio=2.0/a+4.0/b
+				case ('cuboid')
+					e_ratio=2.0*(1.0/a+1.0/b+1.0/c)
+				case ('ellipsoid')
+					e_ratio=3.0*(((a*b)**p+(b*c)**p+(c*a)**p)/3.0)**(1.0/p)/(a*b*c)
+				!case ('arbitrary')				
+				case DEFAULT
+					e_ratio=3.0/a
+			end select
+			
+			h_flux=D_w/theta
+			f_S=L_p**2.0/D_p_temp*h_flux*e_ratio
+			k(i,j)=D_p_temp/L_p**2.0*f_S
+			
+		end if
+
+	end do
+end do
 
 End Subroutine Calc_Toxin_Leach_Rate_SI
 

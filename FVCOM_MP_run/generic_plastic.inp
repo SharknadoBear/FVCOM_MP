@@ -108,8 +108,10 @@ PLAST_DUMPBOT = F
 !   TOX_CKL: Toxic releasing rate from bonded state 			     [1/s    ]
 !   TOX_CKD: Toxic decaying rate									 [1/s    ]
 !   TOX_CKG: Toxic generation rate									 [1/s    ]
+!   TOX_EAD: Toxin Arrhenius type activation energy                  [J/mol  ]
+!   TOX_ADP: Toxin Arrhenius type diffusion prefactor                [m^2/s  ]
 !   TOX_INR: Initial bottom toxic ratio								 [-		 ]
-!   TOX_MOLD: Diameter of toxic molecular                            [nm     ]
+!   TOX_MOD: Diameter of toxic molecular                             [nm     ]
 !------------------------------------------------------------------------------!
 
 NPLAST = 1
@@ -129,8 +131,10 @@ TOX_NAME = tox1
 TOX_CKL = 0.3
 TOX_CKD = 0.0
 TOX_CKG = 0.0
+TOX_EAD = 20.0
+TOX_ADP = 1E-7
 TOX_INR = 0.001
-TOX_MOLD = 1
+TOX_MOD = 1
 
 !-------------------------------------------------------------------------------!
 !Ambient environment parameters, including the bed character (constant), and
