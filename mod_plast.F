@@ -800,11 +800,11 @@ Subroutine Read_PLAST_Params
 			plast(i)%tox_gen_k = ftemp
 
 			!Read-in the toxin activation energy
-			Call Get_Val(ftemp,plastfile,'TOX_EAD',line=linenum,echo=.false.start=k1)
+			Call Get_Val(ftemp,plastfile,'TOX_EAD',line=linenum,echo=.false.,start=k1)
 			plast(i)%Ea = ftemp
 
 			!Read-in the toxin Arrhenius type 
-			Call Get_Val(ftemp,plastfile,'TOX_ADP',line=linenum,echo=.false.start=k1)
+			Call Get_Val(ftemp,plastfile,'TOX_ADP',line=linenum,echo=.false.,start=k1)
 			plast(i)%D0 = ftemp
 			
 			!read initial ratio of toxic in the MP (mass-rato) on the bed
@@ -961,10 +961,10 @@ Subroutine Advance_plast(DTin,Tin,taub_in,s_in,t_in)
 
 		!Computation of diffusivity
 		r_plast=plast(iplast)%dequ/2.0
-		Call Calc_Mechanical_Diffusivity(r_plast,.false.,D_mech_plast)
+		Call Calc_Mechanical_Diffusivity(r_plast,plast(iplast)%ws_sed,.false.,D_mech_plast)
 		if (tox_vector) then
 			r_tox=plast(iplast)%dequ_tox/2.0
-			Call Calc_Mechanical_Diffusivity(r_tox,.true.,D_mech_tox)
+			Call Calc_Mechanical_Diffusivity(r_tox,plast(iplast)%ws_sed,.true.,D_mech_tox)
 		end if
 
 		!Computation of the vertical diffussion
@@ -1325,7 +1325,7 @@ Subroutine Alloc_Plast_Vars
 	! Allocate plastic Variables                      
 	!=======================================================================
 
-	use lims,     only: nt,mt,kb,kbm1
+	use lims,     only: nt,m,mt,kb,kbm1
   
 	implicit none
   
@@ -2797,7 +2797,7 @@ Subroutine Update_Bottom
 					plast(iplast)%tmass_b(i) = max(accum,0.0)
 				end do
 			end do
-		endif
+		end if
 
 		if(dbg_set(dbg_sbr)) write(ipt,*) "End: Mass depositing and infiltrating"
 
@@ -2825,11 +2825,11 @@ Subroutine Update_Bottom
 					plast(iplast)%tmass_b(i) = max(accum,0.0)
 				end do
 			end do
-		endif
+		end if
 
 		if(dbg_set(dbg_sbr)) write(ipt,*) "End: Mass depositing"
 
-	  end do
+	  end if
 	  
 	  !Updating the surface fractions
 	  if(dbg_set(dbg_sbr)) write(ipt,*) "Start: Fraction computation"
@@ -3066,14 +3066,14 @@ Subroutine Calc_Active_Layer
 	end do
 End Subroutine Calc_Active_Layer
 
-Subroutine Calc_Mechanical_Diffusivity(r_tracer,tox_flag,D_mech)
+Subroutine Calc_Mechanical_Diffusivity(r_tracer,wss,tox_flag,D_mech)
 
 	use lims,     only: m
   
   	implicit none
 
 	integer  :: i, j
-	real(sp), intent(in) :: r_tracer
+	real(sp), intent(in) :: r_tracer,wss
 	real(sp), intent(inout) :: D_mech(:)
 	real(sp)     :: w,tau,eta
 	real(sp)     :: D_m
@@ -3098,20 +3098,20 @@ Subroutine Calc_Mechanical_Diffusivity(r_tracer,tox_flag,D_mech)
 				if (tox_flag) then
 					w = 0.0
 				else
-					w = abs(plast(iplast)%ws_sed)
+					w = abs(wss)
 				end if
 			else
 				if (tox_flag) then
 					w = abs(darv0)
 				else
-					w = abs(plast(iplast)%ws_sed+darv0)
+					w = abs(wss+darv0)
 				end if
 			end if
 # else
 			if (tox_flag) then
 				w = abs(darv0)
 			else
-				w = abs(plast(iplast)%ws_sed+darv0)
+				w = abs(wss+darv0)
 			end if
 # endif
 
@@ -3159,7 +3159,8 @@ Subroutine Calc_Blockage_Rate
 	real(sp)     :: lambda_DLVO, lambda_strain, alpha_primary, w, eps
 	real(sp)     :: eta, eta_D, eta_I, eta_G, gamma, phi, d_g, d_MP
 	real(sp)     :: A_S, N_R, N_Pe, N_vdW, N_A, N_G
-	real(sp)     :: k_str, psi_str, dz
+	real(sp)     :: k_str, psi_str, dz, AH, r_tracer
+	real(sp)     :: T_norm, rho_norm, sum_term, mu0, delta_mu
 	real(sp)     :: Z_level(1:N_sed_layer)
 	real(sp)     :: D_mech(m)
 	real(sp), parameter :: k_B=1.380649E-23 !Boltzmann constant
@@ -3182,7 +3183,7 @@ Subroutine Calc_Blockage_Rate
 			AH=plast(iplast)%A_Hamaker
 
 			!Estimate the alpha_primary
-			if (A_Hamaker>0.0) then
+			if (AH>0.0) then
 				alpha_primary = 1.0
 			else
 				alpha_primary = 0.0
@@ -3190,7 +3191,7 @@ Subroutine Calc_Blockage_Rate
 
 			!Compute diffusivity
 			r_tracer = d_MP/2.0
-			Call Calc_Mechanical_Diffusivity(r_tracer,D_mech)
+			Call Calc_Mechanical_Diffusivity(r_tracer,plast(iplast)%ws_sed,.false.,D_mech)
 			
 			do i=1,m
 
@@ -3384,13 +3385,13 @@ Subroutine Calc_Internal_Diffusivity_Field(m,kbm1,D0,Ea,TEMP,D_p)
 	Implicit None
 
 	!Input variables
-	integer,  intent(in)    :: m
-	integer,  intent(in)    :: kbm1
+	integer,  intent(in)    :: m, kbm1
 	real(sp), intent(inout) :: D_p(m,kbm1)
 	real(sp), intent(in)	:: TEMP(m,kbm1)
 	real(sp), intent(in)	:: D0	!Arrhenious prefactor
 	real(sp), intent(in)	:: Ea	!activation energy
 
+	integer  ::  i, k
 	real, parameter  :: R=8.31446261815324      !Universal Gas Constant
 
 	do i=1,m
@@ -3411,8 +3412,7 @@ Subroutine Calc_Toxin_Leach_Rate_SI(m,kbm1,sname,a,b,c,theta,D_p,k)
 	Implicit None
 	
 	!Input variables
-	integer,  intent(in)    :: m
-	integer,  intent(in)    :: kbm1
+	integer,  intent(in)    :: m, kbm1
 	real(sp), intent(inout) :: k(m,kbm1)
 	real(sp), intent(in) 	:: D_p(m,kbm1)
 	character(len=20), intent(in)   :: sname
@@ -3420,6 +3420,8 @@ Subroutine Calc_Toxin_Leach_Rate_SI(m,kbm1,sname,a,b,c,theta,D_p,k)
 	real(sp), intent(in) 	:: b
 	real(sp), intent(in) 	:: c
 	real(sp), intent(in) 	:: theta
+
+	integer  ::  i, j
 	
 	!Local variables
 	real			 :: Bim

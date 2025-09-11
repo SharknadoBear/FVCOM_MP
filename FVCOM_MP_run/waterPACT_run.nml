@@ -266,7 +266,7 @@
  STARTUP_BIO_TYPE        = 'observed'    ,
  BIOLOGICAL_MODEL_FILE   = 'none',
  STARTUP_BIO_TYPE        = 'observed'                        ,
- SEDIMENT_MODEL          = T,
+ SEDIMENT_MODEL          = F,
  SEDIMENT_MODEL_FILE     = 'generic_sediment.inp',
  SEDIMENT_PARAMETER_TYPE = 'uniform',
  SEDIMENT_PARAMETER_FILE = 'none',

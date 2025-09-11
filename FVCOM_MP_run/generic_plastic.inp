@@ -43,8 +43,6 @@
 !					with sediment through bedload, while the dynamics of 
 !					microplastics inside the active bottom for resuspension and
 !					settling is also considered through V.Chavarrias et al. (2019)
-!				5) burial_bottom: consider infiltration of microplastics into 
-!					layers below the active layer
 !  CSHIEDS: treatment of critical shields parameter
 !				1) R93: using the treatment from van Rijn 1993
 !				2) SW97: using the treatment from Soulsby and Whitehouse 1997
@@ -85,7 +83,7 @@ PLAST_DUMPBOT = F
 
 !------------------------------------------------------------------------------!
 ! Micro Plastic Parameters
-!   NPLAST:   number of suspended sediments
+!   NPLAST:   number of microplastic types
 !   AMBIENT_DEN:   ambient seawater density	
 !						(if constant option is used)			     [kg/m^3 ]
 !   PLAST_NAME:   plastic name										 [-      ]

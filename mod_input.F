@@ -2451,7 +2451,7 @@ SUBROUTINE LOAD_INIT_PLAST_SED_CONC(conc_sed,conc_sed_s,conc_sed_p)
 
     LOGICAL FOUND
 	
-	! FIND THE SEDIMENT CONCENTRATION FILE OBJECT
+	! FIND THE PLASTIC CONCENTRATION FILE OBJECT
 	NCF => FIND_FILE(FILEHEAD,trim(INIT_PLAST_SED_CONC_FILE),FOUND)
     IF(.not. FOUND) CALL FATAL_ERROR &
          & ("COULD NOT FIND INIT PLASTIC SEDIMENT CONCENTRATION FILE OBJECT",&
@@ -2475,7 +2475,7 @@ SUBROUTINE LOAD_INIT_PLAST_SED_CONC(conc_sed,conc_sed_s,conc_sed_p)
          & ("COULD NOT FIND INIT PLASTIC SEDIMENT CONCENTRATION FILE DIMENSION 'nplast' in:",&
          & "FILE NAME: "//TRIM(INIT_PLAST_SED_CONC_FILE))
 	
-	! FIND THE 'init_conc_sed' VARIABLE (total sediment concentration)
+	! FIND THE 'init_conc_sed' VARIABLE (total plastic concentration in the sediment)
 	VAR => FIND_VAR(NCF,'init_conc_sed',FOUND)
     IF(.not. FOUND) CALL FATAL_ERROR &
          & ("COULD NOT FIND VARIABLE 'init_conc_sed' in:",&
@@ -2485,7 +2485,7 @@ SUBROUTINE LOAD_INIT_PLAST_SED_CONC(conc_sed,conc_sed_s,conc_sed_p)
     CALL NC_READ_VAR(VAR)
     CALL NC_DISCONNECT(VAR)
 
-	! FIND THE 'init_conc_sed_s' VARIABLE (stopped sediment concentration)
+	! FIND THE 'init_conc_sed_s' VARIABLE (stopped plastic concentration in the sediment)
 	VAR => FIND_VAR(NCF,'init_conc_sed_s',FOUND)
     IF(.not. FOUND) CALL FATAL_ERROR &
          & ("COULD NOT FIND VARIABLE 'init_conc_sed_s' in:",&
@@ -2495,7 +2495,7 @@ SUBROUTINE LOAD_INIT_PLAST_SED_CONC(conc_sed,conc_sed_s,conc_sed_p)
     CALL NC_READ_VAR(VAR)
     CALL NC_DISCONNECT(VAR)
 
-	! FIND THE 'init_conc_sed_p' VARIABLE (passing sediment concentration)
+	! FIND THE 'init_conc_sed_p' VARIABLE (passing plastic concentration in the sediment)
 	VAR => FIND_VAR(NCF,'init_conc_sed_p',FOUND)
     IF(.not. FOUND) CALL FATAL_ERROR &
          & ("COULD NOT FIND VARIABLE 'init_conc_sed_p' in:",&

@@ -119,37 +119,6 @@ MODULE MOD_NCDIO
 !    VAR  => ADD(VAR,ATT)
 !# endif
 
-!==============================================================================!
-!  FVCOM-MP INFILTRATION DEVELOPMENT LOG                                       !
-!==============================================================================!
-!  Phase 1: Data Structure Setup (COMPLETED)                                  !
-!    - Extended plast_type with sediment concentration arrays                 !
-!    - Added infiltration flux tracking (iflx, tiflx_b, tiflx_f, tiflx_f_deep)!
-!    - Added DLVO physics parameters per species (A_Hamaker, ws_sed, D_plast)  !
-!    - Added global infiltration switch (plast_infil)                         !
-!                                                                              !
-!  Phase 2: Namelist and Parameter Implementation (COMPLETED)                 !
-!    - Added infiltration parameters to generic_plastic.inp                   !
-!    - Extended Setup_PLAST routine for array allocation within species loop  !
-!    - Updated Read_PLAST_Params using Get_Val calls                          !
-!    - Added global variable declarations to mod_plast.F public section       !
-!                                                                              !
-!  Phase 3: Core Physics Implementation (COMPLETED)                           !
-!    - Implemented Calc_Infiltration subroutine based on governing equations  !
-!    - Implemented vertical diffusion scalar solver                           !
-!    - Adapted 1D transport solver for movable/blocked phases                 !
-!    - Implemented DLVO+strain retention mechanisms                           !
-!    - Modified Advance_plast to call infiltration when plast_infil=T         !
-!    - Implemented toxic leaching mechanisms for deep sediment layers         !
-!    - Ensured mass conservation across water column-sediment interface       !
-!                                                                              !
-!  Phase 4: I/O and Advanced Features (IN PROGRESS)                           !
-!    - Extended initialization file input for new bed properties              !
-!    - Extended initialization file input for plastic/toxin inside bed layers !
-!    - TODO: Extend NetCDF output for concentration profiles                  !
-!           (conc_sed, tconc_b_sed, tconc_f_sed)                             !
-!==============================================================================!
-
   LOGICAL :: VISIT_CMD_DUMP
   LOGICAL :: NCNEST_CMD_DUMP
     
@@ -548,9 +517,6 @@ CONTAINS
           NC_DAT_GRIDS(I)%NAME = NC_DAT%FNAME
           INCLUDE_MASTER = .TRUE.
        END IF
-
-
-
 
        ! ADD THE DATA OBJECTS
        NCF2 => GRID_FILE_OBJECT(NC_DAT_GRIDS(I))
@@ -8552,13 +8518,13 @@ FUNCTION PLAST_FILE_OBJECT() RESULT(NCF)
 		End do
   End if
 
-   if (plast_infil) then
+  if (plast_infil) then
 
       Do II=1,nplast
       
       SLD_P => plast(ii)%conc_sed(1:m,1:N_sed_layer) 
 
-		VAR  => NC_MAKE_PVAR(name=TRIM(plast(ii)%pname),&
+		VAR  => NC_MAKE_PVAR(name=TRIM(plast(ii)%pname)//'_sed_t',&
 			& values=SLD_P, DIM1= DIM_node, DIM2= DIM_siglay, DIM3 = DIM_time)
 
 		ATT  => NC_MAKE_ATT(name='long_name',values=TRIM('Total Concentration of plastics '//TRIM(plast(ii)%pname))) 
@@ -8580,7 +8546,7 @@ FUNCTION PLAST_FILE_OBJECT() RESULT(NCF)
       
       SLD_P => plast(ii)%conc_sed_p(1:m,1:N_sed_layer) 
 
-		VAR  => NC_MAKE_PVAR(name=TRIM(plast(ii)%pname),&
+		VAR  => NC_MAKE_PVAR(name=TRIM(plast(ii)%pname)//'_sed_p',&
 			& values=SLD_P, DIM1= DIM_node, DIM2= DIM_siglay, DIM3 = DIM_time)
 
 		ATT  => NC_MAKE_ATT(name='long_name',values=TRIM('Movable Concentration of plastics in sediment '//TRIM(plast(ii)%pname))) 
@@ -8602,7 +8568,7 @@ FUNCTION PLAST_FILE_OBJECT() RESULT(NCF)
       
       SLD_P => plast(ii)%conc_sed_s(1:m,1:N_sed_layer) 
 
-		VAR  => NC_MAKE_PVAR(name=TRIM(plast(ii)%pname),&
+		VAR  => NC_MAKE_PVAR(name=TRIM(plast(ii)%pname)//'_sed_s',&
 			& values=SLD_P, DIM1= DIM_node, DIM2= DIM_siglay, DIM3 = DIM_time)
 
 		ATT  => NC_MAKE_ATT(name='long_name',values=TRIM('Immovable Concentration of plastics in sediment '//TRIM(plast(ii)%pname))) 
@@ -8620,13 +8586,13 @@ FUNCTION PLAST_FILE_OBJECT() RESULT(NCF)
 
       End do
 
-      if (PLAST_infil) then
+      if (tox_vector) then
 
          Do II=1,nplast
 
          SLD_P => plast(ii)%tconc_b_sed(1:m,1:N_sed_layer) 
 
-         VAR  => NC_MAKE_PVAR(name=TRIM(plast(ii)%tname_b),&
+         VAR  => NC_MAKE_PVAR(name=TRIM(plast(ii)%tname_b)//'_sed_t',&
             & values=SLD_P, DIM1= DIM_node, DIM2= DIM_siglay, DIM3 = DIM_time)
 
          ATT  => NC_MAKE_ATT(name='long_name',values=TRIM('Total Bonded Toxic Concentration of '//TRIM(plast(ii)%tname_b))) 
@@ -8648,7 +8614,7 @@ FUNCTION PLAST_FILE_OBJECT() RESULT(NCF)
 
          SLD_P => plast(ii)%tconc_b_sed_p(1:m,1:N_sed_layer) 
 
-         VAR  => NC_MAKE_PVAR(name=TRIM(plast(ii)%tname_b),&
+         VAR  => NC_MAKE_PVAR(name=TRIM(plast(ii)%tname_b)//'_sed_p',&
             & values=SLD_P, DIM1= DIM_node, DIM2= DIM_siglay, DIM3 = DIM_time)
 
          ATT  => NC_MAKE_ATT(name='long_name',values=TRIM('Movable Bonded Toxic Concentration of '//TRIM(plast(ii)%tname_b))) 
@@ -8670,7 +8636,7 @@ FUNCTION PLAST_FILE_OBJECT() RESULT(NCF)
 
          SLD_P => plast(ii)%tconc_b_sed_s(1:m,1:N_sed_layer) 
 
-         VAR  => NC_MAKE_PVAR(name=TRIM(plast(ii)%tname_b),&
+         VAR  => NC_MAKE_PVAR(name=TRIM(plast(ii)%tname_b)//'_sed_s',&
             & values=SLD_P, DIM1= DIM_node, DIM2= DIM_siglay, DIM3 = DIM_time)
 
          ATT  => NC_MAKE_ATT(name='long_name',values=TRIM('Immovable Bonded Toxic Concentration of '//TRIM(plast(ii)%tname_b))) 
@@ -8692,7 +8658,7 @@ FUNCTION PLAST_FILE_OBJECT() RESULT(NCF)
 
          SLD_P => plast(ii)%tconc_f_sed(1:m,1:N_sed_layer) 
 
-         VAR  => NC_MAKE_PVAR(name=TRIM(plast(ii)%tname_f),&
+         VAR  => NC_MAKE_PVAR(name=TRIM(plast(ii)%tname_f)//'_sed_t',&
             & values=SLD_P, DIM1= DIM_node, DIM2= DIM_siglay, DIM3 = DIM_time)
 
          ATT  => NC_MAKE_ATT(name='long_name',values=TRIM('Free Toxic Concentration of '//TRIM(plast(ii)%tname_f))) 

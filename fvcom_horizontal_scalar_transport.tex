@@ -1,0 +1,380 @@
+\documentclass[11pt,a4paper]{article}
+\usepackage[utf8]{inputenc}
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{amsfonts}
+\usepackage{geometry}
+\usepackage{graphicx}
+\usepackage{array}
+\usepackage{booktabs}
+\usepackage{hyperref}
+
+\geometry{margin=1in}
+
+\title{FVCOM Horizontal Scalar Transport: Numerical Schemes Analysis}
+\author{Analysis of mod\_scal.F}
+\date{\today}
+
+\begin{document}
+
+\maketitle
+
+\section{Introduction}
+
+This document provides a detailed analysis of the horizontal scalar transport numerical schemes implemented in FVCOM's \texttt{mod\_scal.F} module. The focus is on the 2D finite volume method (FVM) approaches for advection and diffusion processes in the horizontal direction, specifically within the \texttt{Adv\_Scal} subroutine.
+
+\section{Governing Equation}
+
+The 2D horizontal scalar transport equation solved by FVCOM has the general form:
+
+\begin{equation}
+\frac{\partial f}{\partial t} + \frac{\partial}{\partial x}(uf) + \frac{\partial}{\partial y}(vf) = \frac{\partial}{\partial x}\left(A_h \frac{\partial f}{\partial x}\right) + \frac{\partial}{\partial y}\left(A_h \frac{\partial f}{\partial y}\right) + S
+\end{equation}
+
+where:
+\begin{itemize}
+\item $f$ is the scalar quantity (concentration, temperature, etc.)
+\item $u, v$ are the horizontal velocity components
+\item $A_h$ is the horizontal diffusion coefficient
+\item $S$ represents source/sink terms
+\end{itemize}
+
+\section{Numerical Discretization Schemes}
+
+\subsection{Control Volume Approach}
+
+FVCOM uses an unstructured triangular mesh with a dual control volume approach:
+\begin{itemize}
+\item Primary mesh: triangular elements for velocity calculations
+\item Dual mesh: polygon control volumes around nodes for scalar calculations
+\end{itemize}
+
+The scalar values are stored at nodes, and fluxes are calculated across control volume edges.
+
+\subsection{Control Volume Areas: art1 vs art2}
+
+FVCOM uses two different control volume area definitions for different purposes:
+
+\subsubsection{art1: True Non-overlapping Control Volume Area}
+
+\texttt{art1(i)} represents the actual control volume area around node $i$ used for mass conservation. It is computed by constructing a median dual cell:
+
+\begin{itemize}
+\item For each triangular element around node $i$, connect the triangle centroid to the midpoints of the triangle edges adjacent to node $i$
+\item This creates a "star-shaped" polygon around the node
+\item The area is calculated using the shoelace formula (Cartesian) or spherical triangulation
+\end{itemize}
+
+Properties of \texttt{art1}:
+\begin{itemize}
+\item \textbf{Non-overlapping}: Each point in the domain belongs to exactly one control volume
+\item \textbf{Conservative}: Ensures proper mass conservation in transport equations
+\item \textbf{Total area}: $\sum_{i=1}^{m} \text{art1}(i) = \sum_{j=1}^{n} \text{art}(j)$ (total domain area)
+\end{itemize}
+
+\subsubsection{art2: Sum of Triangle Areas}
+
+\texttt{art2(i)} is the sum of areas of all triangular elements that have node $i$ as a vertex:
+
+\begin{equation}
+\text{art2}(i) = \sum_{j \in \text{triangles around node } i} \text{art}(j)
+\end{equation}
+
+Properties of \texttt{art2}:
+\begin{itemize}
+\item \textbf{Overlapping}: Triangle areas are counted multiple times (once for each vertex)
+\item \textbf{Purpose}: Used only for gradient calculation scaling via Green's theorem
+\item \textbf{Total area}: $\sum_{i=1}^{m} \text{art2}(i) = 3 \times \sum_{j=1}^{n} \text{art}(j)$ (each triangle counted 3 times)
+\end{itemize}
+
+\subsubsection{Usage in Transport Calculations}
+
+\begin{itemize}
+\item \textbf{Gradient calculation}: Uses \texttt{art2} for proper scaling in Green's theorem application
+\item \textbf{Mass conservation}: Uses \texttt{art1} for actual transport updates to prevent double-counting
+\end{itemize}
+
+\subsection{Gradient Calculation Using Green's Theorem}
+
+The spatial gradients of the scalar field are calculated using Green's theorem applied to the control volumes surrounding each node.
+
+\subsubsection{Mathematical Formulation}
+
+For a node $i$ with control volume $\Omega_i$, the gradient components are:
+
+\begin{align}
+\frac{\partial f}{\partial x}\bigg|_i &= \frac{1}{A_i} \oint_{\partial \Omega_i} f \, dy \\
+\frac{\partial f}{\partial y}\bigg|_i &= -\frac{1}{A_i} \oint_{\partial \Omega_i} f \, dx
+\end{align}
+
+where $A_i$ is the area of control volume $i$.
+
+\subsubsection{Discrete Implementation}
+
+In the code (lines 163-201), this is implemented as:
+
+\begin{align}
+\text{pfpx}(i) &= \frac{1}{\text{art2}(i)} \sum_{j=1}^{\text{ntsn}(i)-1} \text{ff1} \times (\text{vy}(i_1) - \text{vy}(i_2)) \\
+\text{pfpy}(i) &= \frac{1}{\text{art2}(i)} \sum_{j=1}^{\text{ntsn}(i)-1} \text{ff1} \times (\text{vx}(i_2) - \text{vx}(i_1))
+\end{align}
+
+where:
+\begin{itemize}
+\item \texttt{ff1} = $0.5(f_{i_1} + f_{i_2})$ is the scalar value at the edge midpoint
+\item \texttt{art2(i)} is the control volume area
+\item The sum is over all edges of the control volume
+\end{itemize}
+
+\subsubsection{Gradient Types: pfpx vs pfpxd}
+
+FVCOM calculates two types of gradients for different purposes:
+
+\paragraph{pfpx (Advection Gradients):}
+\begin{itemize}
+\item Uses \texttt{ff1}: Simple average of scalar values, $\text{ff1} = 0.5(f_{i_1} + f_{i_2})$
+\item Purpose: Linear reconstruction for upwind advection schemes
+\item Used in: Upwind interpolation for advective flux calculation
+\end{itemize}
+
+\paragraph{pfpxd (Diffusion Gradients):}
+\begin{itemize}
+\item Uses \texttt{ffd}: Modified scalar values that can account for wet/dry conditions
+\item Purpose: Diffusive flux calculations
+\item Special treatment: In wet/dry applications, \texttt{ffd} may differ from \texttt{ff1} near wetting/drying boundaries
+\end{itemize}
+
+In most cases, $\text{pfpx} = \text{pfpxd}$, but the separation allows different numerical treatments for advection vs. diffusion processes, especially important in shallow water applications with wetting/drying.
+
+\subsection{Horizontal Advection Scheme}
+
+\subsubsection{Upwind Discretization}
+
+The advective flux across control volume edges is calculated using an upwind scheme with linear reconstruction.
+
+\subsubsection{Mathematical Formulation}
+
+For an edge connecting nodes $a$ and $b$, the advective flux is:
+
+\begin{equation}
+F_{adv} = -u_n \Delta t \times \begin{cases}
+f_a + \nabla f_a \cdot \mathbf{d}_a & \text{if } u_n \geq 0 \\
+f_b + \nabla f_b \cdot \mathbf{d}_b & \text{if } u_n < 0
+\end{cases}
+\end{equation}
+
+where:
+\begin{itemize}
+\item $u_n$ is the normal velocity component at the edge
+\item $\mathbf{d}_a, \mathbf{d}_b$ are distance vectors from nodes to edge midpoint
+\item Linear reconstruction provides higher-order accuracy
+\end{itemize}
+
+\subsubsection{Code Implementation}
+
+From lines 409-427:
+
+\begin{align}
+\text{fij1} &= f(\text{ia},k) + \text{dxa} \times \text{pfpx}(\text{ia}) + \text{dya} \times \text{pfpy}(\text{ia}) \\
+\text{fij2} &= f(\text{ib},k) + \text{dxb} \times \text{pfpx}(\text{ib}) + \text{dyb} \times \text{pfpy}(\text{ib}) \\
+\text{exflux}_{adv} &= -\text{un} \times \text{dtij}(i,k) \times \frac{(1+\text{sign}(u_n)) \cdot \text{fij2} + (1-\text{sign}(u_n)) \cdot \text{fij1}}{2}
+\end{align}
+
+This implements the upwind selection automatically using the sign function.
+
+\subsection{Horizontal Diffusion Scheme}
+
+\subsubsection{Central Difference Approximation}
+
+The diffusive flux uses a central difference approximation of the scalar gradients.
+
+\subsubsection{Mathematical Formulation}
+
+The diffusive flux across an edge is:
+
+\begin{equation}
+F_{diff} = A_h \Delta t \left[ \frac{\partial f}{\partial x} n_x + \frac{\partial f}{\partial y} n_y \right]
+\end{equation}
+
+where $(n_x, n_y)$ is the outward normal vector to the control volume edge.
+
+\subsubsection{Code Implementation}
+
+From lines 414-424:
+
+The horizontal diffusion coefficient $A_h$ (represented as \texttt{viscof}) is computed as an edge-averaged value:
+
+\begin{equation}
+A_h = \text{FACT} \times 0.5 \times (\text{VISCOFF}(a) \times \text{NN\_HVC}(a) + \text{VISCOFF}(b) \times \text{NN\_HVC}(b)) + \text{FM1} \times 0.5 \times (\text{NN\_HVC}(a) + \text{NN\_HVC}(b))
+\end{equation}
+
+where:
+\begin{itemize}
+\item \texttt{VISCOFF(i)}: Smagorinsky-type eddy viscosity from strain rates
+\item \texttt{NN\_HVC(i)}: Node-specific horizontal viscosity coefficient (spatially variable)
+\item \texttt{FACT}, \texttt{FM1}: Mixing model control parameters
+\end{itemize}
+
+The diffusive flux components are then calculated:
+
+\begin{align}
+\text{txx} &= 0.5 \times (\text{pfpxd}(\text{ia}) + \text{pfpxd}(\text{ib})) \times A_h \\
+\text{tyy} &= 0.5 \times (\text{pfpyd}(\text{ia}) + \text{pfpyd}(\text{ib})) \times A_h \\
+\text{fxx} &= -\text{dtij}(i,k) \times \text{txx} \times \text{dltye}(i) \\
+\text{fyy} &= \text{dtij}(i,k) \times \text{tyy} \times \text{dltxe}(i)
+\end{align}
+
+where:
+\begin{itemize}
+\item \texttt{pfpxd}, \texttt{pfpyd} are gradients used for diffusion
+\item $A_h$ (\texttt{viscof}) is the spatially-variable, edge-averaged diffusion coefficient
+\item \texttt{dltxe}, \texttt{dltye} are edge normal components
+\end{itemize}
+
+\subsubsection{Complete Diffusive Flux Formulation}
+
+The total diffusive flux across a control volume edge can be expressed as:
+
+\begin{equation}
+F_{diff} = A_h \Delta t \left[ \frac{1}{2}\left(\frac{\partial f}{\partial x}\Big|_a + \frac{\partial f}{\partial x}\Big|_b\right) n_x + \frac{1}{2}\left(\frac{\partial f}{\partial y}\Big|_a + \frac{\partial f}{\partial y}\Big|_b\right) n_y \right]
+\end{equation}
+
+where the gradients are computed using Green's theorem with the summation formula:
+
+\begin{equation}
+\frac{\partial f}{\partial x}\Big|_i = \frac{1}{\text{art2}(i)} \sum_{j=1}^{\text{ntsn}(i)-1} \text{ffd}_{j} \times (\text{vy}(i_{1j}) - \text{vy}(i_{2j}))
+\end{equation}
+
+In this formulation:
+\begin{itemize}
+\item $a, b$ are the nodes on either side of the control volume edge
+\item $(n_x, n_y)$ are the components of the outward unit normal vector
+\item $\text{ffd}_{j} = 0.5(f(i_{1j}) + f(i_{2j}))$ is the scalar value at the $j$-th edge midpoint
+\item The summation is over all edges of the control volume around node $i$
+\end{itemize}
+
+\subsection{Horizontal Diffusion Coefficient Components}
+
+The horizontal diffusion coefficient $A_h$ in FVCOM is a composite quantity with multiple components:
+
+\subsubsection{Eddy Viscosity Component (VISCOFF)}
+
+The turbulent eddy viscosity is calculated using a Smagorinsky-type model from lines 382-384:
+
+\begin{align}
+\text{tmp1} &= \text{pupx}(i)^2 + \text{pvpy}(i)^2 \\
+\text{tmp2} &= 0.5 \times (\text{pupy}(i) + \text{pvpx}(i))^2 \\
+\text{VISCOFF}(i) &= \sqrt{\text{tmp1} + \text{tmp2}} \times \text{art1}(i)
+\end{align}
+
+This represents:
+\begin{equation}
+\text{VISCOFF}(i) = \sqrt{S_{ij} S_{ij}} \times A_{cell}
+\end{equation}
+
+where:
+\begin{itemize}
+\item $S_{ij}$ is the strain rate tensor components
+\item $A_{cell}$ is the control volume area (\texttt{art1})
+\item \texttt{pupx}, \texttt{pupy}, \texttt{pvpx}, \texttt{pvpy} are velocity gradient components
+\end{itemize}
+
+\subsubsection{Spatially-Variable Background Viscosity (NN\_HVC)}
+
+\texttt{NN\_HVC(i)} represents a node-specific horizontal viscosity coefficient that can account for:
+\begin{itemize}
+\item Background/molecular diffusion
+\item Spatially-dependent diffusion properties
+\item User-specified diffusion fields
+\item Grid-scale diffusion corrections
+\end{itemize}
+
+\subsubsection{Mixing Model Parameters}
+
+The mixing model is controlled by parameters \texttt{FACT} and \texttt{FM1}:
+\begin{itemize}
+\item \textbf{Constant diffusion}: \texttt{FACT} = 0.0, \texttt{FM1} = 1.0
+\item \textbf{Closure-based diffusion}: \texttt{FACT} = 1.0, \texttt{FM1} = 0.0
+\item These parameters allow blending between different diffusion models
+\end{itemize}
+
+\subsection{Flux Limiting}
+
+\subsubsection{Physical Constraint}
+
+To prevent unphysical negative concentrations or excessive transport, flux limiting is applied.
+
+\subsubsection{Implementation}
+
+From lines 435-441, the flux limiting routine \texttt{limit\_hor\_flux\_Scal} is called to ensure:
+
+\begin{equation}
+|F_{total}| \leq \frac{\rho \times V}{\Delta t}
+\end{equation}
+
+where:
+\begin{itemize}
+\item $\rho$ is the scalar concentration in the source cell
+\item $V$ is the volume of the source cell
+\item $\Delta t$ is the time step
+\end{itemize}
+
+\section{Spherical Coordinate System}
+
+For spherical coordinates, additional geometric factors are included:
+
+\begin{align}
+\text{txpi} &= (\text{vx}(i_2) - \text{vx}(i_1)) \times \frac{2\pi}{360} \times \cos(\text{latitude}) \\
+\text{typi} &= (\text{vy}(i_1) - \text{vy}(i_2)) \times \frac{2\pi}{360}
+\end{align}
+
+This accounts for the convergence of meridians and the spherical geometry.
+
+\section{Time Integration}
+
+The overall time integration follows a fractional step approach:
+\begin{enumerate}
+\item Calculate horizontal advection and diffusion fluxes
+\item Apply flux limiting
+\item Update scalar values: $f^{n+1} = f^n - \frac{\Delta t}{V} \sum F$
+\item Apply boundary conditions
+\end{enumerate}
+
+\section{Boundary Conditions}
+
+The code supports several boundary condition types:
+\begin{itemize}
+\item Open boundaries: Prescribed values or radiation conditions
+\item Point sources: River inflows with specified concentrations
+\item No-flux boundaries: Zero gradient normal to boundary
+\end{itemize}
+
+\section{Summary of Numerical Properties}
+
+\begin{table}[h]
+\centering
+\begin{tabular}{@{}lcc@{}}
+\toprule
+\textbf{Scheme Component} & \textbf{Order of Accuracy} & \textbf{Properties} \\
+\midrule
+Gradient calculation & 2nd order & Conservative, exact for linear functions \\
+Advection & 2nd order & Upwind, monotonicity preserving \\
+Diffusion & 2nd order & Central difference, stable \\
+Flux limiting & N/A & Prevents negative values \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\section{Conclusion}
+
+The FVCOM horizontal scalar transport implementation combines:
+\begin{itemize}
+\item Accurate gradient calculation using Green's theorem
+\item Stable upwind advection with linear reconstruction
+\item Standard central difference diffusion
+\item Flux limiting for physical realizability
+\item Proper treatment of spherical geometry
+\end{itemize}
+
+This approach provides a robust and accurate solution for scalar transport problems in coastal and ocean modeling applications.
+
+\end{document}
