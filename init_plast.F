@@ -158,10 +158,10 @@
   
   If (INIT_PLAST_CONC_TYPE==STTC) then
 
-	allocate(conc_tmp(0:mt,kb,nplast)) ; conc_tmp = 0.0
+	allocate(conc_tmp(m,kb,nplast)) ; conc_tmp = 0.0
 	If (tox_vector) then
-		allocate(tconc_b_tmp(0:mt,kb,nplast)) ; tconc_b_tmp = 0.0
-		allocate(tconc_f_tmp(0:mt,kb,nplast)) ; tconc_f_tmp = 0.0
+		allocate(tconc_b_tmp(m,kb,nplast)) ; tconc_b_tmp = 0.0
+		allocate(tconc_f_tmp(m,kb,nplast)) ; tconc_f_tmp = 0.0
 	End if
 
 	call LOAD_INIT_PLAST_CONC(conc_tmp)
@@ -207,6 +207,14 @@
 		bottom(i,iwDcy) = darv0
 		bottom(i,iLsed) = infil_max_depth
 	End do	
+
+    ! Clamp to safe defaults if any constant inputs are non-physical
+    Do i=1,m
+      if (bottom(i,isd50) <= 0.0_sp) bottom(i,isd50) = sd50_0
+      if (bottom(i,iporo) <= 0.0_sp) bottom(i,iporo) = poro0
+      if (bottom(i,iTsed) <= 0.0_sp) bottom(i,iTsed) = temp0
+      if (bottom(i,iLsed) <= 0.0_sp) bottom(i,iLsed) = infil_max_depth
+    End do
   end if
 
   if (BOTTOM_FEATURES_TYPE==STTC) then

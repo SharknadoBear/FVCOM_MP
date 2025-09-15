@@ -140,6 +140,10 @@ MODULE MOD_NCDIO
   TYPE(NCDIM), POINTER :: DIM_bedlay
 # endif
 
+# if defined (PLASTIC)
+  TYPE(NCDIM), POINTER :: DIM_sedlay
+# endif
+
   TYPE(NCDIM), POINTER :: DIM_time
   TYPE(NCDIM), POINTER :: DIM_DateStrLen
 
@@ -1695,6 +1699,12 @@ CONTAINS
 # if defined (SEDIMENT)
     IF(SEDIMENT_MODEL)THEN
 		DIM_bedlay    => NC_MAKE_RUNTIME_DIM(name='bedlay',len=nbed)
+    ENDIF
+# endif
+
+# if defined (PLASTIC)
+    IF(PLASTIC_MODEL)THEN
+		DIM_sedlay    => NC_MAKE_RUNTIME_DIM(name='sedlay',len=N_sed_layer)
     ENDIF
 # endif
     
@@ -8525,7 +8535,7 @@ FUNCTION PLAST_FILE_OBJECT() RESULT(NCF)
       SLD_P => plast(ii)%conc_sed(1:m,1:N_sed_layer) 
 
 		VAR  => NC_MAKE_PVAR(name=TRIM(plast(ii)%pname)//'_sed_t',&
-			& values=SLD_P, DIM1= DIM_node, DIM2= DIM_siglay, DIM3 = DIM_time)
+			& values=SLD_P, DIM1= DIM_node, DIM2= DIM_sedlay, DIM3 = DIM_time)
 
 		ATT  => NC_MAKE_ATT(name='long_name',values=TRIM('Total Concentration of plastics '//TRIM(plast(ii)%pname))) 
 		VAR  => ADD(VAR,ATT)
@@ -8547,7 +8557,7 @@ FUNCTION PLAST_FILE_OBJECT() RESULT(NCF)
       SLD_P => plast(ii)%conc_sed_p(1:m,1:N_sed_layer) 
 
 		VAR  => NC_MAKE_PVAR(name=TRIM(plast(ii)%pname)//'_sed_p',&
-			& values=SLD_P, DIM1= DIM_node, DIM2= DIM_siglay, DIM3 = DIM_time)
+			& values=SLD_P, DIM1= DIM_node, DIM2= DIM_sedlay, DIM3 = DIM_time)
 
 		ATT  => NC_MAKE_ATT(name='long_name',values=TRIM('Movable Concentration of plastics in sediment '//TRIM(plast(ii)%pname))) 
 		VAR  => ADD(VAR,ATT)
@@ -8569,7 +8579,7 @@ FUNCTION PLAST_FILE_OBJECT() RESULT(NCF)
       SLD_P => plast(ii)%conc_sed_s(1:m,1:N_sed_layer) 
 
 		VAR  => NC_MAKE_PVAR(name=TRIM(plast(ii)%pname)//'_sed_s',&
-			& values=SLD_P, DIM1= DIM_node, DIM2= DIM_siglay, DIM3 = DIM_time)
+			& values=SLD_P, DIM1= DIM_node, DIM2= DIM_sedlay, DIM3 = DIM_time)
 
 		ATT  => NC_MAKE_ATT(name='long_name',values=TRIM('Immovable Concentration of plastics in sediment '//TRIM(plast(ii)%pname))) 
 		VAR  => ADD(VAR,ATT)
@@ -8593,7 +8603,7 @@ FUNCTION PLAST_FILE_OBJECT() RESULT(NCF)
          SLD_P => plast(ii)%tconc_b_sed(1:m,1:N_sed_layer) 
 
          VAR  => NC_MAKE_PVAR(name=TRIM(plast(ii)%tname_b)//'_sed_t',&
-            & values=SLD_P, DIM1= DIM_node, DIM2= DIM_siglay, DIM3 = DIM_time)
+            & values=SLD_P, DIM1= DIM_node, DIM2= DIM_sedlay, DIM3 = DIM_time)
 
          ATT  => NC_MAKE_ATT(name='long_name',values=TRIM('Total Bonded Toxic Concentration of '//TRIM(plast(ii)%tname_b))) 
          VAR  => ADD(VAR,ATT)
@@ -8615,7 +8625,7 @@ FUNCTION PLAST_FILE_OBJECT() RESULT(NCF)
          SLD_P => plast(ii)%tconc_b_sed_p(1:m,1:N_sed_layer) 
 
          VAR  => NC_MAKE_PVAR(name=TRIM(plast(ii)%tname_b)//'_sed_p',&
-            & values=SLD_P, DIM1= DIM_node, DIM2= DIM_siglay, DIM3 = DIM_time)
+            & values=SLD_P, DIM1= DIM_node, DIM2= DIM_sedlay, DIM3 = DIM_time)
 
          ATT  => NC_MAKE_ATT(name='long_name',values=TRIM('Movable Bonded Toxic Concentration of '//TRIM(plast(ii)%tname_b))) 
          VAR  => ADD(VAR,ATT)
@@ -8637,7 +8647,7 @@ FUNCTION PLAST_FILE_OBJECT() RESULT(NCF)
          SLD_P => plast(ii)%tconc_b_sed_s(1:m,1:N_sed_layer) 
 
          VAR  => NC_MAKE_PVAR(name=TRIM(plast(ii)%tname_b)//'_sed_s',&
-            & values=SLD_P, DIM1= DIM_node, DIM2= DIM_siglay, DIM3 = DIM_time)
+            & values=SLD_P, DIM1= DIM_node, DIM2= DIM_sedlay, DIM3 = DIM_time)
 
          ATT  => NC_MAKE_ATT(name='long_name',values=TRIM('Immovable Bonded Toxic Concentration of '//TRIM(plast(ii)%tname_b))) 
          VAR  => ADD(VAR,ATT)
@@ -8659,7 +8669,7 @@ FUNCTION PLAST_FILE_OBJECT() RESULT(NCF)
          SLD_P => plast(ii)%tconc_f_sed(1:m,1:N_sed_layer) 
 
          VAR  => NC_MAKE_PVAR(name=TRIM(plast(ii)%tname_f)//'_sed_t',&
-            & values=SLD_P, DIM1= DIM_node, DIM2= DIM_siglay, DIM3 = DIM_time)
+            & values=SLD_P, DIM1= DIM_node, DIM2= DIM_sedlay, DIM3 = DIM_time)
 
          ATT  => NC_MAKE_ATT(name='long_name',values=TRIM('Free Toxic Concentration of '//TRIM(plast(ii)%tname_f))) 
          VAR  => ADD(VAR,ATT)

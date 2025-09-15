@@ -374,7 +374,9 @@ Module Mod_Plast
 	integer  :: PLAST_start
 	integer  :: PLAST_its
 	integer  :: settle_limiter = 2
-	real(sp) :: DTplast
+    real(sp) :: DTplast
+    real(sp) :: blockage_theta_cap = 0.5_sp
+    real(sp) :: blockage_scale     = 1.0_sp
 	real(sp) :: qlim  = 1.0
 	real(sp) :: PLAST_alpha
 	real(sp) :: settle_cfl = 1.0
@@ -655,6 +657,12 @@ Subroutine Read_PLAST_Params
     Call Get_Val(darv0,plastfile,'SED_DARV',line=linenum,echo=.false.)
 	Call Get_Val(N_sed_layer,plastfile,'SED_LNUM',line=linenum,echo=.false.)
 
+    ! Optional blockage tuning
+    Call Get_Val(blockage_theta_cap,plastfile,'BLOCKAGE_THETA_CAP',line=linenum,echo=.false.)
+	write(*,*)'Entered blockage cap value: ', blockage_theta_cap
+    Call Get_Val(blockage_scale    ,plastfile,'BLOCKAGE_SCALE'    ,line=linenum,echo=.false.)
+	write(*,*)'Entered blockage scale: ', blockage_scale
+
     ! Validate parameters
     if (infil_max_depth <= 0.0) then
         write(*,*)'error: INFIL_MAX_DEPTH must be > 0'
@@ -856,10 +864,10 @@ Subroutine Advance_plast(DTin,Tin,taub_in,s_in,t_in)
   real(sp), intent(in ) :: taub_in(m),s_in(m,kb),t_in(m,kb)
   real(sp), dimension(mt) :: usurf,vsurf
 
-  integer :: i,k,iplast,l1,l2,ierr,d_cdis,d_cflx
+  integer :: i,k,iplast,l1,l2,ierr,d_cdis,d_cflx,ii,jj
   real(sp) :: fact,ufact,temp,s_temp(kbm1),t_temp(kbm1),rho_temp(kbm1),tc_temp(m,kb),dtc_temp
   real(sp) :: r_plast, r_tox
-  real(sp) :: D_mech_plast(0:mt), D_mech_tox(0:mt)
+  real(sp) :: D_mech_plast(m), D_mech_tox(m)
 
   if(dbg_set(dbg_sbr)) write(ipt,*) "Start: Advance_Plast "
 
@@ -867,6 +875,8 @@ Subroutine Advance_plast(DTin,Tin,taub_in,s_in,t_in)
   !Check for Initialization
   !------------------------------------------------------
   if(iint < PLAST_start) return
+  
+  ! (Removed CONC_TRACK start logging)
   
   ! Compute surface velocity at node
   CALL E2N2D(u(:,1),usurf)
@@ -945,14 +955,19 @@ Subroutine Advance_plast(DTin,Tin,taub_in,s_in,t_in)
   call calc_active_layer
     
   !calculated depositional flux from settling (settle flux function is called here)
+  
   call calc_deposition
+  
+  ! (Removed CONC_TRACK after deposition logging)
 
   !calculate erosive flux (resuspension function is called here)
   call calc_erosion
+  
+  ! (Removed CONC_TRACK after erosion logging)
 
   !calculate infiltration and blockage
   if (PLAST_infil) then
-	
+
 	!Infiltration step
 	Call Calc_Infiltration
 
@@ -961,17 +976,19 @@ Subroutine Advance_plast(DTin,Tin,taub_in,s_in,t_in)
 
 		!Computation of diffusivity
 		r_plast=plast(iplast)%dequ/2.0
-		Call Calc_Mechanical_Diffusivity(r_plast,plast(iplast)%ws_sed,.false.,D_mech_plast)
+			Call Calc_Mechanical_Diffusivity(r_plast,plast(iplast)%ws_sed,.false.,D_mech_plast)
 		if (tox_vector) then
 			r_tox=plast(iplast)%dequ_tox/2.0
 			Call Calc_Mechanical_Diffusivity(r_tox,plast(iplast)%ws_sed,.true.,D_mech_tox)
 		end if
 
 		!Computation of the vertical diffussion
-    	Call vdif_scal_sed(plast(iplast)%conc_sed_p,DTplast,D_mech_plast)
+		
+    	Call vdif_scal_sed(plast(iplast)%conc_sed_p(1:m,1:N_sed_layer),DTplast,D_mech_plast)
+    	
 		if (tox_vector) then
-			Call vdif_scal_sed(plast(iplast)%tconc_b_sed_p,DTplast,D_mech_plast)
-			Call vdif_scal_sed(plast(iplast)%tconc_f_sed,DTplast,D_mech_tox)
+			Call vdif_scal_sed(plast(iplast)%tconc_b_sed_p(1:m,1:N_sed_layer),DTplast,D_mech_plast)
+			Call vdif_scal_sed(plast(iplast)%tconc_f_sed(1:m,1:N_sed_layer),DTplast,D_mech_tox)
 		end if 
 	
 	end do
@@ -979,14 +996,16 @@ Subroutine Advance_plast(DTin,Tin,taub_in,s_in,t_in)
 	!Blockage step
 	Call Calc_Blockage
 	
-	do iplast=1,nplast
-		do i=1,m
-			do k=1,N_sed_layer
-				plast(iplast)%conc_sed(i,k)=plast(iplast)%conc_sed_p(i,k)+plast(iplast)%conc_sed_s(i,k)
-				plast(iplast)%tconc_b_sed(i,k)=plast(iplast)%tconc_b_sed_p(i,k)+plast(iplast)%tconc_b_sed_s(i,k)
-			end do
-		end do
-	end do
+    do iplast=1,nplast
+      do i=1,m
+        do k=1,N_sed_layer
+          plast(iplast)%conc_sed(i,k)=plast(iplast)%conc_sed_p(i,k)+plast(iplast)%conc_sed_s(i,k)
+          if (tox_vector) then
+            plast(iplast)%tconc_b_sed(i,k)=plast(iplast)%tconc_b_sed_p(i,k)+plast(iplast)%tconc_b_sed_s(i,k)
+          end if
+        end do
+      end do
+    end do
 
   end if
 
@@ -1018,7 +1037,7 @@ Subroutine Advance_plast(DTin,Tin,taub_in,s_in,t_in)
                       plast(i)%cflx, &
                       DTplast,PLAST_source)
 
-	  !This concentration updating function is for plastic, no need to change here.
+	  !This additional limiter will cause over smoothing and mass inconservation, no need to change here.
       !call fct_sed(plast(i)%conc,plast(i)%cnew) 
   
     end do
@@ -1396,11 +1415,12 @@ Subroutine Alloc_Plast_Vars
 		    
 		    ! Infiltration flux arrays (nodal)
 		    allocate(plast(i)%iflx(0:mt)); plast(i)%iflx = 0.0
+			allocate(plast(i)%bflx(0:mt)); plast(i)%bflx = 0.0
 			allocate(plast(i)%lambda_plast(0:mt, N_sed_layer)); plast(i)%lambda_plast = 0.0
 		    if (tox_vector) then
 		        allocate(plast(i)%tiflx_b(0:mt)); plast(i)%tiflx_b = 0.0
+				allocate(plast(i)%tiflx_f(0:mt)); plast(i)%tiflx_f = 0.0
 		        allocate(plast(i)%tiflx_b_deep(0:mt)); plast(i)%tiflx_b_deep = 0.0
-		        allocate(plast(i)%tiflx_f(0:mt)); plast(i)%tiflx_f = 0.0
 		        allocate(plast(i)%tiflx_f_deep(0:mt)); plast(i)%tiflx_f_deep = 0.0
 		    endif
 		endif
@@ -1761,7 +1781,7 @@ Subroutine Calc_Erosion
   
   implicit none
   
-  integer  :: iplast ,i
+  integer  :: iplast ,i, k
   real(sp) :: bottom_por,bottom_frac,t_bottom_frac
   real(sp) :: bottom_mass,tau_f,tau_w,dep,active,erosion_flux,t_erosion_flux,precip_flux
   real(sp) :: tau_c_p(m)
@@ -1833,16 +1853,15 @@ Subroutine Calc_Erosion
         
 		plast(iplast)%conc(i,kbm1) = plast(iplast)%conc(i,kbm1) + plast(iplast)%eflx(i)/(d(i)*dz(i,kbm1))
 		plast(iplast)%conc(i,1) = plast(iplast)%conc(i,1) + plast(iplast)%pflx(i)/(d(i)*dz(i,1))
-		
-		if (tox_vector) then
-			plast(iplast)%tconc_b(i,kbm1) = plast(iplast)%tconc_b(i,kbm1) + plast(iplast)%teflx_b(i)/(d(i)*dz(i,kbm1)) 
-			plast(iplast)%tconc_f(i,kbm1) = plast(iplast)%tconc_f(i,kbm1) + plast(iplast)%tbdflx_f(i)/(d(i)*dz(i,kbm1))
-		end if		
+			
+			if (tox_vector) then
+				plast(iplast)%tconc_b(i,kbm1) = plast(iplast)%tconc_b(i,kbm1) + plast(iplast)%teflx_b(i)/(d(i)*dz(i,kbm1)) 
+				plast(iplast)%tconc_f(i,kbm1) = plast(iplast)%tconc_f(i,kbm1) + plast(iplast)%tbdflx_f(i)/(d(i)*dz(i,kbm1))
+			end if		
 
 # if defined (WET_DRY)
       else
-        plast(iplast)%conc(i,kbm1) = 0.0_sp
-		plast(iplast)%conc(i,1) = 0.0_sp
+        cycle
       end if
 # endif
 
@@ -1851,7 +1870,7 @@ Subroutine Calc_Erosion
   
   if(dbg_set(dbg_sbr)) write(ipt,*) "End: Calc_Erosion "
 
-End Subroutine Calc_Erosion
+  End Subroutine Calc_Erosion
 
 Subroutine Calc_critial_shear_WS(m,rho_wb,dsed,dequ,rho_s,rho_p,tau_c_s,tau_c_p)
 
@@ -2554,7 +2573,7 @@ Subroutine Calc_Infiltration
   
   	implicit none
 
-	integer  :: iplast ,i,mcyc_t,mcyc_p,ncyc,k
+	integer  :: iplast ,i,mcyc_t,mcyc_p,ncyc,k,k_search
 	real(sp) :: wset_sed_plastic(N_sed_layer), wset_sed_toxic(N_sed_layer), c_sed_p(N_sed_layer), ctb_sed_p(N_sed_layer), ctf_sed(N_sed_layer)
 	real(sp) :: dx(N_sed_layer), iflx, bflx, itflxb, itflxf, btflxb, btflxf, DTmax_p, DTdep_p, DTmax_t, DTdep_t
 	real(sp) :: c_sed_bc, ctb_sed_bc, ctf_sed_bc
@@ -2563,7 +2582,7 @@ Subroutine Calc_Infiltration
 
 	eps = epsilon(eps)
 
-	if(dbg_set(dbg_sbr)) write(ipt,*) "Start: Calc_Infiltration "
+    if(dbg_set(dbg_sbr)) write(ipt,*) "INFIL_DEBUG: Start Calc_Infiltration"
 
 	!Loop over plastic classes and spatial points for advection    
   	do iplast=1,nplast
@@ -2581,6 +2600,7 @@ Subroutine Calc_Infiltration
 
 		!setup 1D concentration and grid arrays
 		c_sed_p(1:N_sed_layer) = plast(iplast)%conc_sed_p(i,1:N_sed_layer)
+		
 		if (Tox_vector) then
 			ctb_sed_p(1:N_sed_layer) = plast(iplast)%tconc_b_sed_p(i,1:N_sed_layer)
 			ctf_sed(1:N_sed_layer) = plast(iplast)%tconc_f_sed(i,1:N_sed_layer)
@@ -2590,10 +2610,10 @@ Subroutine Calc_Infiltration
 		!Read in settling velocity 
 # if defined (WET_DRY)
       	if (iswetn(i)/=1) then
-			wset_sed_plastic(1:N_sed_layer) = plast(iplast)%ws_sed
-		else
-			wset_sed_plastic(1:N_sed_layer) = plast(iplast)%ws_sed+darv0
-		end if
+				wset_sed_plastic(1:N_sed_layer) = abs(plast(iplast)%ws_sed)
+			else
+				wset_sed_plastic(1:N_sed_layer) = abs(plast(iplast)%ws_sed+darv0)
+			end if
 
 		if (Tox_vector) then
 
@@ -2611,7 +2631,7 @@ Subroutine Calc_Infiltration
 
 		end if
 # else
-		wset_sed_plastic(1:N_sed_layer) = plast(iplast)%ws_sed+darv0
+    	wset_sed_plastic(1:N_sed_layer) = abs(plast(iplast)%ws_sed+darv0)
 
 		if (Tox_vector) then
 		
@@ -2626,50 +2646,81 @@ Subroutine Calc_Infiltration
 # endif
 
 		!Set first sediment layer plastic/toxin concentration = bottom water plastic/toxin concentration
-		c_sed_bc = plast(iplast)%conc_sed_p(i,kbm1)
+		! Find the deepest water layer with non-zero concentration
+		c_sed_bc = 0.0
+		k = 0  ! Initialize k to track if we found valid concentration
+		do k_search = kb, 1, -1
+			if (plast(iplast)%conc(i,k_search) > 0.0) then
+				c_sed_bc = plast(iplast)%conc(i,k_search)
+				k = k_search
+				exit
+			endif
+		end do
+		
+		
 		if (Tox_vector) then
 			ctb_sed_bc = plast(iplast)%tconc_b(i,kbm1)
 			ctf_sed_bc = plast(iplast)%tconc_f(i,kbm1)
 		end if
-
-		if(dbg_set(dbg_sbr)) write(ipt,*) "Start: Settling advection in sediment"
+		
 			!set up cycles (use max(CFL) == 1)
-			DTmax_p = Settle_CFL*minval(dx(1:N_sed_layer)/wset_sed_plastic(1:N_sed_layer))
-			mcyc_p = int(DTplast/DTmax_p + 1. - eps)
+			DTmax_p = Settle_CFL*minval( dx(1:N_sed_layer) / max(abs(wset_sed_plastic(1:N_sed_layer)), eps) )
+			mcyc_p = max(1, int(DTplast/DTmax_p + 1. - eps))
 			DTdep_p = DTplast/float(mcyc_p)
-
+                
 			!call flux-limited settling equation
+			
 			do ncyc = 1,mcyc_p
+				
 				call settle_flux_sed_new(N_sed_layer,c_sed_p,dx,wset_sed_plastic,c_sed_bc,iflx,bflx,DTdep_p)
+				
 			end do
+			
 
 			!store solution in 3D array
-			plast(iplast)%conc_sed_p(i,1:N_sed_layer) = c_sed_p(1:N_sed_layer)
+            plast(iplast)%conc_sed_p(i,1:N_sed_layer) = c_sed_p(1:N_sed_layer)
+            
 
 			!store infiltration flux
-			plast(iplast)%iflx(i) = iflx
+            plast(iplast)%iflx(i) = iflx
+            
 
 			!store burial flux
 			plast(iplast)%bflx(i) = bflx
 
 			if (Tox_vector) then
+				write(ipt,*) "DEBUG: Starting toxic settling calculations"
 
 				! Handle embedded toxic settling case
-				do ncyc = 1,mcyc_p
+				write(ipt,*) "DEBUG: Starting embedded toxic loop, mcyc_p = ", mcyc_p
+				do ncyc = 1,max(mcyc_p,1)
+					write(ipt,*) "DEBUG: Embedded toxic loop iteration ", ncyc, " of ", mcyc_p
 					call settle_flux_sed_new(N_sed_layer,ctb_sed_p,dx,wset_sed_plastic,ctb_sed_bc,itflxb,btflxb,DTdep_p)
+					write(ipt,*) "DEBUG: Completed embedded toxic loop iteration ", ncyc
 				end do
+				write(ipt,*) "DEBUG: Finished embedded toxic loop"
 
 				! Handle free toxic settling case
 				if (.not. isfloat_toxic) then
+					write(ipt,*) "DEBUG: Starting free toxic calculations"
+					write(ipt,*) "DEBUG: minval(wset_sed_toxic) = ", minval(wset_sed_toxic(1:N_sed_layer))
 					DTmax_t = Settle_CFL*minval(dx(1:N_sed_layer)/wset_sed_toxic(1:N_sed_layer))
 					mcyc_t = int(DTplast/DTmax_t + 1. - eps)
 					DTdep_t = DTplast/float(mcyc_t)
+					write(ipt,*) "DEBUG: DTmax_t = ", DTmax_t
+					write(ipt,*) "DEBUG: mcyc_t = ", mcyc_t
+					write(ipt,*) "DEBUG: DTdep_t = ", DTdep_t
 
+					write(ipt,*) "DEBUG: Starting free toxic loop, mcyc_t = ", mcyc_t
 					do ncyc = 1, mcyc_t
+						write(ipt,*) "DEBUG: Free toxic loop iteration ", ncyc, " of ", mcyc_t
 						call settle_flux_sed_new(N_sed_layer,ctf_sed,dx,wset_sed_toxic,ctf_sed_bc,itflxf,btflxf,DTdep_t)
+						write(ipt,*) "DEBUG: Completed free toxic loop iteration ", ncyc
 					end do
+					write(ipt,*) "DEBUG: Finished free toxic loop"
+				else
+					write(ipt,*) "DEBUG: Skipping free toxic (isfloat_toxic = true)"
 				end if
-
 				!store toxic solution in 3D array
 				plast(iplast)%tconc_b_sed_p(i,1:N_sed_layer) = ctb_sed_p(1:N_sed_layer)
 				plast(iplast)%tconc_f_sed(i,1:N_sed_layer) = ctf_sed(1:N_sed_layer)
@@ -2682,41 +2733,41 @@ Subroutine Calc_Infiltration
 				plast(iplast)%tiflx_b_deep(i) = btflxb
 				plast(iplast)%tiflx_f_deep(i) = btflxf
 
+				write(ipt,*) "DEBUG: Finished all toxic settling calculations"
 			end if
-
-		if(dbg_set(dbg_sbr)) write(ipt,*) "End: Settling advection in sediment"
-
 		end do
 	end do
 			
-	if(dbg_set(dbg_sbr)) write(ipt,*) "End: Calc_Infiltration "
+		if(dbg_set(dbg_sbr)) write(ipt,*) "INFIL_DEBUG: End Calc_Infiltration"
 
 End Subroutine Calc_Infiltration
 
 Subroutine Calc_Blockage
 
-	use all_vars
+		use all_vars
   
-  	implicit none
+	  	implicit none
 
-	integer  :: iplast ,i,k
-	real	 :: w_p, w_t, conc_sed_tmp, tconc_b_sed_tmp
+    	integer  :: iplast ,i,k, cap_cnt
+    	real	 :: w_p, w_t, conc_sed_tmp, tconc_b_sed_tmp
+    	real(sp) :: alpha_block, decay, theta, theta_min, theta_max
 
-	if(dbg_set(dbg_sbr)) write(ipt,*) "Start: Calc_Blockage "
 
 		!Calculation of lambda
 		Call Calc_Blockage_Rate
 
-		!Loop over plastic classes and spatial points for kinetics updating    
-		do iplast=1,nplast
-			do i=1,m
+			!Loop over plastic classes and spatial points for kinetics updating  
+			do iplast=1,nplast
+				do i=1,m
+				
+
 
 # if defined (WET_DRY)
       	if (iswetn(i)/=1) then
-			w_p = abs(plast(iplast)%ws_sed)
-		else
-			w_p = abs(plast(iplast)%ws_sed+darv0)
-		end if
+				w_p = abs(plast(iplast)%ws_sed)
+			else
+				w_p = abs(plast(iplast)%ws_sed+darv0)
+			end if
 
 		if (Tox_vector) then
 
@@ -2735,21 +2786,34 @@ Subroutine Calc_Blockage
 		end if
 # endif
 
-				do k=1,N_sed_layer
-					conc_sed_tmp=plast(iplast)%conc_sed_p(i,k)
-					plast(iplast)%conc_sed_p(i,k)=plast(iplast)%conc_sed_p(i,k)-DTplast*plast(iplast)%lambda_plast(i,k)*w_p*conc_sed_tmp
-					plast(iplast)%conc_sed_s(i,k)=plast(iplast)%conc_sed_s(i,k)+DTplast*plast(iplast)%lambda_plast(i,k)*w_p*conc_sed_tmp
-					if (Tox_vector) then
-						tconc_b_sed_tmp=plast(iplast)%tconc_b_sed_p(i,k)
-						plast(iplast)%tconc_b_sed_p(i,k)=plast(iplast)%tconc_b_sed_p(i,k)-DTplast*plast(iplast)%lambda_plast(i,k)*w_t*tconc_b_sed_tmp
-						plast(iplast)%tconc_b_sed_s(i,k)=plast(iplast)%tconc_b_sed_s(i,k)+DTplast*plast(iplast)%lambda_plast(i,k)*w_t*tconc_b_sed_tmp
-					end if
-				end do 
+					do k=1,N_sed_layer
+						conc_sed_tmp=plast(iplast)%conc_sed_p(i,k)
+						! Stable analytic update: mass-conserving partitioning
+							alpha_block = max(0.0_sp, blockage_scale*plast(iplast)%lambda_plast(i,k)*w_p)
+							theta = alpha_block*DTplast
+							if (theta > blockage_theta_cap) theta = blockage_theta_cap
+							decay = exp(-theta)
+							
+							
+						plast(iplast)%conc_sed_p(i,k) = conc_sed_tmp*decay
+						plast(iplast)%conc_sed_s(i,k) = plast(iplast)%conc_sed_s(i,k) + conc_sed_tmp*(1.0_sp - decay)
+						
+						if (plast(iplast)%conc_sed_p(i,k) < 0.0_sp) plast(iplast)%conc_sed_p(i,k) = 0.0_sp
+						if (plast(iplast)%conc_sed_s(i,k) < 0.0_sp) plast(iplast)%conc_sed_s(i,k) = 0.0_sp
+						if (Tox_vector) then
+							tconc_b_sed_tmp=plast(iplast)%tconc_b_sed_p(i,k)
+							alpha_block = max(0.0_sp, blockage_scale*plast(iplast)%lambda_plast(i,k)*w_t)
+							theta = alpha_block*DTplast
+							if (theta > blockage_theta_cap) theta = blockage_theta_cap
+							decay = exp(-theta)
+							plast(iplast)%tconc_b_sed_p(i,k)=tconc_b_sed_tmp*decay
+							plast(iplast)%tconc_b_sed_s(i,k)=plast(iplast)%tconc_b_sed_s(i,k)+tconc_b_sed_tmp*(1.0_sp - decay)
+							if (plast(iplast)%tconc_b_sed_p(i,k) < 0.0_sp) plast(iplast)%tconc_b_sed_p(i,k) = 0.0_sp
+							if (plast(iplast)%tconc_b_sed_s(i,k) < 0.0_sp) plast(iplast)%tconc_b_sed_s(i,k) = 0.0_sp
+						end if
+					end do 
+				end do
 			end do
-		end do
-
-	if(dbg_set(dbg_sbr)) write(ipt,*) "End: Calc_Blockage "
-
 End subroutine Calc_Blockage
 
 Subroutine Update_Bottom
@@ -3088,7 +3152,7 @@ Subroutine Calc_Mechanical_Diffusivity(r_tracer,wss,tox_flag,D_mech)
 	real(sp), parameter :: rho_star = 322.0     ! Critical density [kg/m3] [IAPWS 2008 viscosity formulation parameters (Huber et al.)]
 	real(sp), parameter :: H0(0:3) = [1.67752, 2.20462, 0.6366564, -0.241605] ! H0 coefficients [IAPWS 2008 viscosity formulation parameters (Huber et al.)]
 	
-	if(dbg_set(dbg_sbr)) write(ipt,*) "Start: Calc_Mechanical_Diffusivity "
+  		if(dbg_set(dbg_sbr)) write(ipt,*) "Start: Calc_Mechanical_Diffusivity "
 
 		do i=1,m
 
@@ -3137,11 +3201,11 @@ Subroutine Calc_Mechanical_Diffusivity(r_tracer,wss,tox_flag,D_mech)
 			! Final viscosity calculation [Pa⋅s]
 			eta = mu_star * mu0 * delta_mu
 
-			!Molecular diffusivity at given temperature computation [Stokes-Einstein treatment]
-			D_m = (k_B*bottom(i,iTsed))/(6*PI*eta*r_tracer)
-
-			!Mechanical diffusivity estimation
-			D_mech(i)=c*w*bottom(i,isd50)+D_m/tau
+  				!Molecular diffusivity at given temperature computation [Stokes-Einstein treatment]
+  				D_m = (k_B*bottom(i,iTsed))/(6*PI*eta*r_tracer)
+  	
+  				!Mechanical diffusivity estimation
+  				D_mech(i)=c*w*bottom(i,isd50)+D_m/tau
 
 		end do
 
@@ -3173,7 +3237,6 @@ Subroutine Calc_Blockage_Rate
 	eps = epsilon(eps)
 
 	if(dbg_set(dbg_sbr)) write(ipt,*) "Start: Calc_Blockage_Rate "
-
 		do iplast=1,nplast
 			
 			!Read MP diameter
@@ -3247,6 +3310,7 @@ Subroutine Calc_Blockage_Rate
 
 				!lambda_DLVO computation
 				lambda_DLVO = 3*(1-phi)/(2*d_g)*(eta_D+eta_I+eta_G)*alpha_primary
+				
 
 				!lambda_strain computation and combined lambda computation
 				k_str=269.7*(d_MP/d_g)**(1.42)
@@ -3255,6 +3319,7 @@ Subroutine Calc_Blockage_Rate
 					psi_str=((d_MP+Z_level(k))/d_MP)**(-0.43)
 					lambda_strain=k_str*psi_str/w
 					plast(iplast)%lambda_plast(i,k)=lambda_strain+lambda_DLVO
+					
 				end do
 
 			end do
@@ -3301,6 +3366,7 @@ Subroutine Settle_Flux_sed_new(n,c,dx,wset,c_bc,iflx,bflx,deltat)
 
 	  if(dbg_set(dbg_sbr)) write(ipt,*) "Start: Settle_Flux "
 
+
 	  !transfer to working array
 	  cin(1:n) = c(1:n)
 	  win(1:n) = wset(1:n) 
@@ -3317,17 +3383,18 @@ Subroutine Settle_Flux_sed_new(n,c,dx,wset,c_bc,iflx,bflx,deltat)
 	   endif
 
 	  !bottom bcs (extrapolate/zero flux)
-	  if (win(n)>0.0) then
-			cin(n+1) = cin(n) 
-			cin(n+2) = cin(n)
-			win(n+1) = win(n)
-			win(n+2) = win(n)
-	  else
-			cin(n+1) = -cin(n) 
-			cin(n+2) = -cin(n)
-			win(n+1) = -win(n)
-			win(n+2) = -win(n)
-	  end if
+          if (win(n)>0.0) then
+                cin(n+1) = cin(n)
+                cin(n+2) = cin(n)
+                win(n+1) = win(n)
+                win(n+2) = win(n)
+          else
+                ! No-flux at bottom: zero gradient and no outgoing flux
+                cin(n+1) = cin(n)
+                cin(n+2) = cin(n)
+                win(n+1) = win(n)
+                win(n+2) = win(n)
+          end if
 
 	  !flux computation
 	  do i=1,n+1
@@ -3344,16 +3411,17 @@ Subroutine Settle_Flux_sed_new(n,c,dx,wset,c_bc,iflx,bflx,deltat)
 		  conv(1) = 0. ; diss(1) = 0.
 	  end if
 
-	  if (win(n)>0.0) then
-		  conv(n+1) = conv(n+1) ; diss(n+1) = diss(n+1)
-	  else
-		  conv(n+1) = 0. ; diss(n+1) = 0.
-	  end if
+          if (win(n)>0.0) then
+              conv(n+1) = conv(n+1) ; diss(n+1) = diss(n+1)
+          else
+              conv(n+1) = 0. ; diss(n+1) = 0.
+          end if
 
 	  !update
-	  do i=1,n
-		c(i) = cin(i) + (deltat/dx(i))*(-conv(i+1)+conv(i) + diss(i+1)-diss(i)) 
-	  end do
+          do i=1,n
+                c(i) = cin(i) + (deltat/dx(i))*(-conv(i+1)+conv(i) + diss(i+1)-diss(i)) 
+                if (c(i) < 0.0_sp) c(i) = 0.0_sp
+          end do
 
 	  !set bottom flux (> 0 = deposition)
 	  iflx = iflx + deltat*(conv(1)-diss(1))
@@ -3655,5 +3723,73 @@ SUBROUTINE AMBI_DENS(mb,kb,MYS,MYT,MYRHO)
 END SUBROUTINE AMBI_DENS
   
 # endif
+
+!==============================================================================|
+! Vertical Diffusion of Scalar in Sediment Matrix                             |
+!==============================================================================|
+Subroutine Vdif_Scal_Sed(f,deltat,diff_rate)
+
+  use mTridiagonal_scal
+  use all_vars 
+
+  Implicit None 
+  Real(sp), intent(inout) :: f(m,N_sed_layer)
+  Real(sp), intent(in   ) :: deltat
+  Real(sp), intent(in   ) :: diff_rate(m)     ! Custom diffusivity [m^2/s]
+  !--local--------------------
+  integer  :: i,k
+  real(sp) :: dz_sed, dzz_sed_up, dzz_sed_down
+  real(sp) :: fsol(0:N_sed_layer)
+
+  call init_tridiagonal_scal(N_sed_layer)
+
+  Do i=1,m
+     
+     ! Sediment layer geometry - uniform layers
+     dz_sed = infil_max_depth / N_sed_layer  ! Layer thickness
+     
+
+    !----------------------------------------------------------------
+    !  Set up Diagonals of Matrix for uniform sediment layers
+    !----------------------------------------------------------------
+    
+    !Top layer (k=1) - interface with water column
+    au(1) = 0.0  ! No flux from above (water-sediment interface)
+    cu(1) = - deltat * diff_rate(i) / (dz_sed * dz_sed)  ! Diffusion to layer below
+    bu(1) = 1.0 - cu(1) 
+
+    !Interior layers (k=2 to N_sed_layer-1)
+    do k=2,N_sed_layer-1
+      au(k) = - deltat * diff_rate(i) / (dz_sed * dz_sed)  ! Diffusion from layer above
+      cu(k) = - deltat * diff_rate(i) / (dz_sed * dz_sed)  ! Diffusion to layer below
+      bu(k) = 1.0 - cu(k) - au(k) 
+    end do
+
+    !Bottom layer (k=N_sed_layer)
+    if (N_sed_layer > 1) then
+      au(N_sed_layer) = - deltat * diff_rate(i) / (dz_sed * dz_sed)  ! Diffusion from layer above
+      cu(N_sed_layer) = 0.0  ! No flux boundary at bottom
+      bu(N_sed_layer) = 1.0 - au(N_sed_layer) 
+    endif
+
+    !----------------------------------------------------------------
+    ! Set up RHS forcing vector 
+    !----------------------------------------------------------------
+    do k=1,N_sed_layer
+      du(k) = f(i,k)
+    end do
+      
+    !----------------------------------------------------------------
+    ! Solve tridiagonal system
+    !----------------------------------------------------------------
+    call tridiagonal_scal(N_sed_layer,1,N_sed_layer,fsol)
+    
+    !Transfer solution back
+    f(i,1:N_sed_layer) = fsol(1:N_sed_layer)
+     
+
+  End Do
+
+End Subroutine Vdif_Scal_Sed
    
 End Module Mod_Plast
