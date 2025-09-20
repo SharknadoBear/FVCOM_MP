@@ -242,6 +242,7 @@ Module Mod_Plast
 		real(sp) 		  :: tox_decay_k
 		real(sp)          :: tox_gen_k
 		real(sp) 		  :: tox_r
+		real(sp)          :: tox_leach_k_uniform
 		real(sp)          :: theta_s
 		real(sp)		  :: A_Hamaker
 		real(sp)          :: ws_sed
@@ -264,6 +265,7 @@ Module Mod_Plast
 		real(sp), allocatable :: cobc(:)
 		real(sp), allocatable :: D_plast(:,:)
 		real(sp), allocatable :: tox_leach_k(:,:)
+		real(sp), allocatable :: tox_leach_sed_k(:,:)
 		real(sp), allocatable :: D_toxin(:,:)
 		real(sp), allocatable :: lambda_plast(:,:)
 		real(sp), allocatable :: tconc_b(:,:)
@@ -364,6 +366,7 @@ Module Mod_Plast
 	logical  :: PLAST_dumpbot = .false.
 	logical  :: PLAST_source = .false.
 	logical  :: PLAST_infil = .false.
+	logical  :: PLAST_lab_leaching = .false.
 	logical  :: plast_hot_start = .false.
 	logical  :: tox_vector = .false.
 	integer  :: nplast
@@ -648,6 +651,9 @@ Subroutine Read_PLAST_Params
   !read infiltration control switch
   Call Get_Val(plast_infil,plastfile,'PLAST_INFIL',line=linenum,echo=.false.)
 
+  !read lab leaching control switch
+  Call Get_Val(plast_lab_leaching,plastfile,'PLAST_LAB_LEACHING',line=linenum,echo=.false.)
+
   !read infiltration parameters only if enabled
   if (plast_infil) then
     ! Global infiltration parameters (uniform sediment properties)
@@ -723,6 +729,7 @@ Subroutine Read_PLAST_Params
   if (tox_vector) then
 	!read toxin leaching mode
 	Call Get_Val(tox_leaching,plastfile,'TOX_MOD',line=linenum,echo=.false.)
+  else
   end if
   
   !check values
@@ -795,9 +802,9 @@ Subroutine Read_PLAST_Params
 			Call Get_Val(stemp,plastfile,'TOX_NAME',line=linenum,echo=.false.,start=k1)
 			plast(i)%tname_f = TRIM(TRIM(stemp) // '_f')
 
-			!Initialize tox leach with a uniform estimation 
+			!Initialize tox leach with a uniform estimation
 			Call Get_Val(ftemp,plastfile,'TOX_CKL',line=linenum,echo=.false.,start=k1)
-			plast(i)%tox_leach_k = ftemp
+			plast(i)%tox_leach_k_uniform = ftemp
 			
 			!read free toxic decaying rate
 			Call Get_Val(ftemp,plastfile,'TOX_CKD',line=linenum,echo=.false.,start=k1)
@@ -868,6 +875,7 @@ Subroutine Advance_plast(DTin,Tin,taub_in,s_in,t_in)
   real(sp) :: fact,ufact,temp,s_temp(kbm1),t_temp(kbm1),rho_temp(kbm1),tc_temp(m,kb),dtc_temp
   real(sp) :: r_plast, r_tox
   real(sp) :: D_mech_plast(m), D_mech_tox(m)
+  real(sp) :: real_temp1, real_temp2, real_temp3  ! Debug variables for checking extreme changes
 
   if(dbg_set(dbg_sbr)) write(ipt,*) "Start: Advance_Plast "
 
@@ -889,57 +897,75 @@ Subroutine Advance_plast(DTin,Tin,taub_in,s_in,t_in)
   if(msr .and.  PLAST_its == 1)then
     write(*,*)'========Plast Model Initiated======='
   endif
-  
+
+
   !------------------------------------------------------
-  !read-in the density variation from baroclinic time-step 
+  !read-in the density variation from baroclinic time-step
   !------------------------------------------------------
   if (AMBIENT_DENSITY_TYPE==VRBL) then
 	Call AMBI_DENS(m,kbm1,s_in(1:m,1:kbm1),t_in(1:m,1:kbm1),rho_water(1:m,1:kbm1))
   end if
 
   !------------------------------------------------------
-  !Toxin leaching rate field computing toxin-leaching 
+  !Toxin leaching rate field computing toxin-leaching
   !------------------------------------------------------
 
   if (tox_vector) then
-	select case (tox_leaching)
+
+	do i=1,nplast
+
+		select case (tox_leaching)
 
 		case ('SFOK')
-		
-			!Pass here
-		
+
+			!Assign uniform value to entire water column array
+			plast(i)%tox_leach_k(:,:) = plast(i)%tox_leach_k_uniform
+			!Assign uniform value to entire sediment array
+			plast(i)%tox_leach_sed_k(:,:) = plast(i)%tox_leach_k_uniform
+
 		case ('SI-FOK')
 
 			!Compute the field of internal diffusivity
 			Call Calc_Internal_Diffusivity_Field(m,kbm1,plast(i)%D0,plast(i)%Ea,t_in(1:m,1:kbm1),plast(i)%D_plast)
-		
+
 			!Compute shape-impacted leaching factor
 			Call Calc_Toxin_Leach_Rate_SI(m,kbm1,plast(i)%MP_shape,plast(i)%aaxis,plast(i)%baxis,plast(i)%caxis,plast(i)%theta_s,plast(i)%D_plast,plast(i)%tox_leach_k)
-		
+
+
 		case ('SIR-FOK') !Under-development!!!
 
 			!Compute the field of internal diffusivity
 			Call Calc_Internal_Diffusivity_Field(m,kbm1,plast(i)%D0,plast(i)%Ea,t_in(1:m,1:kbm1),plast(i)%D_plast)
-			
+
 			!Compute shape-impacted leaching factor
 			Call Calc_Toxin_Leach_Rate_SI(m,kbm1,plast(i)%MP_shape,plast(i)%aaxis,plast(i)%baxis,plast(i)%caxis,plast(i)%theta_s,plast(i)%D_plast,plast(i)%tox_leach_k)
-		
+
+
 		case DEFAULT
 
 			!Default is set to no leaching
 			plast(i)%tox_leach_k = 0.0
 			plast(i)%tox_decay_k = 0.0
 			plast(i)%tox_gen_k = 0.0
-				
-	end select
+
+		end select
+	end do  ! end of nplast loop
+  else
   end if
 
   !------------------------------------------------------
-  !Set up Model Forcing  -> time step and bottom shear 
+  !Set up Model Forcing  -> time step and bottom shear
   !Convert taux/tauy to node-based values
   !Convert Model tau/rho to tau [N/m^2]
   !------------------------------------------------------
   DTplast = DTin
+
+  if (tox_vector .and. nplast > 0) then
+    real_temp1 = DTplast * plast(1)%tox_leach_k(1,1)
+    if (real_temp1 > 0.1) then
+      write(*,'(A,F12.8)') 'WARNING: Large stability parameter may cause instability!', real_temp1
+    end if
+  end if
   T_model = Tin
   
   do i=1,m
@@ -976,7 +1002,7 @@ Subroutine Advance_plast(DTin,Tin,taub_in,s_in,t_in)
 
 		!Computation of diffusivity
 		r_plast=plast(iplast)%dequ/2.0
-			Call Calc_Mechanical_Diffusivity(r_plast,plast(iplast)%ws_sed,.false.,D_mech_plast)
+		Call Calc_Mechanical_Diffusivity(r_plast,plast(iplast)%ws_sed,.false.,D_mech_plast)
 		if (tox_vector) then
 			r_tox=plast(iplast)%dequ_tox/2.0
 			Call Calc_Mechanical_Diffusivity(r_tox,plast(iplast)%ws_sed,.true.,D_mech_tox)
@@ -1137,14 +1163,16 @@ Subroutine Advance_plast(DTin,Tin,taub_in,s_in,t_in)
 		end do
 		
 		!Bonded and free toxic concentration updating
-	do iplast=1,nplast
-				
+		do iplast=1,nplast
+
 			!Leaching kinetic terms for bonded and free toxin in the water column
 			do i=1,m
 				do k=1,kb
+
 					plast(iplast)%tcnew_f(i,k)=plast(iplast)%tcnew_f(i,k)+DTplast*plast(iplast)%tox_leach_k(i,k)*plast(iplast)%tcnew_b(i,k)
 					plast(iplast)%cnew(i,k)=plast(iplast)%cnew(i,k)-DTplast*plast(iplast)%tox_leach_k(i,k)*plast(iplast)%tcnew_b(i,k)
 					plast(iplast)%tcnew_b(i,k)=plast(iplast)%tcnew_b(i,k)-DTplast*plast(iplast)%tox_leach_k(i,k)*plast(iplast)%tcnew_b(i,k)
+
 				end do
 			end do
 
@@ -1152,13 +1180,27 @@ Subroutine Advance_plast(DTin,Tin,taub_in,s_in,t_in)
 			if (PLAST_infil) then
 				do i=1,m
 					do k=1,N_sed_layer
-						plast(iplast)%tconc_f_sed(i,k)=plast(iplast)%tconc_f_sed(i,k)+DTplast*plast(iplast)%tox_leach_k(i,k)*plast(iplast)%tconc_b_sed(i,k)
-						plast(iplast)%conc_sed(i,k)=plast(iplast)%conc_sed(i,k)-DTplast*plast(iplast)%tox_leach_k(i,k)*plast(iplast)%tconc_b_sed(i,k)
-						plast(iplast)%conc_sed_s(i,k)=plast(iplast)%conc_sed_s(i,k)-DTplast*plast(iplast)%tox_leach_k(i,k)*plast(iplast)%tconc_b_sed_s(i,k)
-						plast(iplast)%conc_sed_p(i,k)=plast(iplast)%conc_sed_p(i,k)-DTplast*plast(iplast)%tox_leach_k(i,k)*plast(iplast)%tconc_b_sed_p(i,k)
-						plast(iplast)%tconc_b_sed(i,k)=plast(iplast)%tconc_b_sed(i,k)-DTplast*plast(iplast)%tox_leach_k(i,k)*plast(iplast)%tconc_b_sed(i,k)
-						plast(iplast)%tconc_b_sed_s(i,k)=plast(iplast)%tconc_b_sed_s(i,k)-DTplast*plast(iplast)%tox_leach_k(i,k)*plast(iplast)%tconc_b_sed_s(i,k)
-						plast(iplast)%tconc_b_sed_p(i,k)=plast(iplast)%tconc_b_sed_p(i,k)-DTplast*plast(iplast)%tox_leach_k(i,k)*plast(iplast)%tconc_b_sed_p(i,k)
+
+						! Store original values to check for extreme changes
+						real_temp1 = plast(iplast)%tconc_f_sed(i,k)
+						real_temp2 = plast(iplast)%conc_sed(i,k)
+						real_temp3 = plast(iplast)%tconc_b_sed(i,k)
+
+						plast(iplast)%tconc_f_sed(i,k)=plast(iplast)%tconc_f_sed(i,k)+DTplast*plast(iplast)%tox_leach_sed_k(i,k)*plast(iplast)%tconc_b_sed(i,k)
+						plast(iplast)%conc_sed(i,k)=plast(iplast)%conc_sed(i,k)-DTplast*plast(iplast)%tox_leach_sed_k(i,k)*plast(iplast)%tconc_b_sed(i,k)
+						plast(iplast)%conc_sed_s(i,k)=plast(iplast)%conc_sed_s(i,k)-DTplast*plast(iplast)%tox_leach_sed_k(i,k)*plast(iplast)%tconc_b_sed_s(i,k)
+						plast(iplast)%conc_sed_p(i,k)=plast(iplast)%conc_sed_p(i,k)-DTplast*plast(iplast)%tox_leach_sed_k(i,k)*plast(iplast)%tconc_b_sed_p(i,k)
+						plast(iplast)%tconc_b_sed(i,k)=plast(iplast)%tconc_b_sed(i,k)-DTplast*plast(iplast)%tox_leach_sed_k(i,k)*plast(iplast)%tconc_b_sed(i,k)
+						plast(iplast)%tconc_b_sed_s(i,k)=plast(iplast)%tconc_b_sed_s(i,k)-DTplast*plast(iplast)%tox_leach_sed_k(i,k)*plast(iplast)%tconc_b_sed_s(i,k)
+						plast(iplast)%tconc_b_sed_p(i,k)=plast(iplast)%tconc_b_sed_p(i,k)-DTplast*plast(iplast)%tox_leach_sed_k(i,k)*plast(iplast)%tconc_b_sed_p(i,k)
+
+						! Check for negative values or extreme changes
+						if (plast(iplast)%conc_sed(i,k) < 0.0) then
+							write(*,'(A,F12.6)') 'WARNING: Negative conc_sed detected!', plast(iplast)%conc_sed(i,k)
+						end if
+						if (abs(plast(iplast)%conc_sed(i,k) - real_temp2) > abs(real_temp2)*0.1) then
+							write(*,'(A,F12.6,A,F12.6)') 'WARNING: Large conc_sed change:', (plast(iplast)%conc_sed(i,k) - real_temp2), ' relative:', (plast(iplast)%conc_sed(i,k) - real_temp2)/real_temp2
+						end if
 					end do
 				end do
 			end if
@@ -1202,9 +1244,17 @@ Subroutine Advance_plast(DTin,Tin,taub_in,s_in,t_in)
 					end do
 				end if
 			end if
-		   
-				
-	end do
+
+			if (PLAST_infil) then
+
+				! Check if sediment values are reasonable
+				if (plast(iplast)%conc_sed(1,1) > 1.0e10 .or. plast(iplast)%conc_sed(1,1) < -1.0e-10) then
+					write(*,'(A,E15.6)') 'ERROR: Extreme conc_sed value detected!', plast(iplast)%conc_sed(1,1)
+				end if
+			end if
+
+
+		end do
 
   end if
 
@@ -1398,6 +1448,7 @@ Subroutine Alloc_Plast_Vars
 			allocate(plast(i)%D_plast(m,kbm1)) 		; plast(i)%D_plast = 0.0
 			allocate(plast(i)%D_toxin(m,kbm1))      ; plast(i)%D_toxin = 0.0
 			allocate(plast(i)%tox_leach_k(m,kbm1))  ; plast(i)%tox_leach_k = 0.0
+			allocate(plast(i)%tox_leach_sed_k(m,N_sed_layer))  ; plast(i)%tox_leach_sed_k = 0.0
 		endif
 
 		! Allocate infiltration arrays if enabled
@@ -1822,6 +1873,7 @@ Subroutine Calc_Erosion
 		tau_w = taub(i)
 		tau_f = tauf(i)
 		bottom_mass = plast(iplast)%mass(i)
+
 		if (bottom_mass>0.0) then
 			erosion_flux = DTplast*Erate(i)
 			if (erosion_flux>bottom_mass) then
@@ -1829,9 +1881,10 @@ Subroutine Calc_Erosion
 			end if
 		else
 			erosion_flux = 0.0
-		end if 
+		end if
+
 		precip_flux = plast(iplast)%prate*tau_f
-		plast(iplast)%eflx(i) = erosion_flux 
+		plast(iplast)%eflx(i) = erosion_flux
 		plast(iplast)%pflx(i) = precip_flux
 		
 		if (tox_vector) then
@@ -2103,44 +2156,62 @@ Subroutine Calc_Deposition
 		ctb(1:kb) = plast(iplast)%tconc_b(i,1:kbm1)
 	  end if
       dx(1:kbm1) = dz(i,1:kbm1)*d(i)
-      
-	  rhop = plast(iplast)%Prho
-	  da = plast(iplast)%aaxis
-	  db = plast(iplast)%baxis
-	  dc = plast(iplast)%caxis
-	  if(dbg_set(dbg_sbr)) write(ipt,*) "Start: Calc_Wset_Plastic"
-		call Calc_Wset_Plastic(kbm1,rho_water(i,1:kbm1),rhop,da,db,dc,wset)
-	  if(dbg_set(dbg_sbr)) write(ipt,*) "End: Calc_Wset_Plastic"
 
-	  if(dbg_set(dbg_sbr)) write(ipt,*) "Start: Settling advection"
-		!set up cycles (use max(CFL) == 1)
-		DTmax = Settle_CFL*minval(dx(1:kbm1)/wset(1:kbm1))
-		mcyc = int(DTplast/DTmax + 1. - eps)
-		DTdep = DTplast/float(mcyc)
+	  ! Check if concentrations are essentially zero to prevent numerical artifacts
+	  if (maxval(abs(c(1:kbm1))) < 1.0e-12) then
+		! Skip settling calculation if concentrations are negligible
+		dflux = 0.0
+		fflux = 0.0
+		if (Tox_vector) then
+			tfluxb = 0.0
+		end if
+	  else
+		! Normal settling calculation
+		rhop = plast(iplast)%Prho
+		da = plast(iplast)%aaxis
+		db = plast(iplast)%baxis
+		dc = plast(iplast)%caxis
+		if(dbg_set(dbg_sbr)) write(ipt,*) "Start: Calc_Wset_Plastic"
+			call Calc_Wset_Plastic(kbm1,rho_water(i,1:kbm1),rhop,da,db,dc,wset)
+		if(dbg_set(dbg_sbr)) write(ipt,*) "End: Calc_Wset_Plastic"
 
-		!call flux-limited settling equation
-		do ncyc = 1,mcyc
-			call settle_flux_new(kbm1,c,dx,wset,dflux,fflux,DTdep)
-		end do
+		if(dbg_set(dbg_sbr)) write(ipt,*) "Start: Settling advection"
+			!set up cycles (use max(CFL) == 1)
+			DTmax = Settle_CFL*minval(dx(1:kbm1)/wset(1:kbm1))
+			mcyc = int(DTplast/DTmax + 1. - eps)
+			DTdep = DTplast/float(mcyc)
+
+			!call flux-limited settling equation
+			do ncyc = 1,mcyc
+				call settle_flux_new(kbm1,c,dx,wset,dflux,fflux,DTdep)
+			end do
+
+			!Bonded Toxic Deposition
+			if (Tox_vector) then
+				do ncyc = 1,mcyc
+					call settle_tflux_new(kbm1,ctb,dx,wset,tfluxb,DTdep)
+				end do
+			end if
+	  end if
 
 		!store solution in 3D array
 		plast(iplast)%conc(i,1:kbm1) = c(1:kbm1)
-	  
-		!store wset in 3D array
-		plast(iplast)%wset(i,1:kbm1) = wset(1:kbm1)
+
+		!store wset in 3D array (only if settling was calculated)
+		if (maxval(abs(c(1:kbm1))) >= 1.0e-12) then
+			plast(iplast)%wset(i,1:kbm1) = wset(1:kbm1)
+		else
+			plast(iplast)%wset(i,1:kbm1) = 0.0
+		end if
 
 		!store depositional flux
 		plast(iplast)%dflx(i) = dflux
-		
+
 		!store floating flux
 		plast(iplast)%fflx(i) = fflux
-		
-		!Bonded Toxic Deposition
-		if (Tox_vector) then
-			do ncyc = 1,mcyc
-				call settle_tflux_new(kbm1,ctb,dx,wset,tfluxb,DTdep)
-			end do
 
+		!store toxic depositional flux
+		if (Tox_vector) then
 			!store solution in 3D array
 			plast(iplast)%tconc_b(i,1:kbm1) = ctb(1:kbm1)
 
@@ -2570,7 +2641,7 @@ End Function Lim
 Subroutine Calc_Infiltration
 
 	use all_vars
-  
+
   	implicit none
 
 	integer  :: iplast ,i,mcyc_t,mcyc_p,ncyc,k,k_search
@@ -2657,69 +2728,99 @@ Subroutine Calc_Infiltration
 			endif
 		end do
 		
-		
 		if (Tox_vector) then
 			ctb_sed_bc = plast(iplast)%tconc_b(i,kbm1)
 			ctf_sed_bc = plast(iplast)%tconc_f(i,kbm1)
 		end if
-		
+
+		! Handle boundary condition: if no particles in water column, infiltration flux should be zero
+		if (abs(c_sed_bc) < 1.0e-12) then
+			! No particles available to infiltrate from water column
+			! But still allow sediment transport within sediment layers
+			iflx = 0.0
+			! Still run infiltration for internal sediment transport if there are particles in sediment
+			if (maxval(abs(c_sed_p(1:N_sed_layer))) >= 1.0e-12) then
+				!set up cycles (use max(CFL) == 1)
+				DTmax_p = Settle_CFL*minval( dx(1:N_sed_layer) / max(abs(wset_sed_plastic(1:N_sed_layer)), eps) )
+				mcyc_p = max(1, int(DTplast/DTmax_p + 1. - eps))
+				DTdep_p = DTplast/float(mcyc_p)
+
+				!call flux-limited settling equation with zero boundary condition
+				do ncyc = 1,mcyc_p
+					call settle_flux_sed_new(N_sed_layer,c_sed_p,dx,wset_sed_plastic,0.0_sp,iflx,bflx,DTdep_p)
+				end do
+				! Ensure infiltration flux remains zero (only internal sediment flux allowed)
+				iflx = 0.0
+
+				! Apply lab leaching boundary condition for MPs (impermeable bottom)
+				if (PLAST_lab_leaching) then
+					! Add back particles that would have exited to maintain mass balance
+					c_sed_p(N_sed_layer) = c_sed_p(N_sed_layer) + bflx/dx(N_sed_layer)
+					! Force zero flux out of bottom sediment layer for MPs (impermeable boundary)
+					bflx = 0.0
+				end if
+			end if
+		else
+			! Normal infiltration calculation with non-zero boundary condition
 			!set up cycles (use max(CFL) == 1)
 			DTmax_p = Settle_CFL*minval( dx(1:N_sed_layer) / max(abs(wset_sed_plastic(1:N_sed_layer)), eps) )
 			mcyc_p = max(1, int(DTplast/DTmax_p + 1. - eps))
 			DTdep_p = DTplast/float(mcyc_p)
-                
-			!call flux-limited settling equation
-			
-			do ncyc = 1,mcyc_p
-				
-				call settle_flux_sed_new(N_sed_layer,c_sed_p,dx,wset_sed_plastic,c_sed_bc,iflx,bflx,DTdep_p)
-				
-			end do
-			
 
+			!call flux-limited settling equation
+			do ncyc = 1,mcyc_p
+				call settle_flux_sed_new(N_sed_layer,c_sed_p,dx,wset_sed_plastic,c_sed_bc,iflx,bflx,DTdep_p)
+
+				! Apply lab leaching boundary condition for MPs (impermeable bottom)
+				if (PLAST_lab_leaching) then
+					! Add back particles that would have exited to maintain mass balance
+					c_sed_p(N_sed_layer) = c_sed_p(N_sed_layer) + bflx/dx(N_sed_layer)
+					! Force zero flux out of bottom sediment layer for MPs (impermeable boundary)
+					bflx = 0.0
+				end if
+			end do
+		end if
+			
 			!store solution in 3D array
             plast(iplast)%conc_sed_p(i,1:N_sed_layer) = c_sed_p(1:N_sed_layer)
             
-
 			!store infiltration flux
             plast(iplast)%iflx(i) = iflx
             
-
 			!store burial flux
 			plast(iplast)%bflx(i) = bflx
 
 			if (Tox_vector) then
-				write(ipt,*) "DEBUG: Starting toxic settling calculations"
 
 				! Handle embedded toxic settling case
-				write(ipt,*) "DEBUG: Starting embedded toxic loop, mcyc_p = ", mcyc_p
 				do ncyc = 1,max(mcyc_p,1)
-					write(ipt,*) "DEBUG: Embedded toxic loop iteration ", ncyc, " of ", mcyc_p
 					call settle_flux_sed_new(N_sed_layer,ctb_sed_p,dx,wset_sed_plastic,ctb_sed_bc,itflxb,btflxb,DTdep_p)
-					write(ipt,*) "DEBUG: Completed embedded toxic loop iteration ", ncyc
+
+					! Apply lab leaching boundary condition for embedded toxins (impermeable bottom - same as MPs)
+					if (PLAST_lab_leaching) then
+						! Add back particles that would have exited to maintain mass balance
+						ctb_sed_p(N_sed_layer) = ctb_sed_p(N_sed_layer) + btflxb/dx(N_sed_layer)
+						! Force zero flux out of bottom sediment layer for embedded toxins (impermeable boundary)
+						btflxb = 0.0
+					end if
 				end do
-				write(ipt,*) "DEBUG: Finished embedded toxic loop"
 
 				! Handle free toxic settling case
 				if (.not. isfloat_toxic) then
-					write(ipt,*) "DEBUG: Starting free toxic calculations"
-					write(ipt,*) "DEBUG: minval(wset_sed_toxic) = ", minval(wset_sed_toxic(1:N_sed_layer))
 					DTmax_t = Settle_CFL*minval(dx(1:N_sed_layer)/wset_sed_toxic(1:N_sed_layer))
 					mcyc_t = int(DTplast/DTmax_t + 1. - eps)
 					DTdep_t = DTplast/float(mcyc_t)
-					write(ipt,*) "DEBUG: DTmax_t = ", DTmax_t
-					write(ipt,*) "DEBUG: mcyc_t = ", mcyc_t
-					write(ipt,*) "DEBUG: DTdep_t = ", DTdep_t
 
-					write(ipt,*) "DEBUG: Starting free toxic loop, mcyc_t = ", mcyc_t
 					do ncyc = 1, mcyc_t
-						write(ipt,*) "DEBUG: Free toxic loop iteration ", ncyc, " of ", mcyc_t
 						call settle_flux_sed_new(N_sed_layer,ctf_sed,dx,wset_sed_toxic,ctf_sed_bc,itflxf,btflxf,DTdep_t)
-						write(ipt,*) "DEBUG: Completed free toxic loop iteration ", ncyc
+
+						! Apply lab leaching boundary condition for free toxins (permeable bottom - allow passage)
+						if (PLAST_lab_leaching) then
+							! Free toxins can pass through the micropore filter (no change to btflxf)
+							! This maintains the original bottom flux for free toxins
+							! No modification needed - free toxins naturally flow through
+						end if
 					end do
-					write(ipt,*) "DEBUG: Finished free toxic loop"
-				else
-					write(ipt,*) "DEBUG: Skipping free toxic (isfloat_toxic = true)"
 				end if
 				!store toxic solution in 3D array
 				plast(iplast)%tconc_b_sed_p(i,1:N_sed_layer) = ctb_sed_p(1:N_sed_layer)
@@ -2733,7 +2834,6 @@ Subroutine Calc_Infiltration
 				plast(iplast)%tiflx_b_deep(i) = btflxb
 				plast(iplast)%tiflx_f_deep(i) = btflxf
 
-				write(ipt,*) "DEBUG: Finished all toxic settling calculations"
 			end if
 		end do
 	end do
@@ -2752,7 +2852,6 @@ Subroutine Calc_Blockage
     	real	 :: w_p, w_t, conc_sed_tmp, tconc_b_sed_tmp
     	real(sp) :: alpha_block, decay, theta, theta_min, theta_max
 
-
 		!Calculation of lambda
 		Call Calc_Blockage_Rate
 
@@ -2760,21 +2859,17 @@ Subroutine Calc_Blockage
 			do iplast=1,nplast
 				do i=1,m
 				
-
-
 # if defined (WET_DRY)
       	if (iswetn(i)/=1) then
-				w_p = abs(plast(iplast)%ws_sed)
-			else
-				w_p = abs(plast(iplast)%ws_sed+darv0)
-			end if
-
+			w_p = abs(plast(iplast)%ws_sed)
+		else
+			w_p = abs(plast(iplast)%ws_sed+darv0)
+		end if
 		if (Tox_vector) then
-
 			if (iswetn(i)/=1) then
 				w_t = 0.0
 			else
-				w_t = darv0
+				w_t = abs(darv0)
 			end if
 
 		end if
@@ -2785,7 +2880,6 @@ Subroutine Calc_Blockage
 			w_t = abs(darv0)
 		end if
 # endif
-
 					do k=1,N_sed_layer
 						conc_sed_tmp=plast(iplast)%conc_sed_p(i,k)
 						! Stable analytic update: mass-conserving partitioning
@@ -2793,11 +2887,8 @@ Subroutine Calc_Blockage
 							theta = alpha_block*DTplast
 							if (theta > blockage_theta_cap) theta = blockage_theta_cap
 							decay = exp(-theta)
-							
-							
 						plast(iplast)%conc_sed_p(i,k) = conc_sed_tmp*decay
 						plast(iplast)%conc_sed_s(i,k) = plast(iplast)%conc_sed_s(i,k) + conc_sed_tmp*(1.0_sp - decay)
-						
 						if (plast(iplast)%conc_sed_p(i,k) < 0.0_sp) plast(iplast)%conc_sed_p(i,k) = 0.0_sp
 						if (plast(iplast)%conc_sed_s(i,k) < 0.0_sp) plast(iplast)%conc_sed_s(i,k) = 0.0_sp
 						if (Tox_vector) then
@@ -2845,9 +2936,9 @@ Subroutine Update_Bottom
 			do iplast=1,nplast
 			flux = (plast(iplast)%eflx(i)+plast(iplast)%iflx(i)-plast(iplast)%dflx(i))
 
-			!change top layer bed mass of each plastic type 
-			accum  = plast(iplast)%mass(i) - flux 
-			plast(iplast)%mass(i) = max(accum,0.0) 
+			!change top layer bed mass of each plastic type
+			accum  = plast(iplast)%mass(i) - flux
+			plast(iplast)%mass(i) = max(accum,0.0)
 			end do
 		end do
 
@@ -3311,7 +3402,6 @@ Subroutine Calc_Blockage_Rate
 				!lambda_DLVO computation
 				lambda_DLVO = 3*(1-phi)/(2*d_g)*(eta_D+eta_I+eta_G)*alpha_primary
 				
-
 				!lambda_strain computation and combined lambda computation
 				k_str=269.7*(d_MP/d_g)**(1.42)
 
@@ -3787,7 +3877,6 @@ Subroutine Vdif_Scal_Sed(f,deltat,diff_rate)
     !Transfer solution back
     f(i,1:N_sed_layer) = fsol(1:N_sed_layer)
      
-
   End Do
 
 End Subroutine Vdif_Scal_Sed

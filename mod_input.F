@@ -2092,6 +2092,50 @@ CONTAINS
 		
 	END IF
 
+	!LOAD INITIAL PLASTIC SEDIMENT CONCENTRATION
+	IF (BOTTOM_FEATURES_TYPE == STTC) then
+
+		! TEST FILE NAME
+		charnum = index (INIT_PLAST_SED_CONC_FILE,".nc",back)
+		if (charnum /= len_trim(INIT_PLAST_SED_CONC_FILE)-2)&
+			& CALL WARNING("Initial plastic sediment concentration file does not end in .nc", &
+			& trim(INIT_PLAST_SED_CONC_FILE))
+
+		! INITIALIZE TYPE TO HOLD FILE METADATA
+		pathnfile= trim(INPUT_DIR)//trim(INIT_PLAST_SED_CONC_FILE)
+        CALL  NC_INIT(NCF,pathnfile)
+
+	    ! OPEN THE FILE AND LOAD METADATA
+       if(.not. NCF%OPEN) then
+          Call NC_OPEN(NCF)
+          CALL NC_LOAD(NCF)
+          FILEHEAD => ADD(FILEHEAD,NCF)
+       end if
+
+	END IF
+
+	!LOAD INITIAL TOXIN SEDIMENT CONCENTRATION
+	IF (BOTTOM_FEATURES_TYPE == STTC) then
+
+		! TEST FILE NAME
+		charnum = index (INIT_TOXIN_SED_CONC_FILE,".nc",back)
+		if (charnum /= len_trim(INIT_TOXIN_SED_CONC_FILE)-2)&
+			& CALL WARNING("Initial toxin sediment concentration file does not end in .nc", &
+			& trim(INIT_TOXIN_SED_CONC_FILE))
+
+		! INITIALIZE TYPE TO HOLD FILE METADATA
+		pathnfile= trim(INPUT_DIR)//trim(INIT_TOXIN_SED_CONC_FILE)
+        CALL  NC_INIT(NCF,pathnfile)
+
+	    ! OPEN THE FILE AND LOAD METADATA
+       if(.not. NCF%OPEN) then
+          Call NC_OPEN(NCF)
+          CALL NC_LOAD(NCF)
+          FILEHEAD => ADD(FILEHEAD,NCF)
+       end if
+
+	END IF
+
 # endif 
 
   END SUBROUTINE OPEN_FORCING

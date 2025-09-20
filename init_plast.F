@@ -140,34 +140,14 @@
 		  End Do
 		End do
 	  End do
-	  
-	  If (tox_vector) then
-		 Do k=1,Kb
-			Do i=1,m
-			  Do iplast=1,Nplast
-				plast(iplast)%tconc_b(i,k) = 0.0 
-				plast(iplast)%tcnew_b(i,k) = plast(iplast)%tconc_b(i,k)
-				plast(iplast)%tconc_f(i,k) = 0.0 
-				plast(iplast)%tcnew_f(i,k) = plast(iplast)%tconc_f(i,k) 				
-			  End Do
-			End do
-		 End do
-	  End if
   
   End if
   
   If (INIT_PLAST_CONC_TYPE==STTC) then
 
 	allocate(conc_tmp(m,kb,nplast)) ; conc_tmp = 0.0
-	If (tox_vector) then
-		allocate(tconc_b_tmp(m,kb,nplast)) ; tconc_b_tmp = 0.0
-		allocate(tconc_f_tmp(m,kb,nplast)) ; tconc_f_tmp = 0.0
-	End if
 
 	call LOAD_INIT_PLAST_CONC(conc_tmp)
-	If (tox_vector) then
-		call LOAD_INIT_TOXIN_CONC(tconc_b_tmp,tconc_f_tmp)
-	End if
 	
 	Do k=1,Kb
 		Do i=1,m
@@ -177,21 +157,47 @@
 			End do
 		End do
 	End do
-	
-	If (tox_vector) then
-		Do k=1,Kb
-			Do i=1,m
-				Do iplast=1,nplast
-					plast(iplast)%tconc_b(i,k) = tconc_b_tmp(i,k,iplast)
-					plast(iplast)%tcnew_b(i,k) = plast(iplast)%tconc_b(i,k)
-					plast(iplast)%tconc_f(i,k) = tconc_f_tmp(i,k,iplast)
-					plast(iplast)%tcnew_f(i,k) = plast(iplast)%tconc_f(i,k) 
-				End do
-			End do
-		End do
-	End if
   
   End if
+
+	If (tox_vector) then
+
+		If (INIT_TOXIN_CONC_TYPE==CNSTNT) then
+
+			Do k=1,Kb
+			Do i=1,m
+				Do iplast=1,Nplast
+				plast(iplast)%tconc_b(i,k) = 0.0 
+				plast(iplast)%tcnew_b(i,k) = plast(iplast)%tconc_b(i,k)
+				plast(iplast)%tconc_f(i,k) = 0.0 
+				plast(iplast)%tcnew_f(i,k) = plast(iplast)%tconc_f(i,k) 				
+				End Do
+			End do
+			End do
+
+		End If
+
+		If (INIT_TOXIN_CONC_TYPE==STTC) then
+
+			allocate(tconc_b_tmp(m,kb,nplast)) ; tconc_b_tmp = 0.0
+			allocate(tconc_f_tmp(m,kb,nplast)) ; tconc_f_tmp = 0.0
+
+			call LOAD_INIT_TOXIN_CONC(tconc_b_tmp,tconc_f_tmp)
+
+			Do k=1,Kb
+				Do i=1,m
+					Do iplast=1,nplast
+						plast(iplast)%tconc_b(i,k) = tconc_b_tmp(i,k,iplast)
+						plast(iplast)%tcnew_b(i,k) = plast(iplast)%tconc_b(i,k)
+						plast(iplast)%tconc_f(i,k) = tconc_f_tmp(i,k,iplast)
+						plast(iplast)%tcnew_f(i,k) = plast(iplast)%tconc_f(i,k) 
+					End do
+				End do
+			End do
+
+		End if
+	
+	End if
   
   !--------------------------------------------------
   !Loading bottom (sediment) properties
@@ -218,6 +224,15 @@
   end if
 
   if (BOTTOM_FEATURES_TYPE==STTC) then
+
+	allocate(sd50_temp(m))
+	allocate(dens_temp(m))
+	allocate(mudp_temp(m))
+	allocate(poro_temp(m))
+	allocate(Tsed_temp(m))
+	allocate(wDcy_temp(m))
+	allocate(Lsed_temp(m))
+
 	call LOAD_BOTTOM_FEATURES(sd50_temp,dens_temp,mudp_temp,poro_temp,Tsed_temp,wDcy_temp,Lsed_temp)
 	Do i=1,m
 		bottom(i,isd50) = sd50_temp(i)
@@ -258,14 +273,14 @@
 
 	if (BOTTOM_FEATURES_TYPE==STTC) then
 
-		allocate(conc_sed_tmp(0:mt,kb,nplast)) ; conc_sed_tmp = 0.0
-		allocate(conc_sed_p_tmp(0:mt,kb,nplast)) ; conc_sed_p_tmp = 0.0
-		allocate(conc_sed_s_tmp(0:mt,kb,nplast)) ; conc_sed_s_tmp = 0.0
+		allocate(conc_sed_tmp(m,N_sed_layer,nplast)) ; conc_sed_tmp = 0.0
+		allocate(conc_sed_p_tmp(m,N_sed_layer,nplast)) ; conc_sed_p_tmp = 0.0
+		allocate(conc_sed_s_tmp(m,N_sed_layer,nplast)) ; conc_sed_s_tmp = 0.0
 		If (tox_vector) then
-			allocate(tconc_b_sed_tmp(0:mt,kb,nplast)) ; tconc_b_sed_tmp = 0.0
-			allocate(tconc_b_sed_p_tmp(0:mt,kb,nplast)) ; tconc_b_sed_p_tmp = 0.0
-			allocate(tconc_b_sed_s_tmp(0:mt,kb,nplast)) ; tconc_b_sed_s_tmp = 0.0
-			allocate(tconc_f_tmp(0:mt,kb,nplast)) ; tconc_f_tmp = 0.0
+			allocate(tconc_b_sed_tmp(m,N_sed_layer,nplast)) ; tconc_b_sed_tmp = 0.0
+			allocate(tconc_b_sed_p_tmp(m,N_sed_layer,nplast)) ; tconc_b_sed_p_tmp = 0.0
+			allocate(tconc_b_sed_s_tmp(m,N_sed_layer,nplast)) ; tconc_b_sed_s_tmp = 0.0
+			allocate(tconc_f_sed_tmp(m,N_sed_layer,nplast)) ; tconc_f_sed_tmp = 0.0
 		End if
 
 		call LOAD_INIT_PLAST_SED_CONC(conc_sed_tmp,conc_sed_s_tmp,conc_sed_p_tmp)
