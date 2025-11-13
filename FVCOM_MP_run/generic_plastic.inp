@@ -21,6 +21,10 @@
 !	PLAST_ONED: switch of 1D model
 !	PLAST_NUDGE: switch of OBC nudging
 !   PLAST_INFIL: switch of plastic infiltration submodule
+!   PLAST_FLOC: switch of plastic sediment interaction submodule, it has to be
+!               compiled with sediment transport module; for the present version
+!               the toxin and infiltration part is not compatible with the 
+!               flocculation module.
 !   PLAST_ALPHA: plastic nudging relaxation factor
 !	PLAST_RAMP: number of iterations over which to ramp plastic nudging
 !	PLAST_START: start interval for plastic model
@@ -51,6 +55,7 @@
 PLAST_ONED = F
 PLAST_NUDGE = F
 PLAST_INFIL = F
+PLAST_FLOC = F
 PLAST_ALPHA = 0.5
 PLAST_RAMP  = 1
 PLAST_START = 361
@@ -68,7 +73,6 @@ CSHIELDS = SW97
 !            =0:  1st order upwind
 !            =1:  minmod limiter
 !            =2:  Van Leer limiter
-!   
 !------------------------------------------------------------------------------!
 
 SETTLE_CFL = .8
@@ -145,7 +149,8 @@ TOX_MOD = 1
 !   SED_MUDP:   mud portion in the sediment	(if set constant)		 [-      ]	
 !   AMBIENT_DEN: ambient water density 								 [kg/m^3 ]								  
 !   INI_MASS:	initial plastic mass on each grid point 	 		 [kg     ]
-!	INF_PLAST:  infinite plastic mass switch                         [-      ]
+!   INI_MRATE:  initial aggregated mass ratio on the ground          [-      ]
+!   INF_PLAST:  infinite plastic mass switch                         [-      ]
 !
 !   Infiltration parameters (when PLAST_INFIL = T):
 !   SED_LNUM:           sediment layer number                        [-      ]
@@ -167,5 +172,8 @@ SED_LNUM = 5
 AMBIENT_DEN = 1025.
 
 INI_MASS = 0.0001
+INI_MASS_AG_RATE = 0.1
+SOURCE_AG_RATE = 0.1
+OBC_AG_RATE = 0.1
 INF_PLAST = F
 INFIL_MAX_DEPTH = 1.0

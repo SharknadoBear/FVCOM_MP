@@ -1,0 +1,402 @@
+\documentclass[12pt,a4paper]{article}
+\usepackage[utf8]{inputenc}
+\usepackage{amsmath}
+\usepackage{amsfonts}
+\usepackage{amssymb}
+\usepackage{graphicx}
+\usepackage{tikz}
+\usepackage{pgfplots}
+\usepackage{listings}
+\usepackage{color}
+\usepackage{geometry}
+\usepackage{hyperref}
+\usepackage{float}
+
+\geometry{margin=2.5cm}
+
+\definecolor{codegreen}{rgb}{0,0.6,0}
+\definecolor{codegray}{rgb}{0.5,0.5,0.5}
+\definecolor{codepurple}{rgb}{0.58,0,0.82}
+\definecolor{backcolour}{rgb}{0.95,0.95,0.92}
+
+\lstdefinestyle{mystyle}{
+    backgroundcolor=\color{backcolour},
+    commentstyle=\color{codegreen},
+    keywordstyle=\color{magenta},
+    numberstyle=\tiny\color{codegray},
+    stringstyle=\color{codepurple},
+    basicstyle=\ttfamily\footnotesize,
+    breakatwhitespace=false,
+    breaklines=true,
+    captionpos=b,
+    keepspaces=true,
+    numbers=left,
+    numbersep=5pt,
+    showspaces=false,
+    showstringspaces=false,
+    showtabs=false,
+    tabsize=2
+}
+
+\lstset{style=mystyle}
+
+\title{FVCOM Processing Structure and Module Analysis\\
+\large{Hydrodynamics, Temperature, Salinity, and Plastic Module Documentation}}
+\author{FVCOM-MP Analysis Documentation}
+\date{\today}
+
+\begin{document}
+
+\maketitle
+
+\tableofcontents
+\newpage
+
+\section{Executive Summary}
+
+This document provides a comprehensive analysis of the FVCOM (Finite Volume Community Ocean Model) processing structure, focusing on the main computational flow, hydrodynamic processes, temperature and salinity transport, and the plastic module (FVCOM-MP). The analysis includes recommendations for disabling hydrodynamic processes when operating in laboratory leaching mode.
+
+\section{FVCOM Main Processing Flow}
+
+\subsection{Program Structure}
+
+The FVCOM model is organized in a main program located in \texttt{fvcom.F:33} with the following key components:
+
+\begin{itemize}
+    \item \textbf{Main Program}: \texttt{PROGRAM FVCOM} (fvcom.F:33)
+    \item \textbf{Setup Phase}: Domain setup, allocation, and initialization
+    \item \textbf{Main Time Loop}: Iterative solution of governing equations
+    \item \textbf{Internal Step}: Solution of 3D momentum, temperature, salinity
+    \item \textbf{External Step}: Solution of 2D barotropic equations
+\end{itemize}
+
+\subsection{Main Loop Structure}
+
+The main computational loop structure varies depending on the run mode:
+
+\begin{enumerate}
+    \item \textbf{Standard Mode} (fvcom.F:870-942):
+        \begin{itemize}
+            \item Calls \texttt{INTERNAL\_STEP} (fvcom.F:875)
+            \item Updates Lagrangian velocities (fvcom.F:930)
+        \end{itemize}
+
+    \item \textbf{Assimilation Mode} (fvcom.F:945-1169):
+        \begin{itemize}
+            \item Multiple nested loops for data assimilation
+            \item Temperature and salinity observation updates
+            \item SSH grid assimilation updates
+        \end{itemize}
+\end{enumerate}
+
+\section{Internal Step Processing}
+
+\subsection{File Location and Structure}
+\texttt{internal\_step.F:29} contains the main 3D computational kernel.
+
+\subsection{Key Processing Sections}
+
+\subsubsection{Initialization and Setup}
+\begin{itemize}
+    \item Ramp factor calculation (internal\_step.F:127-133)
+    \item Offline mode setup (internal\_step.F:136-239)
+\end{itemize}
+
+\subsubsection{Hydrodynamic Processing}
+
+\textbf{Momentum Advection and Diffusion:}
+\begin{itemize}
+    \item \texttt{CALL ADV\_UV\_EDGE\_GCN} (internal\_step.F:661,819,854)
+    \item \texttt{CALL ADV\_UV\_EDGE\_GCY} (internal\_step.F:663,821,856)
+    \item Handles horizontal advection/diffusion and vertical advection
+\end{itemize}
+
+\textbf{Vertical Velocity:}
+\begin{itemize}
+    \item \texttt{CALL ADV\_W} (internal\_step.F:710,945)
+    \item Computes vertical velocity field
+\end{itemize}
+
+\textbf{Turbulence Closure:}
+\begin{itemize}
+    \item \texttt{CALL ADV\_Q} for Q2 and Q2L (internal\_step.F:1027,1032)
+    \item Turbulent kinetic energy and length scale advection
+\end{itemize}
+
+\subsubsection{Temperature Processing}
+Located in section: internal\_step.F:1155-1261
+
+\textbf{Key Operations:}
+\begin{itemize}
+    \item \texttt{CALL ADV\_T} (internal\_step.F:1164) - Temperature advection
+    \item Boundary condition applications
+    \item Assimilation and nudging procedures
+    \item Temperature field updates
+\end{itemize}
+
+\subsubsection{Salinity Processing}
+Located in section: internal\_step.F:1262-1361
+
+\textbf{Key Operations:}
+\begin{itemize}
+    \item \texttt{CALL ADV\_S} (internal\_step.F:1272) - Salinity advection
+    \item Boundary condition applications
+    \item Assimilation procedures
+    \item Salinity field updates
+\end{itemize}
+
+\subsubsection{Plastic Module Processing}
+Located in section: internal\_step.F:1129-1140
+
+\textbf{Key Operations:}
+\begin{itemize}
+    \item \texttt{CALL ADVANCE\_PLAST} (internal\_step.F:1138,1140)
+    \item Plastic transport and fate calculations
+    \item Integration with sediment and water quality models
+\end{itemize}
+
+\section{Plastic Module (FVCOM-MP) Structure}
+
+\subsection{Module Overview}
+The plastic module (\texttt{mod\_plast.F}) implements microplastic transport and fate modeling based on the Community Sediment Transport Model (CSTM) structure.
+
+\subsection{Key Features}
+
+\subsubsection{Lab Leaching Mode}
+\textbf{Configuration Variable:} \texttt{PLAST\_lab\_leaching} (mod\_plast.F:369)
+
+\textbf{Applications:}
+\begin{itemize}
+    \item Impermeable bottom boundary for microplastics (mod\_plast.F:2756-2779)
+    \item Mass balance maintenance for confined systems
+    \item Controlled toxin release studies
+\end{itemize}
+
+\subsubsection{Transport Processes}
+\begin{itemize}
+    \item Advection and diffusion
+    \item Settling and resuspension
+    \item Toxin leaching kinetics
+    \item Infiltration processes
+\end{itemize}
+
+\subsubsection{Multi-component System}
+\begin{itemize}
+    \item Microplastic particles (concentration: \#/m³)
+    \item Embedded toxins (mg/m³)
+    \item Free toxins (mg/m³)
+\end{itemize}
+
+\section{Flow Diagram}
+
+\begin{figure}[H]
+\centering
+\begin{tikzpicture}[node distance=2cm, auto]
+    % Define styles
+    \tikzstyle{startstop} = [rectangle, rounded corners, minimum width=3cm, minimum height=1cm, text centered, draw=black, fill=red!30]
+    \tikzstyle{process} = [rectangle, minimum width=3cm, minimum height=1cm, text centered, draw=black, fill=orange!30]
+    \tikzstyle{decision} = [diamond, minimum width=3cm, minimum height=1cm, text centered, draw=black, fill=green!30]
+    \tikzstyle{module} = [rectangle, minimum width=3cm, minimum height=1cm, text centered, draw=black, fill=blue!30]
+    \tikzstyle{arrow} = [thick,->,>=stealth]
+
+    % Nodes
+    \node (start) [startstop] {PROGRAM FVCOM};
+    \node (setup) [process, below of=start] {Setup Domain \& Allocation};
+    \node (mainloop) [process, below of=setup] {Main Time Loop};
+    \node (internal) [module, below of=mainloop] {INTERNAL\_STEP};
+    \node (hydro) [module, below left of=internal, xshift=-2cm] {Hydrodynamics\\(ADV\_UV, ADV\_W)};
+    \node (temp) [module, below of=internal] {Temperature\\(ADV\_T)};
+    \node (salt) [module, below right of=internal, xshift=2cm] {Salinity\\(ADV\_S)};
+    \node (plastic) [module, below of=temp, yshift=-1cm] {Plastic Module\\(ADVANCE\_PLAST)};
+    \node (decision1) [decision, below of=plastic, yshift=-1cm] {Lab Leaching\\Mode?};
+    \node (normal) [process, below left of=decision1, xshift=-2cm] {Normal Transport\\with Bottom Flux};
+    \node (leaching) [process, below right of=decision1, xshift=2cm] {Impermeable Bottom\\Mass Conservation};
+    \node (update) [process, below of=decision1, yshift=-3cm] {Update Fields};
+    \node (end) [startstop, below of=update] {Output \& Continue};
+
+    % Arrows
+    \draw [arrow] (start) -- (setup);
+    \draw [arrow] (setup) -- (mainloop);
+    \draw [arrow] (mainloop) -- (internal);
+    \draw [arrow] (internal) -- (hydro);
+    \draw [arrow] (internal) -- (temp);
+    \draw [arrow] (internal) -- (salt);
+    \draw [arrow] (temp) -- (plastic);
+    \draw [arrow] (plastic) -- (decision1);
+    \draw [arrow] (decision1) -- node[anchor=east] {No} (normal);
+    \draw [arrow] (decision1) -- node[anchor=west] {Yes} (leaching);
+    \draw [arrow] (normal) -- (update);
+    \draw [arrow] (leaching) -- (update);
+    \draw [arrow] (update) -- (end);
+    \draw [arrow] (end) -- ++(-6,0) |- (mainloop);
+\end{tikzpicture}
+\caption{FVCOM Processing Flow Diagram}
+\label{fig:fvcom_flow}
+\end{figure}
+
+\section{Hydrodynamics, Temperature, and Salinity Disabling Strategy for Lab Leaching Mode}
+
+\subsection{Analysis and Recommendations}
+
+To disable hydrodynamic processes, temperature transport, and salinity transport when \texttt{PLAST\_lab\_leaching = .true.}, the following modifications are recommended:
+
+\subsubsection{Option 1: Complete Physical Transport Bypass}
+
+Modify \texttt{internal\_step.F} to add conditional blocks around all physical transport subroutines:
+
+\begin{lstlisting}[language=Fortran, caption=Proposed Modification in internal\_step.F]
+! Add this check before physical transport calculations
+# if defined (PLASTIC)
+  USE MOD_PLAST, ONLY: PLAST_lab_leaching
+# endif
+
+! Around line 661-663 (momentum advection)
+# if defined (PLASTIC)
+  IF (.NOT. PLAST_lab_leaching) THEN
+# endif
+# if defined (GCN)
+    CALL ADV_UV_EDGE_GCN
+# else
+    CALL ADV_UV_EDGE_GCY
+# endif
+# if defined (PLASTIC)
+  END IF
+# endif
+
+! Around line 710/945 (vertical velocity)
+# if defined (PLASTIC)
+  IF (.NOT. PLAST_lab_leaching) THEN
+# endif
+    CALL ADV_W
+# if defined (PLASTIC)
+  END IF
+# endif
+
+! Around line 1164 (temperature advection)
+# if defined (PLASTIC)
+  IF (.NOT. PLAST_lab_leaching) THEN
+# endif
+    CALL ADV_T
+# if defined (PLASTIC)
+  END IF
+# endif
+
+! Around line 1272 (salinity advection)
+# if defined (PLASTIC)
+  IF (.NOT. PLAST_lab_leaching) THEN
+# endif
+    CALL ADV_S
+# if defined (PLASTIC)
+  END IF
+# endif
+\end{lstlisting}
+
+\subsubsection{Option 2: Static Laboratory Conditions}
+
+For laboratory leaching studies, disable all transport processes to maintain static conditions:
+
+\begin{itemize}
+    \item \textbf{Disable}: Momentum equations and velocity field updates
+    \item \textbf{Disable}: Temperature advection and diffusion
+    \item \textbf{Disable}: Salinity advection and diffusion
+    \item \textbf{Maintain}: Plastic transport and toxin leaching only
+    \item \textbf{Maintain}: Density calculations for settling (if needed)
+\end{itemize}
+
+\subsubsection{Option 3: Parameter-Based Control}
+
+Add a new control parameter in the plastic module:
+
+\begin{lstlisting}[language=Fortran, caption=New Control Parameter]
+! In mod_plast.F variable declarations
+logical :: PLAST_disable_hydrodynamics = .false.
+
+! In setup routine
+Call Get_Val(PLAST_disable_hydrodynamics, plastfile, &
+            'PLAST_DISABLE_HYDRODYNAMICS', line=linenum, echo=.false.)
+
+! Set automatic disabling for lab leaching
+IF (PLAST_lab_leaching) PLAST_disable_hydrodynamics = .true.
+\end{lstlisting}
+
+\subsection{Recommended Implementation Locations}
+
+\begin{enumerate}
+    \item \textbf{Primary Location}: \texttt{internal\_step.F:661-1272}
+        \begin{itemize}
+            \item Wrap momentum advection calls (lines 661-663, 819-821, 854-856)
+            \item Wrap vertical velocity calculations (lines 710, 945)
+            \item Wrap temperature advection (line 1164)
+            \item Wrap salinity advection (line 1272)
+        \end{itemize}
+
+    \item \textbf{Secondary Location}: \texttt{fvcom.F:875}
+        \begin{itemize}
+            \item Add check before calling \texttt{INTERNAL\_STEP}
+            \item Skip entirely for static laboratory conditions
+        \end{itemize}
+
+    \item \textbf{External Step}: Consider disabling \texttt{EXTERNAL\_STEP} calls
+        \begin{itemize}
+            \item Barotropic mode calculations may not be needed
+            \item Maintains computational efficiency
+        \end{itemize}
+
+    \item \textbf{Temperature/Salinity Boundary Conditions}:
+        \begin{itemize}
+            \item Disable boundary condition updates for T/S
+            \item Maintain fixed laboratory conditions
+            \item Consider disabling assimilation routines
+        \end{itemize}
+\end{enumerate}
+
+\subsection{Implementation Considerations}
+
+\begin{itemize}
+    \item \textbf{Mass Conservation}: Ensure plastic mass balance is maintained
+    \item \textbf{Static Fields}: Temperature and salinity remain constant for laboratory conditions
+    \item \textbf{Density Calculations}: May need to maintain fixed density based on initial T/S
+    \item \textbf{Boundary Conditions}: Disable dynamic T/S boundary updates
+    \item \textbf{Output Compatibility}: Ensure output routines handle static T/S fields
+    \item \textbf{Turbulence}: Consider disabling turbulence closure models for static conditions
+    \item \textbf{Initialization}: Set initial T/S values that remain constant throughout simulation
+\end{itemize}
+
+\section{Key File Locations}
+
+\subsection{Main Processing Files}
+\begin{itemize}
+    \item \texttt{fvcom.F:33} - Main program and time loop
+    \item \texttt{internal\_step.F:29} - 3D computational kernel
+    \item \texttt{external\_step.F:30} - 2D barotropic calculations
+\end{itemize}
+
+\subsection{Module Files}
+\begin{itemize}
+    \item \texttt{mod\_plast.F} - Plastic transport and fate module
+    \item \texttt{adv\_t.F} - Temperature advection
+    \item \texttt{adv\_s.F} - Salinity advection
+    \item \texttt{adv\_uv\_edge\_gcn.F/adv\_uv\_edge\_gcy.F} - Momentum advection
+\end{itemize}
+
+\subsection{Configuration Variables}
+\begin{itemize}
+    \item \texttt{PLAST\_lab\_leaching} (mod\_plast.F:369) - Lab leaching mode flag
+    \item \texttt{PLASTIC\_MODEL} - Master plastic module enable flag
+\end{itemize}
+
+\section{Conclusion}
+
+The FVCOM model structure is well-organized for implementing conditional physical transport disabling for laboratory leaching studies. The recommended approach involves adding conditional compilation directives around key transport subroutines in \texttt{internal\_step.F}, controlled by the existing \texttt{PLAST\_lab\_leaching} parameter.
+
+Key modifications include:
+\begin{itemize}
+    \item \textbf{Hydrodynamics}: Disable momentum transport (ADV\_UV\_EDGE) and vertical velocity (ADV\_W)
+    \item \textbf{Temperature}: Disable temperature advection (ADV\_T) for static thermal conditions
+    \item \textbf{Salinity}: Disable salinity advection (ADV\_S) for constant salinity
+    \item \textbf{Plastic Module}: Maintain plastic transport and toxin leaching processes
+\end{itemize}
+
+This modification would allow for realistic plastic transport and toxin leaching modeling in controlled laboratory environments with static water conditions while maintaining computational efficiency and focusing computational resources solely on the plastic-toxin system dynamics.
+
+\end{document}

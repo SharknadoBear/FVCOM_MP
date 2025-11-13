@@ -8257,8 +8257,56 @@ FUNCTION PLAST_FILE_OBJECT() RESULT(NCF)
 		NULLIFY(SLD_P)
   
   END DO
-  
-  !OUTPUT of the settling velocity 
+
+#if defined (SEDIMENT) && (ORIG_SED) || (SEDIMENT) && (CSTMS_SED)
+  !OUTPUT of aggregated plastic concentration
+  Do II=1,nplast
+
+		SLD_P => plast(ii)%conc_a(1:m,1:kbm1)
+
+		VAR  => NC_MAKE_PVAR(name=TRIM(TRIM(plast(ii)%pname)//'_agg'),&
+			& values=SLD_P, DIM1= DIM_node, DIM2= DIM_siglay, DIM3 = DIM_time)
+
+		ATT  => NC_MAKE_ATT(name='long_name',values=TRIM('Aggregated Plastic Concentration of '//TRIM(plast(ii)%pname)))
+		VAR  => ADD(VAR,ATT)
+
+		ATT  => NC_MAKE_ATT(name='units',values='kg/m^3')
+		VAR  => ADD(VAR,ATT)
+
+		ATT  => NC_MAKE_ATT(name='grid',values='fvcom_grid')
+		VAR  => ADD(VAR,ATT)
+
+		NCF  => ADD(NCF,VAR)
+
+		NULLIFY(SLD_P)
+
+  END DO
+
+  !OUTPUT of disaggregated plastic concentration
+  Do II=1,nplast
+
+		SLD_P => plast(ii)%conc_d(1:m,1:kbm1)
+
+		VAR  => NC_MAKE_PVAR(name=TRIM(TRIM(plast(ii)%pname)//'_dis'),&
+			& values=SLD_P, DIM1= DIM_node, DIM2= DIM_siglay, DIM3 = DIM_time)
+
+		ATT  => NC_MAKE_ATT(name='long_name',values=TRIM('Disaggregated Plastic Concentration of '//TRIM(plast(ii)%pname)))
+		VAR  => ADD(VAR,ATT)
+
+		ATT  => NC_MAKE_ATT(name='units',values='kg/m^3')
+		VAR  => ADD(VAR,ATT)
+
+		ATT  => NC_MAKE_ATT(name='grid',values='fvcom_grid')
+		VAR  => ADD(VAR,ATT)
+
+		NCF  => ADD(NCF,VAR)
+
+		NULLIFY(SLD_P)
+
+  END DO
+#endif
+
+  !OUTPUT of the settling velocity
   Do II=1,nplast
 	
 		SLD_P => plast(ii)%wset(1:m,1:kbm1)
@@ -8280,7 +8328,32 @@ FUNCTION PLAST_FILE_OBJECT() RESULT(NCF)
 		NULLIFY(SLD_P)
 	
   End Do
-  
+
+#if defined (SEDIMENT) && (ORIG_SED) || (SEDIMENT) && (CSTMS_SED)
+  !OUTPUT of floc-impacted settling velocity
+  Do II=1,nplast
+
+		SLD_P => plast(ii)%wset_floc(1:m,1:kbm1)
+
+		VAR  => NC_MAKE_PVAR(name=TRIM('settle_vel_floc_'//TRIM(plast(ii)%pname)),&
+			& values=SLD_P, DIM1= DIM_node, DIM2= DIM_siglay, DIM3 = DIM_time)
+
+		ATT  => NC_MAKE_ATT(name='long_name',values=TRIM('Floc-impacted settling velocity of '//TRIM(plast(ii)%pname)))
+		VAR  => ADD(VAR,ATT)
+
+		ATT  => NC_MAKE_ATT(name='units',values='m/s')
+		VAR  => ADD(VAR,ATT)
+
+		ATT  => NC_MAKE_ATT(name='grid',values='fvcom_grid')
+		VAR  => ADD(VAR,ATT)
+
+		NCF  => ADD(NCF,VAR)
+
+		NULLIFY(SLD_P)
+
+  End Do
+#endif
+
   !OUTPUT of deposition mass flux
   Do II=1,nplast
 		
@@ -8349,6 +8422,54 @@ FUNCTION PLAST_FILE_OBJECT() RESULT(NCF)
 		NULLIFY(BLD_P)
 	
   End do
+
+#if defined (SEDIMENT) && (ORIG_SED) || (SEDIMENT) && (CSTMS_SED)
+  !OUTPUT of aggregated bottom surface mass density
+  Do II=1,nplast
+
+		BLD_P => plast(ii)%mass_a(1:m)
+
+		VAR  => NC_MAKE_PVAR(name=TRIM('bot_mass_agg_'//TRIM(plast(ii)%pname)),&
+			& values=BLD_P, DIM1= DIM_node, DIM2 = DIM_time)
+
+		ATT  => NC_MAKE_ATT(name='long_name',values=TRIM('Aggregated bottom surface mass density of '//TRIM(plast(ii)%pname)))
+		VAR  => ADD(VAR,ATT)
+
+		ATT  => NC_MAKE_ATT(name='units',values='kg/m^2')
+		VAR  => ADD(VAR,ATT)
+
+		ATT  => NC_MAKE_ATT(name='grid',values='fvcom_grid')
+		VAR  => ADD(VAR,ATT)
+
+		NCF  => ADD(NCF,VAR)
+
+		NULLIFY(BLD_P)
+
+  End do
+
+  !OUTPUT of disaggregated bottom surface mass density
+  Do II=1,nplast
+
+		BLD_P => plast(ii)%mass_d(1:m)
+
+		VAR  => NC_MAKE_PVAR(name=TRIM('bot_mass_dis_'//TRIM(plast(ii)%pname)),&
+			& values=BLD_P, DIM1= DIM_node, DIM2 = DIM_time)
+
+		ATT  => NC_MAKE_ATT(name='long_name',values=TRIM('Disaggregated bottom surface mass density of '//TRIM(plast(ii)%pname)))
+		VAR  => ADD(VAR,ATT)
+
+		ATT  => NC_MAKE_ATT(name='units',values='kg/m^2')
+		VAR  => ADD(VAR,ATT)
+
+		ATT  => NC_MAKE_ATT(name='grid',values='fvcom_grid')
+		VAR  => ADD(VAR,ATT)
+
+		NCF  => ADD(NCF,VAR)
+
+		NULLIFY(BLD_P)
+
+  End do
+#endif
 
   !OUTPUT of tau_ce
   Do II=1,nplast

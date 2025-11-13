@@ -36,6 +36,14 @@
   real(sp), allocatable :: Tsed_temp(:)
   real(sp), allocatable :: wDcy_temp(:)
   real(sp), allocatable :: Lsed_temp(:)
+#if defined (SEDIMENT) && (ORIG_SED) || (SEDIMENT) && (CSTMS_SED) 
+  real(sp), allocatable :: conc_a(:,:)
+  real(sp), allocatable :: conc_d(:,:)
+  real(sp), allocatable :: cnew_a(:,:)
+  real(sp), allocatable :: cnew_d(:,:)
+  real(sp), allocatable :: mass_a(:)
+  real(sp), allocatable :: mass_d(:)
+#endif
 
    TYPE(NCVAR),  POINTER :: VAR
    TYPE(NCDIM),  POINTER :: DIM
@@ -104,6 +112,21 @@
 		End do
 	End if
 
+#if defined (SEDIMENT) && (ORIG_SED) || (SEDIMENT) && (CSTMS_SED)
+	if (floc_intract) then
+		allocate(mass_a_tmp(0:mt,nplast)) ; mass_a_tmp = 0.0
+		allocate(mass_d_tmp(0:mt,nplast)) ; mass_d_tmp = 0.0
+		
+		!Setup initial aggregated/dis-aggregated plastic mass on the bottom
+		Do i=1,m
+			Do iplast=1,Nplast
+				plast(iplast)%mass_a(i) = mass_a_tmp(i,iplast)
+				plast(iplast)%mass_d(i) = mass_d_tmp(i,iplast)
+			End do 
+		End do
+	end if
+#endif
+
   End if
   
   if (INIT_PLAST_MASS_TYPE==CNSTNT) then
@@ -123,6 +146,17 @@
 			End do 
 		End do
 	End if
+
+#if defined (SEDIMENT) && (ORIG_SED) || (SEDIMENT) && (CSTMS_SED)
+	if (floc_intract) then
+		Do i=1,m
+			Do iplast=1,nplast
+				plast(iplast)%mass_a(i) = mass0*Arate_m0
+				plast(iplast)%mass_d(i) = mass0*(1.0-Arate_m0)
+			End do
+		End do
+	end if
+#endif
 	
   End if
   

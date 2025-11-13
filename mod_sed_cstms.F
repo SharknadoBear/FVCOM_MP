@@ -1417,8 +1417,6 @@ End Subroutine Read_Sed_Params
 
   END SUBROUTINE Alloc_sedbed
 
-
-
 !==========================================================================
 ! Update Bottom Properties due to changes in surface layer sed fractions 
 ! Use geometric mean, good for log normal distribution
