@@ -1639,12 +1639,12 @@ SUBROUTINE READ_SED
     END DO
 
    ! BOTTOM VARIABLES
-   DO II = 1,N_BOT_VARS
-     TMP => bottom(:,ii)
-     TMP => bottom(1:m,ii)
-     VAR => FIND_VAR(NC_START,TRIM(BOT_SNAMES(II)),FOUND)
+   DO II = 1,sed_n_bot_vars
+     TMP => sed_bottom(:,ii)
+     TMP => sed_bottom(1:m,ii)
+     VAR => FIND_VAR(NC_START,TRIM(sed_bot_snames(II)),FOUND)
      IF(.not. FOUND) CALL FATAL_ERROR("COULD NOT FIND VARIABLE "//    &
-        & TRIM(BOT_SNAMES(II))//" IN THE HOTSTART FILE OBJECT")
+        & TRIM(sed_bot_snames(II))//" IN THE HOTSTART FILE OBJECT")
      CALL NC_CONNECT_PVAR(VAR, TMP)
      CALL NC_READ_VAR(VAR,STKCNT)
      NULLIFY(TMP)

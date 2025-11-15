@@ -5554,7 +5554,7 @@ End Subroutine Read_Sed_Params
 
 
           !J. Ge for tracer advection
-          call adv_scal(sed(i)%conc,sed0(i)%conc,sed2(i)%conc, &
+          call adv_scal_backward(sed(i)%conc,sed0(i)%conc,sed2(i)%conc, &
                sed(i)%cnew, &
                d_cdis,      &
                sed(i)%cdis(1:numqbc), &

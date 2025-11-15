@@ -44,11 +44,11 @@
   if(BEDFLAG_TYPE/=CNSTNT)then
     allocate(tmp(0:mt)) ; tmp = 0.0
     call LOAD_BEDFLAG(tmp) 
-    bottom(0:mt,bflag) = tmp(0:mt) 
+    sed_bottom(0:mt,bflag) = tmp(0:mt) 
     deallocate(tmp) 
   else
     do i=1,m   
-      bottom(i,bflag) = 1.0
+      sed_bottom(i,bflag) = 1.0
     end do
   endif;
 

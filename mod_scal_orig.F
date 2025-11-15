@@ -30,7 +30,8 @@
 ! FVCOM Scalar Module  
 !
 !    contains methods:
-!        Adv_Scal            => Advect a Scalar Quantity 
+!        Adv_Scal            => Advect a Scalar Quantity (forward scheme)
+!        Adv_Scal_Backward   => Advect a Scalar Quantity (backward advection scheme)
 !        Vdif_Scal           => Vertical Diffusion of Scalar Quantity
 !        Bcond_Scal_OBC      => Open Boundary Condition for Scalar
 !        Bcond_Scal_PTsource => Point Sources of Scalar
@@ -42,10 +43,11 @@ Module Scalar
   contains
 !==============================================================================|
 ! Calculate Horizontal Advection and Diffusion For Scalar (f)                  |
+! Backward Advection Scheme - uses f0 and f2 for time averaging               |
 !==============================================================================|
 !  Subroutine Adv_Scal(f,fn,d_fdis,fdis,d_fflux,fflux_obc,deltat,source)
 !J. Ge for tracer advection
-  Subroutine Adv_Scal(f,f0,f2,fn,d_fdis,fdis,d_fflux,fflux_obc,deltat,source)
+  Subroutine Adv_Scal_Backward(f,f0,f2,fn,d_fdis,fdis,d_fflux,fflux_obc,deltat,source)
 !J. Ge for tracer advection
 
 !------------------------------------------------------------------------------|
@@ -797,7 +799,7 @@ Module Scalar
   end do
 
   return
-  End Subroutine Adv_Scal
+  End Subroutine Adv_Scal_Backward
 !==============================================================================|
 
 !==============================================================================|

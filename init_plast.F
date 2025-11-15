@@ -43,6 +43,8 @@
   real(sp), allocatable :: cnew_d(:,:)
   real(sp), allocatable :: mass_a(:)
   real(sp), allocatable :: mass_d(:)
+  real(sp), allocatable :: mass_a_tmp(:,:)
+  real(sp), allocatable :: mass_d_tmp(:,:)
 #endif
 
    TYPE(NCVAR),  POINTER :: VAR

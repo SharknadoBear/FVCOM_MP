@@ -205,7 +205,7 @@ logical  :: morpho_model = .false.
 real(sp) :: morpho_factor = 1.0
 integer  :: morpho_incr = 1
 integer  :: morpho_strt = 0
-real(sp) :: rho_water = 1025.
+real(sp) :: sed_rho_water = 1025.
 logical  :: bedload
 logical  :: oned_model
 logical  :: susload
@@ -218,7 +218,7 @@ real(sp) :: T_model
 real(sp) :: settle_cfl = 1.0
 integer  :: settle_limiter = 2   
 real(sp) :: qlim  = 1.0
-real(sp), allocatable :: taub(:)
+real(sp), allocatable :: sed_taub(:)
 real(sp), parameter   :: rho0 = 1025.
 real(sp), parameter   :: thck_cr = .005 
 !--------------Jianzhong Ge------------------------
@@ -358,33 +358,33 @@ real(sp), allocatable, target :: bed(:,:,:)
 !=======================================================================
 
 
-integer, parameter    :: n_bot_vars  = 22
-!character(len=80), dimension(n_bot_vars) :: bot_snames = [character(len=80) :: &
+integer, parameter    :: sed_n_bot_vars  = 22
+!character(len=80), dimension(sed_n_bot_vars) :: sed_bot_snames = [character(len=80) :: &
 !      "bot_sd50","bot_dens","bot_wset","bot_tauc","bot_actv","bot_nthck",&
 !      "bot_lthck","bot_dthck","bot_tmass","morph","rip_length","&
 !       rip_height","wav_excur","def_rough","app_rough","Niku_rough","b&
 !       io_rough","bfm_rough","bld_rough","wave_bbl","bot_phi","bedflag"]
 !
-!character(len=80), dimension(n_bot_vars) :: bot_lnames = [character(len=80) :: &
+!character(len=80), dimension(sed_n_bot_vars) :: sed_bot_lnames = [character(len=80) :: &
 !      "bot_sd50","bot_dens","bot_wset","bot_tauc","bot_actv","sedlayer_depth_current_iteration",& 
 !      "sedlayer_dapth_last_iteration","sedlayer_depth_net_change","bot_tmass","morph","rip_length","&
 !       rip_height","wav_excur","def_rough","app_rough","Niku_rough","b&
 !       io_rough","bfm_rough","bld_rough","wave_bbl","bot_phi","bedflag"]
 !
-!character(len=80), dimension(n_bot_vars) :: bot_units = [character(len=80) :: &  
+!character(len=80), dimension(sed_n_bot_vars) :: sed_bot_units = [character(len=80) :: &  
 !       "m","kg/m^3","m/s","N/m^2","days","m","m","m","kg","m","m","m","m","m"&
 !      ,"m","m","m","m","m","m","-","-"] 
-character(len=80), dimension(n_bot_vars) :: bot_snames = &
+character(len=80), dimension(sed_n_bot_vars) :: sed_bot_snames = &
       (/"bot_sd50","bot_dens","bot_wset","bot_tauc","bot_actv","bot_nthck",&
       "bot_lthck","bot_dthck","bot_tmass","morph","rip_length","&
       &rip_height","wav_excur","def_rough","app_rough","Niku_rough","b&
       &io_rough","bfm_rough","bld_rough","wave_bbl","bot_phi","bedflag"/)
-character(len=80), dimension(n_bot_vars) :: bot_lnames = &
+character(len=80), dimension(sed_n_bot_vars) :: sed_bot_lnames = &
       (/"bot_sd50","bot_dens","bot_wset","bot_tauc","bot_actv","sedlayer_depth_current_iteration",&
       "sedlayer_dapth_last_iteration","sedlayer_depth_net_change","bot_tmass","morph","rip_length","&
       &rip_height","wav_excur","def_rough","app_rough","Niku_rough","b&
       &io_rough","bfm_rough","bld_rough","wave_bbl","bot_phi","bedflag"/)
-character(len=80), dimension(n_bot_vars) :: bot_units = (/"m","kg&
+character(len=80), dimension(sed_n_bot_vars) :: sed_bot_units = (/"m","kg&
      &/m^3","m/s","N/m^2","days","m","m","m","kg","m","m","m","m","m"&
      &,"m","m","m","m","m","m","-","-"/)
 
@@ -411,7 +411,7 @@ integer, parameter    :: izwbl  = 20
 integer, parameter    :: isphi  = 21
 integer, parameter    :: bflag  = 22
 
-real(sp), allocatable, target :: bottom(:,:)
+real(sp), allocatable, target :: sed_bottom(:,:)
 
 !--------------------------------------------------
 !Sediment Point Source Data 
@@ -531,7 +531,7 @@ contains
 
   do i=1,m
     do k=1,nbed
-      bottom(i,nthck) = bottom(i,nthck) + bed(i,k,ithck)
+      sed_bottom(i,nthck) = sed_bottom(i,nthck) + bed(i,k,ithck)
     end do
   end do
 
@@ -904,7 +904,7 @@ End Subroutine Setup_Sed
   !------------------------------------------------------
   DTsed = DTin
   T_model = Tin
-  taub(1:m) = taub_in(1:m)*rho_water
+  sed_taub(1:m) = taub_in(1:m)*sed_rho_water
 
   !------------------------------------------------------
   !Calculate Active Layer Thickness --> bottom(:,iactv)
@@ -948,7 +948,7 @@ End Subroutine Setup_Sed
 !# else
 !    call fluid_mud_source_sink(DTsed,sed(1)%Srho,bottom(:,bflag),bed(:,1,ithck),bed(:,1,iporo),sed(1)%frac(:,1),wubot,wvbot,sed(1)%t_ce,sed(1)%rate)
 !# endif
-    call fluid_mud_source_sink(DTsed,sed(1)%Srho,bottom(:,bflag),bed(:,1,ithck),bed(:,1,iporo),sed(1)%frac(:,1),taub,sed(1)%t_ce,sed(1)%rate)
+    call fluid_mud_source_sink(DTsed,sed(1)%Srho,sed_bottom(:,bflag),bed(:,1,ithck),bed(:,1,iporo),sed(1)%frac(:,1),sed_taub,sed(1)%t_ce,sed(1)%rate)
 
     call internal_step_fluid_mud
 
@@ -1013,7 +1013,7 @@ End Subroutine Setup_Sed
   
 
 !J. Ge for tracer advection
-      call adv_scal(sed(i)%conc,sed0(i)%conc,sed2(i)%conc, &
+      call adv_scal_backward(sed(i)%conc,sed0(i)%conc,sed2(i)%conc, &
                       sed(i)%cnew, &
                       d_cdis,      &
                       sed(i)%cdis(1:numqbc), &
@@ -1114,7 +1114,7 @@ End Subroutine Setup_Sed
     do i=1,nsed
       call aexchange(nc,myid,nprocs,sed(i)%cnew)
     end do
-    call aexchange(nc,myid,nprocs,taub)
+    call aexchange(nc,myid,nprocs,sed_taub)
   endif
 # endif
 
@@ -1202,13 +1202,13 @@ End Subroutine Setup_Sed
   end do
 
   !allocate bottom shear stress array 
-  allocate(taub(0:mt)) ; taub = 0.0
+  allocate(sed_taub(0:mt)) ; sed_taub = 0.0
 
   !allocate bed data
   allocate(bed(0:mt , nbed , n_bed_chars)) ; bed = 0.0
 
   !allocate bottom data
-  allocate(bottom(0:mt , n_bot_vars)) ; bottom = 0.0
+  allocate(sed_bottom(0:mt , sed_n_bot_vars)) ; sed_bottom = 0.0
 
   !allocate discharge data
 !  write(*,*)'allocating discharage arrays: ',numqbc
@@ -1349,9 +1349,9 @@ End Subroutine Setup_Sed
     sed(i)%crms = sed(i)%crms/(dim1*dim2)
   end do
 
-  dthck_max = maxval(abs(bottom(1:m,dthck)))
-  tau_max   = maxval(taub(1:m))
-  tau_min   = minval(taub(1:m))
+  dthck_max = maxval(abs(sed_bottom(1:m,dthck)))
+  tau_max   = maxval(sed_taub(1:m))
+  tau_min   = minval(sed_taub(1:m))
 
 #  if defined (FLUID_MUD)
   ESTOT = DBLE(NGL)
@@ -1609,7 +1609,7 @@ End Subroutine Setup_Sed
 
      !shutdown bedload if node is locally an inactive node
      do i=1,m
-       sed(ns)%bflx(i) = sed(ns)%bflx(i)*bottom(i,bflag)
+       sed(ns)%bflx(i) = sed(ns)%bflx(i)*sed_bottom(i,bflag)
      end do
 
      !if bathy is rough - choose smooth_bedload, averaging filter
@@ -1805,7 +1805,7 @@ End Subroutine Setup_Sed
 
      !shutdown bedload if node is locally an inactive node
      do i=1,m
-       sed(ns)%bflx(i) = sed(ns)%bflx(i)*bottom(i,bflag)
+       sed(ns)%bflx(i) = sed(ns)%bflx(i)*sed_bottom(i,bflag)
      end do
 
   end do !loop over sediment types
@@ -1871,10 +1871,10 @@ End Subroutine Setup_Sed
       !calc taub from upwind or downwind elements - beta
 # if defined (WAVE_CURRENT_INTERACTION)
       if(MB_BBL_USE.or.SG_BBL_USE.or.SSW_BBL_USE)then
-         taub(i) = 1025.0 * taucwmax(i)
+         sed_taub(i) = 1025.0 * taucwmax(i)
       else
 # endif
-        taub(i) = 0.
+        sed_taub(i) = 0.
         cnt = 0.
         do jj=1,ntve(i)
           cc = nbve(i,jj)
@@ -1883,10 +1883,10 @@ End Subroutine Setup_Sed
           !dx=xc(cc)-vx(i);dy=yc(cc)-vy(i);
           !if((dx*unode(i)-dy*vnode(i))>0.) then ! arbitrary direction
             cnt = cnt + 1
-            taub(i) = taub(i) + sqrt(wubot(cc)**2 + wvbot(cc)**2) 
+            sed_taub(i) = sed_taub(i) + sqrt(wubot(cc)**2 + wvbot(cc)**2) 
           !endif
         end do
-        taub(i) = 1025.*taub(i)/cnt
+        sed_taub(i) = 1025.*sed_taub(i)/cnt
 # if defined (WAVE_CURRENT_INTERACTION)
       end if
 # endif
@@ -1895,16 +1895,16 @@ End Subroutine Setup_Sed
 # if !defined (FLUID_MUD)
       bed_por  = bed(i,1,iporo)
       bed_frac = sed(ised)%frac(i,1)
-      tau_w    = taub(i)
+      tau_w    = sed_taub(i)
       dep      = sed(ised)%dflx(i)
-      active   = (1.0-bed_por)*Bed_Frac*(tau_w/tau_ce-1.0)*bottom(i,iactv) + dep
+      active   = (1.0-bed_por)*Bed_Frac*(tau_w/tau_ce-1.0)*sed_bottom(i,iactv) + dep
       !erosion_orig  = MAX(DTsed*Erate*(1.0-bed_por)*Bed_Frac*(tau_w/tau_ce-1.0),0.0)
       !sed(ised)%eflx(i) = erosion_orig 
       sed(ised)%eflx(i) = DTsed*erosion(erate,bed_por,bed_frac,tau_w,tau_ce) !min(erosion,active) !geoff
       !sed(ised)%eflx(i) = DTsed*min(erosion(erate,bed_por,bed_frac,tau_w,tau_ce),active) !min(erosion,active) !geoff
 
       !shutdown erosion if node is inactive 
-      sed(ised)%eflx(i) = sed(ised)%eflx(i)*bottom(i,bflag)
+      sed(ised)%eflx(i) = sed(ised)%eflx(i)*sed_bottom(i,bflag)
 
       ! ========= new: Karsten Lettmann, Okt. 2012 ==========
       ! limit the eflux by the thickness of the top layer_report
@@ -2010,7 +2010,7 @@ End Subroutine Setup_Sed
   !Loop over Sediment Class       
   do ised=1,nsed
     do i=1,m
-      if(bottom(i,bflag) > 0.0)then
+      if(sed_bottom(i,bflag) > 0.0)then
   
       ! no calculation when dry nodes
 # if defined (WET_DRY)
@@ -2032,21 +2032,21 @@ End Subroutine Setup_Sed
       !calc taub from upwind or downwind elements - beta
 # if defined (WAVE_CURRENT_INTERACTION)
       if(MB_BBL_USE.or.SG_BBL_USE.or.SSW_BBL_USE)then
-         taub(i) = 1025.0 * taucwmax(i)
+         sed_taub(i) = 1025.0 * taucwmax(i)
       else
 # endif
         cnt = 0
         je  = 0.
-        taub(i) = 0.
+        sed_taub(i) = 0.
         do jj=1,ntve(i)
            cc=nbve(i,jj)
           !if(xc(cc) < vx(i))then !cell is upstream
           !if(xc(cc) > vx(i))then !cell is downtream
             cnt = cnt + 1
-            taub(i) = taub(i) + sqrt(wubot(cc)**2 + wvbot(cc)**2) 
+            sed_taub(i) = sed_taub(i) + sqrt(wubot(cc)**2 + wvbot(cc)**2) 
           ! endif
         end do
-        taub(i) = 1025.*taub(i)/cnt
+        sed_taub(i) = 1025.*sed_taub(i)/cnt
 # if defined (WAVE_CURRENT_INTERACTION)
         end if
 # endif
@@ -2084,7 +2084,7 @@ End Subroutine Setup_Sed
       !call flux-limited settling equation
       do ncyc = 1,mcyc
         if(sed(ised)%stype == 'cohesive' )then
-          call settle_flux_floc(kbm1,c,dx,wset,flux,DTdep,tau_cd,taub(i))
+          call settle_flux_floc(kbm1,c,dx,wset,flux,DTdep,tau_cd,sed_taub(i))
         else
           call settle_flux(kbm1,c,dx,wset,flux,DTdep)
         end if
@@ -2376,9 +2376,9 @@ End Subroutine Setup_Sed
 !
 !   conv:  convective flux
 !   diss:  dissipative flux
-!   
+!
 !==========================================================================
-  Subroutine Settle_Flux_Floc(n,c,dx,wset,flux,deltat,tau_cd,taub) 
+  Subroutine Settle_Flux_Floc(n,c,dx,wset,flux,deltat,tau_cd,sed_taub) 
   implicit none
   integer , intent(in   ) :: n
 	  real(sp), intent(inout) ::  c(n)
@@ -2386,7 +2386,7 @@ End Subroutine Setup_Sed
 	  real(sp), intent(in   ) :: wset(n)
 	  real(sp), intent(inout) :: flux 
 	  real(sp), intent(in   ) :: deltat 
-          real(sp), intent(in   ) :: tau_cd,taub
+          real(sp), intent(in   ) :: tau_cd,sed_taub
 	  real(sp) :: conv(n+1),diss(n+1)
 	  real(sp) :: cin(-1:n+2)
 	  real(sp) :: win(-1:n+2)
@@ -2501,7 +2501,7 @@ End Subroutine Setup_Sed
       dz = flux/(sed(ised)%srho*(1.0-bed(i,1,iporo)))
       junk = bed(i,1,ithck)
       bed(i,1,ithck) = max(bed(i,1,ithck)-dz,0.0)
-      bottom(i,morph) = bottom(i,morph) - dz 
+      sed_bottom(i,morph) = sed_bottom(i,morph) - dz 
 
     end do
   end do
@@ -2543,7 +2543,7 @@ End Subroutine Setup_Sed
       !change top layer bed thickness 
       dz = flux/(sed(ised)%srho*(1.0-bed(i,1,iporo)))
       bed(i,1,ithck) = max(bed(i,1,ithck)-dz,0.0)
-      bottom(i,morph) = bottom(i,morph) - dz 
+      sed_bottom(i,morph) = sed_bottom(i,morph) - dz 
 
     end do
   end do
@@ -2598,11 +2598,11 @@ End Subroutine Setup_Sed
       sum3 = sum3*(sed(ised)%wset   )**sed(ised)%frac(i,1)
       sum4 = sum4*(sed(ised)%Srho   )**sed(ised)%frac(i,1)
     end do
-    bottom(i,itauc) = sum1
-    bottom(i,isd50) = sum2
-    bottom(i,isphi) = -log(bottom(i,isd50)*1000.)/log(2.0)
-    bottom(i,iwset) = sum3
-    bottom(i,idens) = max(sum4,min_Srho) 
+    sed_bottom(i,itauc) = sum1
+    sed_bottom(i,isd50) = sum2
+    sed_bottom(i,isphi) = -log(sed_bottom(i,isd50)*1000.)/log(2.0)
+    sed_bottom(i,iwset) = sum3
+    sed_bottom(i,idens) = max(sum4,min_Srho) 
   end do 
   
   if(dbg_set(dbg_sbr)) write(ipt,*) "End: Update_Bottom_Properties "
@@ -2636,7 +2636,7 @@ End Subroutine Setup_Sed
   mfac = dim(morpho_factor,1.0) 
   !calculate active layer thickness 
   do i=1,m
-    bottom(i,iactv) = mfac*max(0.,.007*(taub(i)-bottom(i,itauc)))+6.0*bottom(i,isd50)
+    sed_bottom(i,iactv) = mfac*max(0.,.007*(sed_taub(i)-sed_bottom(i,itauc)))+6.0*sed_bottom(i,isd50)
   end do
 
   End Subroutine Calc_Active_Layer
@@ -2663,13 +2663,13 @@ End Subroutine Setup_Sed
 
   !calculate deficit between active layer thickness and surface layer thickness
   do i=1,m
-    delta(i) = bottom(i,iactv)-bed(i,1,ithck)
+    delta(i) = sed_bottom(i,iactv)-bed(i,1,ithck)
   end do
   
   ! (single layer system) ensure top layer > active layer thickness 
   if(nbed == 1)then 
     do i=1,m
-       if(delta(i) > 0) bottom(i,iactv) = bed(i,1,ithck)
+       if(delta(i) > 0) sed_bottom(i,iactv) = bed(i,1,ithck)
     end do
     return
   endif
@@ -2691,7 +2691,7 @@ End Subroutine Setup_Sed
 
       !if not enough material in bed to satisfy active layer req, use all available 
       if (thck_avail < thck_to_add) then
-        bottom(i,iactv)=bed(i,1,ithck)+thck_avail
+        sed_bottom(i,iactv)=bed(i,1,ithck)+thck_avail
         thck_to_add=thck_avail
       end if
   
@@ -2719,7 +2719,7 @@ End Subroutine Setup_Sed
       end do
 
       !update bed thickness of top layer
-      bed(i,1,ithck)=bottom(i,iactv)
+      bed(i,1,ithck)=sed_bottom(i,iactv)
 
       !pull layers Ksed to Bottom up to fill layer 2 down 
       do k=Ksed,Nbed
@@ -2847,27 +2847,27 @@ End Subroutine Setup_Sed
   integer :: i,k,ised
  
   !shift last thickness to lthck
-  bottom(:,lthck) = bottom(:,nthck)
-  bottom(:,nthck) = 0.0
+  sed_bottom(:,lthck) = sed_bottom(:,nthck)
+  sed_bottom(:,nthck) = 0.0
 
   !calculate new thickness
   do i=1,m
     do k=1,nbed
-      bottom(i,nthck) = bottom(i,nthck) + bed(i,k,ithck)
+      sed_bottom(i,nthck) = sed_bottom(i,nthck) + bed(i,k,ithck)
     end do
   end do
 
   !calculate new delta
   do i=1,m
-    bottom(i,dthck) = bottom(i,dthck) + bottom(i,nthck) - bottom(i,lthck)
+    sed_bottom(i,dthck) = sed_bottom(i,dthck) + sed_bottom(i,nthck) - sed_bottom(i,lthck)
   end do
 
   !calculate new total mass
   do i=1,m
-    bottom(i,tmass) = 0.0 
+    sed_bottom(i,tmass) = 0.0 
     do ised=1,nsed
       do k=1,nbed
-        bottom(i,tmass) = bottom(i,tmass) + sed(ised)%mass(i,k)
+        sed_bottom(i,tmass) = sed_bottom(i,tmass) + sed(ised)%mass(i,k)
       end do
     end do
   end do
@@ -2884,17 +2884,17 @@ End Subroutine Setup_Sed
   integer :: j,ised
 
   write(*,*)'----------bottom props'
-  write(*,*)'active thickness',bottom(i,iactv)
-  write(*,*)'total  thickness',bottom(i,nthck)
-  write(*,*)'mean grain size ',bottom(i,isd50)
-  write(*,*)'mean density    ',bottom(i,idens)
-  write(*,*)'mean settle V   ',bottom(i,iwset)
-  write(*,*)'mean E stress   ',bottom(i,itauc)
+  write(*,*)'active thickness',sed_bottom(i,iactv)
+  write(*,*)'total  thickness',sed_bottom(i,nthck)
+  write(*,*)'mean grain size ',sed_bottom(i,isd50)
+  write(*,*)'mean density    ',sed_bottom(i,idens)
+  write(*,*)'mean settle V   ',sed_bottom(i,iwset)
+  write(*,*)'mean E stress   ',sed_bottom(i,itauc)
 
   write(*,*)'--------- bed props'
-  write(*,*)'total  thickness',bottom(i,nthck)
-  write(*,*)'total  mass'     ,bottom(i,tmass)
-  if(bottom(i,nthck) <= 0.)stop
+  write(*,*)'total  thickness',sed_bottom(i,nthck)
+  write(*,*)'total  mass'     ,sed_bottom(i,tmass)
+  if(sed_bottom(i,nthck) <= 0.)stop
 
   End Subroutine Layer_Report
 
@@ -3053,8 +3053,8 @@ End Subroutine Setup_Sed
        J2 = NEXT_OBC(I1)
        IF(I==J1 .OR. I==J2) ISONB2=.TRUE.
      ENDDO
-    IF(.NOT. ISONB2) H(I) = H(I) - bottom(I,morph)
-    bottom(I,morph) = 0.0
+    IF(.NOT. ISONB2) H(I) = H(I) - sed_bottom(I,morph)
+    sed_bottom(I,morph) = 0.0
    ENDDO
 # if defined (MULTIPROCESSOR)
     IF(PAR)CALL AEXCHANGE(NC,MYID,NPROCS,H )

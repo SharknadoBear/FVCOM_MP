@@ -30,7 +30,8 @@
 ! FVCOM Scalar Module  
 !
 !    contains methods:
-!        Adv_Scal            => Advect a Scalar Quantity 
+!        Adv_Scal            => Advect a Scalar Quantity (forward scheme)
+!        Adv_Scal_Backward   => Advect a Scalar Quantity (backward advection scheme)
 !        Vdif_Scal           => Vertical Diffusion of Scalar Quantity
 !        Bcond_Scal_OBC      => Open Boundary Condition for Scalar
 !        Bcond_Scal_PTsource => Point Sources of Scalar
@@ -638,6 +639,675 @@ Subroutine Adv_Scal(f,fn,d_fdis,fdis,d_fflux,fflux_obc,deltat,source)
 
   return
   End Subroutine Adv_Scal
+!==============================================================================|
+
+!==============================================================================|
+! Calculate Horizontal Advection and Diffusion For Scalar (f)                  |
+! Backward Advection Scheme - uses f0 and f2 for time averaging               |
+!==============================================================================|
+  Subroutine Adv_Scal_Backward(f,f0,f2,fn,d_fdis,fdis,d_fflux,fflux_obc,deltat,source)
+
+!------------------------------------------------------------------------------|
+
+  use all_vars
+  use lims, only: m,mt,n,nt,kbm1,kb
+  use bcs
+  use mod_obcs
+# if defined (MULTIPROCESSOR)
+  use mod_par
+# endif
+# if defined (WET_DRY)
+  use mod_wd
+# endif
+
+# if defined (THIN_DAM)
+  use mod_dam, only : kdam,N_DAM_MATCH,IS_DAM
+# endif
+
+  implicit none
+  real(sp), intent(in ), dimension(0:mt,kb)      :: f
+  real(sp), intent(in ), dimension(0:mt,kb)      :: f0,f2
+  real(sp), intent(out), dimension(0:mt,kb)      :: fn
+  integer , intent(in )                          :: d_fdis
+  real(sp), intent(in ), dimension(d_fdis)       :: fdis
+  integer , intent(in )                          :: d_fflux
+  real(sp), intent(out), dimension(d_fflux,kbm1) :: fflux_obc 
+  real(sp), intent(in )                          :: deltat
+  logical , intent(in )                          :: source
+
+  !----------------local--------------------------------------
+  real(sp), dimension(0:mt,kb)   :: xflux,xflux_adv
+  real(sp), dimension(m)         :: pupx,pupy,pvpx,pvpy  
+  real(sp), dimension(m)         :: pfpx,pfpy,pfpxd,pfpyd,viscoff
+  real(sp), dimension(3*nt,kb)      :: dtij 
+  real(sp), dimension(3*nt,kbm1) :: uvn
+  real(sp), dimension(kb)        :: vflux
+  real(sp) :: utmp,vtmp,sitai,ffd,ff1,x11,y11,x22,y22,x33,y33
+  real(sp) :: tmp1,tmp2,xi,yi
+  real(sp) :: dxa,dya,dxb,dyb,fij1,fij2,un
+  real(sp) :: txx,tyy,fxx,fyy,viscof,exflux,temp,fpoint
+  real(sp) :: fact,fm1,fmean
+  integer  :: i,i1,i2,ia,ib,j,j1,j2,k,jtmp,jj
+  real(sp),dimension(kb) :: ftmp
+
+# if defined (SPHERICAL)
+  real(sp) :: ty,txpi,typi
+# else
+  real(sp) :: da,db,ds
+# endif
+
+# if defined (THIN_DAM)
+  INTEGER  :: NX
+  real(sp) :: tmpflx
+  real(sp),dimension(kb) :: wvel
+# endif
+
+
+!------------------------------------------------------------------------------!
+
+!-------------------------------------------------------
+!Calculate Mean Values
+!-------------------------------------------------------
+
+  fmean = sum(f(1:m,1:kbm1))/float(m*kbm1)
+
+!-------------------------------------------------------
+!Initialize Multipliers to Control Horizontal Diff
+!-------------------------------------------------------
+
+  fact = 0.0_sp
+  fm1  = 1.0_sp
+  if(HORIZONTAL_MIXING_TYPE == 'closure') then
+    fact = 1.0_sp
+    fm1  = 0.0_sp
+  end if
+     
+!-------------------------------------------------------
+!Initialize Fluxes
+!-------------------------------------------------------
+  xflux     = 0.0_sp
+  xflux_adv = 0.0_sp
+
+!-------------------------------------------------------
+!Calculate Normal Velocity on Control Volume Edges
+!-------------------------------------------------------
+!!# if !defined (WET_DRY)
+  do i=1,ncv
+    i1=ntrg(i)
+    !dtij(i)=dt1(i1)
+    do k=1,kbm1
+      dtij(i,k)=dt1(i1)*dz1(i1,k) 
+      uvn(i,k) = v(i1,k)*dltxe(i) - u(i1,k)*dltye(i)
+
+#  if defined(PLBC)
+      uvn(i,k) =  - u(i1,k)*dltye(i)
+#  endif
+
+    end do
+  end do
+!!# else
+!!  do i=1,ncv
+!!    i1=ntrg(i)
+!!    dtij(i)=dt1(i1)
+!!    do k=1,kbm1
+!!      uvn(i,k) = vs(i1,k)*dltxe(i) - us(i1,k)*dltye(i)
+!!    end do
+!!  end do
+!!# endif
+
+!
+!--Calculate the Advection and Horizontal Diffusion Terms----------------------!
+!
+
+   do k=1,kbm1
+      pfpx  = 0.0_sp 
+      pfpy  = 0.0_sp 
+      pfpxd = 0.0_sp 
+      pfpyd = 0.0_sp
+     do i=1,m
+       do j=1,ntsn(i)-1
+         i1=nbsn(i,j)
+         i2=nbsn(i,j+1)
+
+#    if defined (WET_DRY)
+         IF(BACKWARD_ADVECTION/=.TRUE.)THEN
+           IF(ISWETN(I1) == 0 .AND. ISWETN(I2) == 1)THEN
+            FFD=0.5_SP*(f(I,K)+f(I2,K))
+            FF1=0.5_SP*(f(I,K)+f(I2,K))
+	   ELSE IF(ISWETN(I1) == 1 .AND. ISWETN(I2) == 0)THEN
+            FFD=0.5_SP*(f(I1,K)+f(I,K))
+            FF1=0.5_SP*(f(I1,K)+f(I,K))
+	   ELSE IF(ISWETN(I1) == 0 .AND. ISWETN(I2) == 0)THEN
+            FFD=0.5_SP*(f(I,K)+f(I,K))
+            FF1=0.5_SP*(f(I,K)+f(I,K))
+	   ELSE
+            FFD=0.5_SP*(f(I1,K)+f(I2,K))
+            FF1=0.5_SP*(f(I1,K)+f(I2,K))
+	   END IF
+         ELSE
+           IF(BACKWARD_STEP==1)THEN
+             IF(ISWETN(I1) == 0 .AND. ISWETN(I2) == 1)THEN
+               FFD=0.5_SP*((f0(I,K)+f(I,K))*0.5+(f0(I2,K)+f(I2,K))*0.5)
+               FF1=0.5_SP*((f0(I,K)+f(I,K))*0.5+(f0(I2,K)+f(I2,K))*0.5)
+             ELSE IF(ISWETN(I1) == 1 .AND. ISWETN(I2) == 0)THEN
+               FFD=0.5_SP*((f0(I1,K)+f(I1,K))*0.5+(f0(I,K)+f(I,K))*0.5)
+               FF1=0.5_SP*((f0(I1,K)+f(I1,K))*0.5+(f0(I,K)+f(I,K))*0.5)
+	     ELSE IF(ISWETN(I1) == 0 .AND. ISWETN(I2) == 0)THEN
+               FFD=0.5_SP*((f0(I,K)+f(I,K))*0.5+(f0(I,K)+f(I,K))*0.5)
+               FF1=0.5_SP*((f0(I,K)+f(I,K))*0.5+(f0(I,K)+f(I,K))*0.5)
+	     ELSE
+               FFD=0.5_SP*((f0(I1,K)+f(I1,K))*0.5+(f0(I2,K)+f(I2,K))*0.5)
+               FF1=0.5_SP*((f0(I1,K)+f(I1,K))*0.5+(f0(I2,K)+f(I2,K))*0.5)
+             END IF
+           ELSEIF(BACKWARD_STEP==2)THEN
+             IF(ISWETN(I1) == 0 .AND. ISWETN(I2) == 1)THEN
+               FFD=0.5_SP*((f2(I,K)+f0(I,K)+f(I,K))/3.0_SP+(f2(I2,K)+f0(I2,K)+f(I2,K))/3.0_SP)
+               FF1=0.5_SP*((f2(I,K)+f0(I,K)+f(I,K))/3.0_SP+(f2(I2,K)+f0(I2,K)+f(I2,K))/3.0_SP)
+             ELSE IF(ISWETN(I1) == 1 .AND. ISWETN(I2) == 0)THEN
+               FFD=0.5_SP*((f2(I1,K)+f0(I1,K)+f(I1,K))/3.0_SP+(f2(I,K)+f0(I,K)+f(I,K))/3.0_SP)
+               FF1=0.5_SP*((f2(I1,K)+f0(I1,K)+f(I1,K))/3.0_SP+(f2(I,K)+f0(I,K)+f(I,K))/3.0_SP)
+	     ELSE IF(ISWETN(I1) == 0 .AND. ISWETN(I2) == 0)THEN
+               FFD=0.5_SP*((f2(I,K)+f0(I,K)+f(I,K))/3.0_SP+(f2(I,K)+f0(I,K)+f(I,K))/3.0_SP)
+               FF1=0.5_SP*((f2(I,K)+f0(I,K)+f(I,K))/3.0_SP+(f2(I,K)+f0(I,K)+f(I,K))/3.0_SP)
+	     ELSE
+               FFD=0.5_SP*((f2(I1,K)+f0(I1,K)+f(I1,K))/3.0_SP+(f2(I2,K)+f0(I2,K)+f(I2,K))/3.0_SP)
+               FF1=0.5_SP*((f2(I1,K)+f0(I1,K)+f(I1,K))/3.0_SP+(f2(I2,K)+f0(I2,K)+f(I2,K))/3.0_SP)
+	     END IF  
+           ENDIF
+
+         END IF
+#    else	 
+         IF(BACKWARD_ADVECTION/=.TRUE.)THEN
+           FFD=0.5_SP*(f(I1,K)+f(I2,K))
+           FF1=0.5_SP*(f(I1,K)+f(I2,K))
+         ELSE
+           IF(BACKWARD_STEP==1)THEN
+             FFD=0.5_SP*((f0(I1,K)+f(I1,K))*0.5+(f0(I2,K)+f(I2,K))*0.5)
+             FF1=0.5_SP*((f0(I1,K)+f(I1,K))*0.5+(f0(I2,K)+f(I2,K))*0.5)
+           ELSEIF(BACKWARD_STEP==2)THEN
+             FFD=0.5_SP*((f2(I1,K)+f0(I1,K)+f(I1,K))*0.5+(f2(I2,K)+f0(I2,K)+f(I2,K))*0.5)
+             FF1=0.5_SP*((f2(I1,K)+f0(I1,K)+f(I1,K))*0.5+(f2(I2,K)+f0(I2,K)+f(I2,K))*0.5)
+           ENDIF
+         ENDIF
+#    endif	 
+	 
+#        if defined (SPHERICAL)
+         ty=0.5_sp*(vy(i1)+vy(i2))
+         txpi=(vx(i2)-vx(i1))*tpi*cos(deg2rad*ty)
+         typi=(vy(i1)-vy(i2))*tpi
+         pfpx(i)=pfpx(i)+ff1*typi
+         pfpy(i)=pfpy(i)+ff1*txpi
+         pfpxd(i)=pfpxd(i)+ffd*typi
+         pfpyd(i)=pfpyd(i)+ffd*txpi
+#        else
+         pfpx(i) = pfpx(i) +ff1*(vy(i1)-vy(i2))
+         pfpy(i) = pfpy(i) +ff1*(vx(i2)-vx(i1))
+         pfpxd(i)= pfpxd(i)+ffd*(vy(i1)-vy(i2))
+         pfpyd(i)= pfpyd(i)+ffd*(vx(i2)-vx(i1))
+#        endif
+       end do
+
+! gather all neighboring control volumes connecting at dam node 
+# if defined (THIN_DAM)
+       IF(IS_DAM(I)==1.AND.K<=KDAM(I))THEN
+         DO NX=1,N_DAM_MATCH(I,1)
+           DO J=1,NTSN(N_DAM_MATCH(I,NX+1))-1
+             I1=NBSN(N_DAM_MATCH(I,NX+1),J)
+             I2=NBSN(N_DAM_MATCH(I,NX+1),J+1)
+             IF(BACKWARD_ADVECTION/=.TRUE.)THEN
+               FFD=0.5_SP*(f(I1,K)+f(I2,K))
+               FF1=0.5_SP*(f(I1,K)+f(I2,K))
+             ELSE
+               IF(BACKWARD_STEP==1)THEN
+                FFD=0.5_SP*((f0(I1,K)+f(I1,K))*0.5+(f0(I2,K)+f(I2,K))*0.5)
+                FF1=0.5_SP*((f0(I1,K)+f(I1,K))*0.5+(f0(I2,K)+f(I2,K))*0.5)
+               ELSEIF(BACKWARD_STEP==2)THEN
+                FFD=0.5_SP*((f2(I1,K)+f0(I1,K)+f(I1,K))/3.0_SP+(f2(I2,K)+f0(I2,K)+f(I2,K))/3.0_SP)
+                FF1=0.5_SP*((f2(I1,K)+f0(I1,K)+f(I1,K))/3.0_SP+(f2(I2,K)+f0(I2,K)+f(I2,K))/3.0_SP)
+               ENDIF
+             ENDIF
+#        if defined (SPHERICAL)
+             ty=0.5_sp*(vy(i1)+vy(i2))
+             txpi=(vx(i2)-vx(i1))*tpi*cos(deg2rad*ty)
+             typi=(vy(i1)-vy(i2))*tpi
+             pfpx(i)=pfpx(i)+ff1*typi
+             pfpy(i)=pfpy(i)+ff1*txpi
+             pfpxd(i)=pfpxd(i)+ffd*typi
+             pfpyd(i)=pfpyd(i)+ffd*txpi
+#        else
+             pfpx(i) = pfpx(i) +ff1*(vy(i1)-vy(i2))
+             pfpy(i) = pfpy(i) +ff1*(vx(i2)-vx(i1))
+             pfpxd(i)= pfpxd(i)+ffd*(vy(i1)-vy(i2))
+             pfpyd(i)= pfpyd(i)+ffd*(vx(i2)-vx(i1))
+#        endif
+           END DO
+         END DO
+       END IF
+# endif
+
+# if !defined (THIN_DAM)
+       pfpx(i)  =pfpx(i )/art2(i)
+       pfpy(i)  =pfpy(i )/art2(i)
+       pfpxd(i) =pfpxd(i)/art2(i)
+       pfpyd(i) =pfpyd(i)/art2(i)
+# else
+       IF(IS_DAM(I)==1.AND.K<=KDAM(I))THEN
+         PFPX(I)=PFPX(I)/(ART2(I)+SUM(ART2(N_DAM_MATCH(I,2:1+N_DAM_MATCH(I,1)))))
+         PFPY(I)=PFPY(I)/(ART2(I)+SUM(ART2(N_DAM_MATCH(I,2:1+N_DAM_MATCH(I,1)))))
+         PFPXD(I)=PFPXD(I)/(ART2(I)+SUM(ART2(N_DAM_MATCH(I,2:1+N_DAM_MATCH(I,1)))))
+         PFPYD(I)=PFPYD(I)/(ART2(I)+SUM(ART2(N_DAM_MATCH(I,2:1+N_DAM_MATCH(I,1)))))
+       ELSE
+         PFPX(I)=PFPX(I)/ART2(I)
+         PFPY(I)=PFPY(I)/ART2(I)
+         PFPXD(I)=PFPXD(I)/ART2(I)
+         PFPYD(I)=PFPYD(I)/ART2(I)
+       END IF
+# endif
+
+     end do
+          
+     if(k == kbm1)then
+       do i=1,m
+         pfpxb(i) = pfpx(i)
+         pfpyb(i) = pfpy(i)
+       end do
+     end if
+
+     do i=1,m
+       pupx(i)=0.0_sp
+       pupy(i)=0.0_sp
+       pvpx(i)=0.0_sp
+       pvpy(i)=0.0_sp
+       j=1
+       i1=nbve(i,j)
+       jtmp=nbvt(i,j)
+       j1=jtmp+1-(jtmp+1)/4*3
+       j2=jtmp+2-(jtmp+2)/4*3
+       x11=0.5_sp*(vx(i)+vx(nv(i1,j1)))
+       y11=0.5_sp*(vy(i)+vy(nv(i1,j1)))
+       x22=xc(i1)
+       y22=yc(i1)
+       x33=0.5_sp*(vx(i)+vx(nv(i1,j2)))
+       y33=0.5_sp*(vy(i)+vy(nv(i1,j2)))
+
+#      if defined (SPHERICAL)
+       ty  =0.5_sp*(y11+y33)
+       txpi=(x33-x11)*tpi*cos(deg2rad*ty)
+       typi=(y11-y33)*tpi
+       pupx(i)=pupx(i)+u(i1,k)*typi 
+       pupy(i)=pupy(i)+u(i1,k)*txpi
+       pvpx(i)=pvpx(i)+v(i1,k)*typi
+       pvpy(i)=pvpy(i)+v(i1,k)*txpi
+#      else
+       pupx(i)=pupx(i)+u(i1,k)*(y11-y33)
+       pupy(i)=pupy(i)+u(i1,k)*(x33-x11)
+       pvpx(i)=pvpx(i)+v(i1,k)*(y11-y33)
+       pvpy(i)=pvpy(i)+v(i1,k)*(x33-x11)
+#      endif
+
+       if(isonb(i) /= 0) then
+#        if defined (SPHERICAL)
+         ty=0.5_sp*(vy(i)+y11)
+         txpi=(x11-vx(i))*tpi*cos(deg2rad*ty)
+         typi=(vy(i)-y11)*tpi
+         pupx(i)=pupx(i)+u(i1,k)*typi
+         pupy(i)=pupy(i)+u(i1,k)*txpi
+         pvpx(i)=pvpx(i)+v(i1,k)*typi
+         pvpy(i)=pvpy(i)+v(i1,k)*txpi
+#        else
+         pupx(i)=pupx(i)+u(i1,k)*(vy(i)-y11)
+         pupy(i)=pupy(i)+u(i1,k)*(x11-vx(i))
+         pvpx(i)=pvpx(i)+v(i1,k)*(vy(i)-y11)
+         pvpy(i)=pvpy(i)+v(i1,k)*(x11-vx(i))
+#        endif
+       end if
+
+       do j=2,ntve(i)-1
+         i1=nbve(i,j)
+         jtmp=nbvt(i,j)
+         j1=jtmp+1-(jtmp+1)/4*3
+         j2=jtmp+2-(jtmp+2)/4*3
+         x11=0.5_sp*(vx(i)+vx(nv(i1,j1)))
+         y11=0.5_sp*(vy(i)+vy(nv(i1,j1)))
+         x22=xc(i1)
+         y22=yc(i1)
+         x33=0.5_sp*(vx(i)+vx(nv(i1,j2)))
+         y33=0.5_sp*(vy(i)+vy(nv(i1,j2)))
+
+#        if defined (SPHERICAL)
+         ty=0.5_sp*(y11+y33)
+         txpi=(x33-x11)*tpi*COS(deg2rad*TY)
+         typi=(y11-y33)*tpi
+         pupx(i)=pupx(i)+u(i1,k)*typi
+         pupy(i)=pupy(i)+u(i1,k)*txpi
+         pvpx(i)=pvpx(i)+v(i1,k)*typi
+         pvpy(i)=pvpy(i)+v(i1,k)*txpi
+#        else
+         pupx(i)=pupx(i)+u(i1,k)*(y11-y33)
+         pupy(i)=pupy(i)+u(i1,k)*(x33-x11)
+         pvpx(i)=pvpx(i)+v(i1,k)*(y11-y33)
+         pvpy(i)=pvpy(i)+v(i1,k)*(x33-x11)
+#        endif
+       end do
+       j=ntve(i)
+       i1=nbve(i,j)
+       jtmp=nbvt(i,j)
+       j1=jtmp+1-(jtmp+1)/4*3
+       j2=jtmp+2-(jtmp+2)/4*3
+       x11=0.5_sp*(vx(i)+vx(nv(i1,j1)))
+       y11=0.5_sp*(vy(i)+vy(nv(i1,j1)))
+       x22=xc(i1)
+       y22=yc(i1)
+       x33=0.5_sp*(vx(i)+vx(nv(i1,j2)))
+       y33=0.5_sp*(vy(i)+vy(nv(i1,j2)))
+
+#      if defined (SPHERICAL)
+       ty=0.5*(Y11+Y33)
+       txpi=(x33-x11)*tpi*cos(deg2rad*TY)
+       typi=(y11-y33)*tpi
+       pupx(i)=pupx(i)+u(i1,k)*typi
+       pupy(i)=pupy(i)+u(i1,k)*txpi
+       pvpx(i)=pvpx(i)+v(i1,k)*typi
+       pvpy(i)=pvpy(i)+v(i1,k)*txpi
+#      else
+       pupx(i)=pupx(i)+u(i1,k)*(y11-y33)
+       pupy(i)=pupy(i)+u(i1,k)*(x33-x11)
+       pvpx(i)=pvpx(i)+v(i1,k)*(y11-y33)
+       pvpy(i)=pvpy(i)+v(i1,k)*(x33-x11)
+#      endif
+
+       if(isonb(i) /= 0) then
+#      if defined (SPHERICAL)
+         ty=0.5*(Y11+VY(I))
+         txpi=(VX(I)-X11)*tpi*COS(deg2rad*ty)
+         typi=(Y11-VY(I))*tpi
+         pupx(i)=pupx(i)+u(i1,k)*typi
+         pupy(i)=pupy(i)+u(i1,k)*txpi
+         pvpx(i)=pvpx(i)+v(i1,k)*typi
+         pvpy(i)=pvpy(i)+v(i1,k)*txpi
+#        else
+         pupx(i)=pupx(i)+u(i1,k)*(y11-vy(i))
+         pupy(i)=pupy(i)+u(i1,k)*(vx(i)-x11)
+         pvpx(i)=pvpx(i)+v(i1,k)*(y11-vy(i))
+         pvpy(i)=pvpy(i)+v(i1,k)*(vx(i)-x11)
+#        endif
+       end if
+       pupx(i)=pupx(i)/art1(i)
+       pupy(i)=pupy(i)/art1(i)
+       pvpx(i)=pvpx(i)/art1(i)
+       pvpy(i)=pvpy(i)/art1(i)
+       tmp1=pupx(i)**2+pvpy(i)**2
+       tmp2=0.5_sp*(pupy(i)+pvpx(i))**2
+       viscoff(i)=sqrt(tmp1+tmp2)*art1(i)
+     end do
+
+
+     do i=1,ncv_i
+       ia=niec(i,1)
+       ib=niec(i,2)
+       xi=0.5_sp*(xije(i,1)+xije(i,2))
+       yi=0.5_sp*(yije(i,1)+yije(i,2))
+#      if defined (SPHERICAL)
+       ty=0.5_sp*(yi+vy(ia))
+       dxa=(xi-vx(ia))*tpi*cos(deg2rad*ty)
+       dya=(yi-vy(ia))*tpi
+       ty=0.5*(YI+VY(IB))
+       DXB=(XI-VX(IB))*tpi*COS(deg2rad*ty)
+       DYB=(YI-VY(IB))*tpi
+#      else
+       dxa=xi-vx(ia)
+       dya=yi-vy(ia)
+       dxb=xi-vx(ib)
+       dyb=yi-vy(ib)
+#      endif
+
+       IF(BACKWARD_ADVECTION/=.TRUE.)THEN
+         fij1=f(ia,k)+dxa*pfpx(ia)+dya*pfpy(ia)
+         fij2=f(ib,k)+dxb*pfpx(ib)+dyb*pfpy(ib)
+       ELSE
+         IF(BACKWARD_STEP==1)THEN
+           fij1=(f0(ia,k)+f(ia,k))*0.5+dxa*pfpx(ia)+dya*pfpy(ia)
+           fij2=(f0(ib,k)+f(ib,k))*0.5+dxb*pfpx(ib)+dyb*pfpy(ib)
+         ELSEIF(BACKWARD_STEP==2)THEN
+           fij1=(f2(ia,k)+f0(ia,k)+f(ia,k))/3.0_SP+dxa*pfpx(ia)+dya*pfpy(ia)
+           fij2=(f2(ib,k)+f0(ib,k)+f(ib,k))/3.0_SP+dxb*pfpx(ib)+dyb*pfpy(ib)
+         ENDIF
+       ENDIF
+       un=uvn(i,k)
+
+       VISCOF=(FACT*0.5_SP*(VISCOFF(IA)*NN_HVC(IA)+VISCOFF(IB)*NN_HVC(IB)) + FM1*0.5_SP*(NN_HVC(IA)+NN_HVC(IB)))
+
+       txx=0.5_sp*(pfpxd(ia)+pfpxd(ib))*viscof
+       tyy=0.5_sp*(pfpyd(ia)+pfpyd(ib))*viscof
+
+       fxx=-dtij(i,k)*txx*dltye(i)
+       fyy= dtij(i,k)*tyy*dltxe(i)
+
+# if defined (PLBC)
+       fyy=0.0_SP
+# endif
+
+       exflux=-un*dtij(i,k)* &
+          ((1.0_sp+sign(1.0_sp,un))*fij2+(1.0_sp-sign(1.0_sp,un))*fij1)*0.5_sp+fxx+fyy
+
+# if !defined (SPHERICAL)
+       Da = dz(ia,k)*dt(ia)
+       Db = dz(ib,k)*dt(ib)
+       Ds = 0.5_sp*( dz(ia,k) + dz(ib,k) )
+
+       exflux = exflux / Ds
+       call limit_hor_flux_Scal(f(ia,k),f(ib,k),ia,ib,Da,Db,ntrg(i),deltat,exflux)
+       exflux = exflux * Ds
+# endif
+
+       xflux(ia,k)=xflux(ia,k)+exflux
+       xflux(ib,k)=xflux(ib,k)-exflux
+
+       xflux_adv(ia,k)=xflux_adv(ia,k)+(exflux-fxx-fyy)
+       xflux_adv(ib,k)=xflux_adv(ib,k)-(exflux-fxx-fyy)
+
+#      if defined (THIN_DAM)
+       IF(K<=KDAM(IA).AND.IS_DAM(IA)==1)THEN
+         IF(N_DAM_MATCH(IA,1)==1)THEN
+           XFLUX(N_DAM_MATCH(IA,2),K) = XFLUX(N_DAM_MATCH(IA,2),K) + EXFLUX
+           XFLUX_ADV(N_DAM_MATCH(IA,2),K) = XFLUX_ADV(N_DAM_MATCH(IA,2),K) +(EXFLUX-FXX-FYY)
+         END IF
+         IF(N_DAM_MATCH(IA,1)==2)THEN
+           XFLUX(N_DAM_MATCH(IA,2),K) = XFLUX(N_DAM_MATCH(IA,2),K) + EXFLUX
+           XFLUX(N_DAM_MATCH(IA,3),K) = XFLUX(N_DAM_MATCH(IA,3),K) + EXFLUX
+           XFLUX_ADV(N_DAM_MATCH(IA,2),K) = XFLUX_ADV(N_DAM_MATCH(IA,2),K) +(EXFLUX-FXX-FYY)
+           XFLUX_ADV(N_DAM_MATCH(IA,3),K) = XFLUX_ADV(N_DAM_MATCH(IA,3),K) +(EXFLUX-FXX-FYY)
+         END IF
+         IF(N_DAM_MATCH(IA,1)==3)THEN
+           XFLUX(N_DAM_MATCH(IA,2),K) = XFLUX(N_DAM_MATCH(IA,2),K) + EXFLUX
+           XFLUX(N_DAM_MATCH(IA,3),K) = XFLUX(N_DAM_MATCH(IA,3),K) + EXFLUX
+           XFLUX(N_DAM_MATCH(IA,4),K) = XFLUX(N_DAM_MATCH(IA,4),K) + EXFLUX
+           XFLUX_ADV(N_DAM_MATCH(IA,2),K) = XFLUX_ADV(N_DAM_MATCH(IA,2),K) +(EXFLUX-FXX-FYY)
+           XFLUX_ADV(N_DAM_MATCH(IA,3),K) = XFLUX_ADV(N_DAM_MATCH(IA,3),K) +(EXFLUX-FXX-FYY)
+           XFLUX_ADV(N_DAM_MATCH(IA,4),K) = XFLUX_ADV(N_DAM_MATCH(IA,4),K) +(EXFLUX-FXX-FYY)
+         END IF
+       END IF
+       IF(K<=KDAM(IB).AND.IS_DAM(IB)==1)THEN
+         IF(N_DAM_MATCH(IB,1)==1)THEN
+           XFLUX(N_DAM_MATCH(IB,2),K) = XFLUX(N_DAM_MATCH(IB,2),K) - EXFLUX
+           XFLUX_ADV(N_DAM_MATCH(IB,2),K) = XFLUX_ADV(N_DAM_MATCH(IB,2),K) - (EXFLUX-FXX-FYY)
+         END IF
+         IF(N_DAM_MATCH(IB,1)==2)THEN
+           XFLUX(N_DAM_MATCH(IB,2),K) = XFLUX(N_DAM_MATCH(IB,2),K) - EXFLUX
+           XFLUX(N_DAM_MATCH(IB,3),K) = XFLUX(N_DAM_MATCH(IB,3),K) - EXFLUX
+           XFLUX_ADV(N_DAM_MATCH(IB,2),K) = XFLUX_ADV(N_DAM_MATCH(IB,2),K) - (EXFLUX-FXX-FYY)
+           XFLUX_ADV(N_DAM_MATCH(IB,3),K) = XFLUX_ADV(N_DAM_MATCH(IB,3),K) - (EXFLUX-FXX-FYY)
+         END IF
+         IF(N_DAM_MATCH(IB,1)==3)THEN
+           XFLUX(N_DAM_MATCH(IB,2),K) = XFLUX(N_DAM_MATCH(IB,2),K) - EXFLUX
+           XFLUX(N_DAM_MATCH(IB,3),K) = XFLUX(N_DAM_MATCH(IB,3),K) - EXFLUX
+           XFLUX(N_DAM_MATCH(IB,4),K) = XFLUX(N_DAM_MATCH(IB,4),K) - EXFLUX
+           XFLUX_ADV(N_DAM_MATCH(IB,2),K) = XFLUX_ADV(N_DAM_MATCH(IB,2),K) - (EXFLUX-FXX-FYY)
+           XFLUX_ADV(N_DAM_MATCH(IB,3),K) = XFLUX_ADV(N_DAM_MATCH(IB,3),K) - (EXFLUX-FXX-FYY)
+           XFLUX_ADV(N_DAM_MATCH(IB,4),K) = XFLUX_ADV(N_DAM_MATCH(IB,4),K) - (EXFLUX-FXX-FYY)
+         END IF
+       END IF
+#      endif
+     end do
+  end do !!sigma loop
+
+# if defined (MULTIPROCESSOR)
+  if(par)call node_match(0,nbn,bn_mlt,bn_loc,bnc,mt,kb,myid,nprocs,xflux,xflux_adv)
+# endif
+
+  do k=1,kbm1
+     if(iobcn > 0) then
+       do i=1,iobcn
+         i1=i_obc_n(i)
+         fflux_obc(i,k)=xflux_adv(i1,k)
+       end do
+     end if
+  end do
+
+   do i=1,m 
+#    if defined (WET_DRY)
+     if(iswetn(i)*iswetnt(i) == 1) then
+#    endif
+#    if defined (THIN_DAM)
+     if(IS_DAM(I)==1)then
+       wvel(1:kb)=0.0_sp
+       IF(BACKWARD_ADVECTION/=.TRUE.)THEN
+         ftmp = f(i,1:kbm1)
+         call calc_vflux(kbm1,f(i,1:kbm1),wvel(1:kb),dz(i,1:kbm1),vflux)
+       ELSE
+         IF(BACKWARD_STEP==1)THEN
+           ftmp=(f0(i,1:kbm1)+f(i,1:kbm1))*0.5
+         ELSEIF(BACKWARD_STEP==2)THEN
+           ftmp=(f2(i,1:kbm1)+f0(i,1:kbm1)+f(i,1:kbm1))/3.0_SP
+         ENDIF
+         call calc_vflux(kbm1,ftmp,wvel(1:kb),dz(i,1:kbm1),vflux)
+       ENDIF
+     else
+       IF(BACKWARD_ADVECTION/=.TRUE.)THEN
+         ftmp = f(i,1:kbm1)
+         call calc_vflux(kbm1,f(i,1:kbm1),wts(i,1:kb),dz(i,1:kbm1),vflux)
+       ELSE
+         IF(BACKWARD_STEP==1)THEN
+           ftmp=(f0(i,1:kbm1)+f(i,1:kbm1))*0.5
+         ELSEIF(BACKWARD_STEP==2)THEN
+           ftmp=(f2(i,1:kbm1)+f0(i,1:kbm1)+f(i,1:kbm1))/3.0_SP
+         ENDIF
+         call calc_vflux(kbm1,ftmp,wts(i,1:kb),dz(i,1:kbm1),vflux)
+       ENDIF
+     end if
+#    else
+       IF(BACKWARD_ADVECTION/=.TRUE.)THEN
+         call calc_vflux(kbm1,f(i,1:kbm1),wts(i,1:kb),dz(i,1:kbm1),vflux)
+       ELSE
+         IF(BACKWARD_STEP==1)THEN
+           ftmp=(f0(i,1:kbm1)+f(i,1:kbm1))*0.5
+         ELSEIF(BACKWARD_STEP==2)THEN
+           ftmp=(f2(i,1:kbm1)+f0(i,1:kbm1)+f(i,1:kbm1))/3.0_SP
+         ENDIF
+         call calc_vflux(kbm1,ftmp,wts(i,1:kb),dz(i,1:kbm1),vflux)
+       ENDIF
+#    endif
+
+     do k=1,kbm1
+       if(isonb(i) == 2) then
+         xflux(i,k)= vflux(k)*art1(i)
+       else
+         xflux(i,k)=xflux(i,k)+ vflux(k)*art1(i)
+       end if
+#    if defined (THIN_DAM)
+       IF(IS_DAM(I)==1.AND.K<=KDAM(I))THEN
+         tmpflx = (vflux(k)-vflux(k+1))*art1(i)/dz(i,k)
+         IF(N_DAM_MATCH(I,1)==1)THEN
+            XFLUX(N_DAM_MATCH(I,2),K) = XFLUX(N_DAM_MATCH(I,2),K)+tmpflx
+         END IF
+         IF(N_DAM_MATCH(I,1)==2)THEN
+            XFLUX(N_DAM_MATCH(I,2),K) = XFLUX(N_DAM_MATCH(I,2),K)+tmpflx
+            XFLUX(N_DAM_MATCH(I,3),K) = XFLUX(N_DAM_MATCH(I,3),K)+tmpflx
+         END IF
+         IF(N_DAM_MATCH(I,1)==3)THEN
+            XFLUX(N_DAM_MATCH(I,2),K) = XFLUX(N_DAM_MATCH(I,2),K)+tmpflx
+            XFLUX(N_DAM_MATCH(I,3),K) = XFLUX(N_DAM_MATCH(I,3),K)+tmpflx
+            XFLUX(N_DAM_MATCH(I,4),K) = XFLUX(N_DAM_MATCH(I,4),K)+tmpflx
+         END IF                
+       END IF
+#    endif
+     end do
+#    if defined (WET_DRY)
+     end if
+#    endif
+   end do
+
+  if(source)then
+
+  if(RIVER_TS_SETTING == 'calculated') then
+    if(RIVER_INFLOW_LOCATION == 'node') then
+        do j=1,numqbc
+          jj=inodeq(j)
+          fpoint=fdis(j)
+          do k=1,kbm1
+            xflux(jj,k)=xflux(jj,k) - qdis(j)*vqdist(j,k)*fpoint
+          end do
+        end do
+    else if(RIVER_INFLOW_LOCATION == 'edge') then
+      write(*,*)'scalar advection not setup for "edge" point source'
+      stop
+    end if
+  end if
+
+  else
+
+  if(RIVER_TS_SETTING == 'calculated')then   
+    if(RIVER_INFLOW_LOCATION == 'node') then
+        do j=1,numqbc
+          jj=inodeq(j)
+          do k=1,kbm1
+            IF(BACKWARD_ADVECTION/=.TRUE.)THEN
+              fpoint = f(jj,k)
+            ELSE
+              IF(BACKWARD_STEP==1)THEN
+                fpoint = (f0(jj,k)+f(jj,k))*0.5
+              ELSEIF(BACKWARD_STEP==2)THEN
+                fpoint = (f2(jj,k)+f0(jj,k)+f(jj,k))/3.0_SP
+              ENDIF
+            ENDIF
+            xflux(jj,k)=xflux(jj,k) - qdis(j)*vqdist(j,k)*fpoint
+          end do
+        end do
+    else if(RIVER_INFLOW_LOCATION == 'edge') then
+      write(*,*)'scalar advection not setup for "edge" point source'
+      stop
+    end if
+  end if
+
+  endif
+
+  do i=1,m
+#   if defined (WET_DRY)
+    if(iswetn(i)*iswetnt(i) == 1 )then
+#   endif
+    do k=1,kbm1
+#   if !defined (THIN_DAM)
+      fn(i,k)=(f(i,k)-xflux(i,k)/art1(i)*(deltat/(dt(i)*dz(i,k))))*(dt(i)/dtfa(i)) 
+#   else
+      IF(IS_DAM(I)==1.AND.K<=KDAM(I))THEN
+        fn(i,k)=(f(i,k)-xflux(i,k)/(ART1(I)&
+        &+SUM(ART1(N_DAM_MATCH(I,2:1+N_DAM_MATCH(I,1)))))*(deltat/dt(i)))*(dt(i)/dtfa(i))
+      ELSE
+        fn(i,k)=(f(i,k)-xflux(i,k)/art1(i)*(deltat/(dt(i)*dz(i,k))))*(dt(i)/dtfa(i)) 
+      END IF
+#   endif
+    end do
+#   if defined (WET_DRY)
+    else
+    do k=1,kbm1
+      fn(i,k)=f(i,k)
+    end do
+    end if
+#   endif
+  end do
+
+  return
+  End Subroutine Adv_Scal_Backward
 !==============================================================================|
 
 !==============================================================================|

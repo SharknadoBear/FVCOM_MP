@@ -110,11 +110,7 @@ SUBROUTINE INTERNAL_STEP
 # if defined (ICE)
     real(SP) :: DUVI,ice_ocnDX,ice_ocnDY
 # endif
-# if defined (SEDIMENT)
-  REAL(DP) :: DPDAYS
-  REAL(SP) :: SPDAYS
-# endif
-# if defined (PLASTIC)
+# if defined (SEDIMENT) || defined (PLASTIC)
   REAL(DP) :: DPDAYS
   REAL(SP) :: SPDAYS
 # endif
