@@ -1886,7 +1886,12 @@ End Subroutine Setup_Sed
             sed_taub(i) = sed_taub(i) + sqrt(wubot(cc)**2 + wvbot(cc)**2) 
           !endif
         end do
-        sed_taub(i) = 1025.*sed_taub(i)/cnt
+        if(cnt > 0.0) then
+          sed_taub(i) = 1025.*sed_taub(i)/cnt
+        else
+          sed_taub(i) = 0.0
+          write(*,*) 'WARNING: cnt=0 at node i=', i, ' ntve(i)=', ntve(i)
+        endif
 # if defined (WAVE_CURRENT_INTERACTION)
       end if
 # endif
@@ -1900,11 +1905,11 @@ End Subroutine Setup_Sed
       active   = (1.0-bed_por)*Bed_Frac*(tau_w/tau_ce-1.0)*sed_bottom(i,iactv) + dep
       !erosion_orig  = MAX(DTsed*Erate*(1.0-bed_por)*Bed_Frac*(tau_w/tau_ce-1.0),0.0)
       !sed(ised)%eflx(i) = erosion_orig 
-      sed(ised)%eflx(i) = DTsed*erosion(erate,bed_por,bed_frac,tau_w,tau_ce) !min(erosion,active) !geoff
+      sed(ised)%eflx(i) = 0.0_sp*DTsed*erosion(erate,bed_por,bed_frac,tau_w,tau_ce) !min(erosion,active) !geoff
       !sed(ised)%eflx(i) = DTsed*min(erosion(erate,bed_por,bed_frac,tau_w,tau_ce),active) !min(erosion,active) !geoff
 
       !shutdown erosion if node is inactive 
-      sed(ised)%eflx(i) = sed(ised)%eflx(i)*sed_bottom(i,bflag)
+      sed(ised)%eflx(i) = 0.0_sp*sed(ised)%eflx(i)*sed_bottom(i,bflag)
 
       ! ========= new: Karsten Lettmann, Okt. 2012 ==========
       ! limit the eflux by the thickness of the top layer_report
@@ -1933,7 +1938,12 @@ End Subroutine Setup_Sed
 # if defined (WET_DRY)
       if(iswetn(i)==1)then
 # endif
-        sed(ised)%conc(i,kbm1) = sed(ised)%conc(i,kbm1) + sed(ised)%eflx(i)/(d(i)*dz(i,kbm1))
+        if(d(i)*dz(i,kbm1) > 0.0) then
+          sed(ised)%conc(i,kbm1) = sed(ised)%conc(i,kbm1) + sed(ised)%eflx(i)/(d(i)*dz(i,kbm1))
+        else
+          write(*,*) 'WARNING: d*dz<=0 at i=', i, ' d=', d(i), ' dz=', dz(i,kbm1)
+          sed(ised)%conc(i,kbm1) = 0.0_sp
+        endif
 # if defined (WET_DRY)
       else
         sed(ised)%conc(i,kbm1) = 0.0_sp
@@ -2098,10 +2108,10 @@ End Subroutine Setup_Sed
       sed(ised)%conc(i,1:kbm1) = c(1:kbm1)
 
       !store depositional flux
-      sed(ised)%dflx(i) = flux 
+      sed(ised)%dflx(i) = 0.0_sp*flux 
 
-      !shutdown erosion if node is inactive 
-      sed(ised)%dflx(i) = sed(ised)%dflx(i)
+      !shutdown deposition if node is inactive 
+      sed(ised)%dflx(i) = 0.0_sp*sed(ised)%dflx(i)
     else
       sed(ised)%dflx(i) = 0.0
     endif
@@ -2334,11 +2344,17 @@ End Subroutine Setup_Sed
   win(0)  =  -wset(1)
   win(-1) =  -wset(1)
 
+  !bottom bcs (no flux)
+  cin(n+1) = -cin(n) 
+  cin(n+2) = -cin(n)
+  win(n+1) = -win(n)
+  win(n+2) = -win(n)
+
   !bottom bcs (extrapolate)
-  cin(n+1) = cin(n) 
-  cin(n+2) = cin(n)
-  win(n+1) = win(n)
-  win(n+2) = win(n)
+  !cin(n+1) = cin(n) 
+  !cin(n+2) = cin(n)
+  !win(n+1) = win(n)
+  !win(n+2) = win(n)
 
   !flux computation
   do i=1,n+1
@@ -2350,6 +2366,9 @@ End Subroutine Setup_Sed
 
   !zero out surface flux
   conv(1) = 0. ; diss(1) = 0.
+
+  !Levitating case
+  conv(n+1) = 0. ; diss(n+1) = 0.
 
   !update
   do i=1,n

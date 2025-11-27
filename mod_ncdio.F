@@ -7831,6 +7831,7 @@ CONTAINS
    NCF => NEW_FILE()
 
 
+# if !defined(PLASTIC)
   !-------------------------------------------------- 
   !bottom stress on the nodes - includes waves
   !-------------------------------------------------- 
@@ -7866,6 +7867,7 @@ CONTAINS
   VAR  => ADD(VAR,ATT)
 
   NCF  => ADD(NCF,VAR)
+# endif
 
   !-------------------------------------------------- 
   !sediment concentration
@@ -8342,6 +8344,52 @@ FUNCTION PLAST_FILE_OBJECT() RESULT(NCF)
 		VAR  => ADD(VAR,ATT)
 
 		ATT  => NC_MAKE_ATT(name='units',values='m/s')
+		VAR  => ADD(VAR,ATT)
+
+		ATT  => NC_MAKE_ATT(name='grid',values='fvcom_grid')
+		VAR  => ADD(VAR,ATT)
+
+		NCF  => ADD(NCF,VAR)
+
+		NULLIFY(SLD_P)
+
+  End Do
+
+  !OUTPUT of aggregation rate (lambda_a)
+  Do II=1,nplast
+
+		SLD_P => plast(ii)%lambda_a(1:m,1:kbm1)
+
+		VAR  => NC_MAKE_PVAR(name=TRIM('lambda_a_'//TRIM(plast(ii)%pname)),&
+			& values=SLD_P, DIM1= DIM_node, DIM2= DIM_siglay, DIM3 = DIM_time)
+
+		ATT  => NC_MAKE_ATT(name='long_name',values=TRIM('Aggregation rate of '//TRIM(plast(ii)%pname)))
+		VAR  => ADD(VAR,ATT)
+
+		ATT  => NC_MAKE_ATT(name='units',values='1/s')
+		VAR  => ADD(VAR,ATT)
+
+		ATT  => NC_MAKE_ATT(name='grid',values='fvcom_grid')
+		VAR  => ADD(VAR,ATT)
+
+		NCF  => ADD(NCF,VAR)
+
+		NULLIFY(SLD_P)
+
+  End Do
+
+  !OUTPUT of disaggregation rate (lambda_d)
+  Do II=1,nplast
+
+		SLD_P => plast(ii)%lambda_d(1:m,1:kbm1)
+
+		VAR  => NC_MAKE_PVAR(name=TRIM('lambda_d_'//TRIM(plast(ii)%pname)),&
+			& values=SLD_P, DIM1= DIM_node, DIM2= DIM_siglay, DIM3 = DIM_time)
+
+		ATT  => NC_MAKE_ATT(name='long_name',values=TRIM('Disaggregation rate of '//TRIM(plast(ii)%pname)))
+		VAR  => ADD(VAR,ATT)
+
+		ATT  => NC_MAKE_ATT(name='units',values='1/s')
 		VAR  => ADD(VAR,ATT)
 
 		ATT  => NC_MAKE_ATT(name='grid',values='fvcom_grid')

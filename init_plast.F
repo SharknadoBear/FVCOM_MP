@@ -196,6 +196,25 @@
   
   End if
 
+#if defined (SEDIMENT) && (ORIG_SED) || (SEDIMENT) && (CSTMS_SED)
+  !--------------------------------------------------
+  !Split concentrations into aggregated and disaggregated fractions
+  !--------------------------------------------------
+  if (floc_intract) then
+	Do k=1,Kb
+		Do i=1,m
+			Do iplast=1,nplast
+				! Split initial concentration based on Arate_c0
+				plast(iplast)%conc_a(i,k) = plast(iplast)%conc(i,k) * Arate_c0
+				plast(iplast)%conc_d(i,k) = plast(iplast)%conc(i,k) * (1.0 - Arate_c0)
+				plast(iplast)%cnew_a(i,k) = plast(iplast)%conc_a(i,k)
+				plast(iplast)%cnew_d(i,k) = plast(iplast)%conc_d(i,k)
+			End do
+		End do
+	End do
+  End if
+#endif
+
 	If (tox_vector) then
 
 		If (INIT_TOXIN_CONC_TYPE==CNSTNT) then
