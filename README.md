@@ -25,13 +25,16 @@ This enhanced FVCOM version includes comprehensive microplastic transport modeli
 - **Infiltration Module**: Plastic transport into sediment layers with DLVO+strain filtration theory, including retention/blockage kinetics and burial processes
 
 **Recent Developments:**
+- **Microplastic-Sediment Flocculation**: Integration of MP-floc aggregation/disaggregation processes with size-dependent exclusion mechanisms, parameterized using experimental data from N. Wu et al. (2023)
 - Advanced infiltration physics with mechanistic filtration theory
 - Spatially-varying diffusion in sediment matrix
 - Multi-layer sediment column transport
 
 ### Upcoming Development
 
-**Next Phase**: Integration of **microplastic-sediment flocculation processes** to capture aggregation dynamics and enhanced settling behaviors in turbid coastal environments.
+**Planned Enhancements:**
+- Further refinement of flocculation kinetics under varying turbulence conditions
+- Integration with biofilm growth processes
 
 ## Model Capabilities
 
