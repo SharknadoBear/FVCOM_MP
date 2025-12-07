@@ -2615,7 +2615,8 @@ Subroutine Calc_Deposition
 		plast(iplast)%conc_d(i,1:kbm1) = c_d(1:kbm1)
 
 		!store wset arrays in 3D arrays
-		plast(iplast)%wset(i,1:kbm1) = wset_plast(1:kbm1)
+		plast(iplast)%wset(i,1:kbm1) = wset_plast(1:kbm1)          ! Disaggregated MP settling velocity
+		plast(iplast)%wset_floc(i,1:kbm1) = wset_sed(1:kbm1)       ! Aggregated MP settling velocity (floc)
 
 		!store depositional flux
 		plast(iplast)%dflx(i) = dflux_d+dflux_a
