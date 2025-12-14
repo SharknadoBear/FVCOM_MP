@@ -8260,7 +8260,7 @@ FUNCTION PLAST_FILE_OBJECT() RESULT(NCF)
   
   END DO
 
-#if defined (SEDIMENT) && (ORIG_SED) || (SEDIMENT) && (CSTMS_SED)
+#if defined (SEDIMENT)
   !OUTPUT of aggregated plastic concentration
   Do II=1,nplast
 
@@ -8331,7 +8331,7 @@ FUNCTION PLAST_FILE_OBJECT() RESULT(NCF)
 	
   End Do
 
-#if defined (SEDIMENT) && (ORIG_SED) || (SEDIMENT) && (CSTMS_SED)
+#if defined (SEDIMENT)
   !OUTPUT of floc-impacted settling velocity
   Do II=1,nplast
 
@@ -8471,7 +8471,7 @@ FUNCTION PLAST_FILE_OBJECT() RESULT(NCF)
 	
   End do
 
-#if defined (SEDIMENT) && (ORIG_SED) || (SEDIMENT) && (CSTMS_SED)
+#if defined (SEDIMENT)
   !OUTPUT of aggregated bottom surface mass density
   Do II=1,nplast
 

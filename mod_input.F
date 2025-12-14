@@ -2583,13 +2583,13 @@ SUBROUTINE LOAD_INIT_TOXIN_CONC(tconc_b,tconc_f)
     IF(.not. FOUND) CALL FATAL_ERROR &
          & ("COULD NOT FIND INIT TOXIN MASS FILE DIMENSION 'ksl' in:",&
          & "FILE NAME: "//TRIM(INIT_TOXIN_CONC_FILE))
-    IF (DIM1%DIM /= MGL)CALL FATAL_ERROR &
-         & ("Dimension 'ksl' in the INIT TOXIN MASS FILE does not match MGL for this model?",&
+    IF (DIM2%DIM /= KB)CALL FATAL_ERROR &
+         & ("Dimension 'ksl' in the INIT TOXIN MASS FILE does not match KB for this model?",&
          & "FILE NAME: "//TRIM(INIT_TOXIN_CONC_FILE))
 		 
 	DIM3 => FIND_DIM(NCF,'nplast',FOUND)
     IF(.not. FOUND) CALL FATAL_ERROR &
-         & ("COULD NOT FIND INIT TOXIN MASS FILE DIMENSION 'nsed' in:",&
+         & ("COULD NOT FIND INIT TOXIN MASS FILE DIMENSION 'nplast' in:",&
          & "FILE NAME: "//TRIM(INIT_TOXIN_CONC_FILE))
 	
 	! FIND THE 'init_tconc_b' VARIABLE

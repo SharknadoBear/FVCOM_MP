@@ -1230,7 +1230,7 @@ if (floc_intract) then
 
 endif 
 
-# elif
+# else
 
   !------------------------------------------------------
   !3D Advection of Plastic Concentration
@@ -1354,15 +1354,13 @@ endif
 			end do
 		endif 
 	  
-		!Vertical diffusion of toxic concentration
-		do i=1,nplast
-			call vdif_scal(plast(i)%tcnew_f,DTplast) 
-		end do
-		
-		!Bonded and free toxic concentration updating
-		do iplast=1,nplast
-
-			!Leaching kinetic terms for bonded and free toxin in the water column
+	!Vertical diffusion of toxic concentration
+	do i=1,nplast
+		call vdif_scal(plast(i)%tcnew_f,DTplast) 
+	end do
+	
+	!Bonded and free toxic concentration updating
+	do iplast=1,nplast			!Leaching kinetic terms for bonded and free toxin in the water column
 			do i=1,m
 				do k=1,kb
 
@@ -1586,7 +1584,7 @@ endif
   end if
 
 !=========================================================
-#elif 
+#else 
 !=========================================================
 
 # if defined (MULTIPROCESSOR)
@@ -1692,11 +1690,11 @@ endif
 # if defined (MULTIPROCESSOR)
   if(par)then
     do iplast=1,nplast
-      call aexchange(nc,myid,nprocs,plast(iplast)%cnew)
+      call aexchange(nc,myid,nprocs,plast(iplast)%conc)
 	  call aexchange(nc,myid,nprocs,plast(iplast)%mass)
 	  if (tox_vector) then
-		call aexchange(nc,myid,nprocs,plast(iplast)%tcnew_b)
-		call aexchange(nc,myid,nprocs,plast(iplast)%tcnew_f)
+		call aexchange(nc,myid,nprocs,plast(iplast)%tconc_b)
+		call aexchange(nc,myid,nprocs,plast(iplast)%tconc_f)
 		call aexchange(nc,myid,nprocs,plast(iplast)%tmass_b)
 	  end if
     end do
@@ -2284,7 +2282,7 @@ Subroutine Calc_Erosion
     end do
   end do
 
-#elif
+#else
 
   do iplast=1,nplast
     do i=1,m
@@ -2293,12 +2291,13 @@ Subroutine Calc_Erosion
       if(iswetn(i)==1) then
 # endif
         
-		plast(iplast)%conc(i,kbm1) = plast(iplast)%conc(i,kbm1) + plast(iplast)%eflx(i)/(d(i)*dz(i,kbm1))
-		plast(iplast)%conc(i,1) = plast(iplast)%conc(i,1) + plast(iplast)%pflx(i)/(d(i)*dz(i,1))
-			
+	plast(iplast)%conc(i,kbm1) = plast(iplast)%conc(i,kbm1) + plast(iplast)%eflx(i)/(d(i)*dz(i,kbm1))
+	plast(iplast)%conc(i,1) = plast(iplast)%conc(i,1) + plast(iplast)%pflx(i)/(d(i)*dz(i,1))
+		
 			if (tox_vector) then
-				plast(iplast)%tconc_b(i,kbm1) = plast(iplast)%tconc_b(i,kbm1) + plast(iplast)%teflx_b(i)/(d(i)*dz(i,kbm1)) 
-				plast(iplast)%tconc_f(i,kbm1) = plast(iplast)%tconc_f(i,kbm1) + plast(iplast)%tbdflx_f(i)/(d(i)*dz(i,kbm1))
+				!Add erosion flux of bonded toxin to bottom water column
+				plast(iplast)%tconc_b(i,kbm1) = plast(iplast)%tconc_b(i,kbm1) + plast(iplast)%teflx_b(i)/(d(i)*dz(i,kbm1))
+				!Note: Free toxin leaching flux (tbdflx_f) is added in update_bottom (same as erosion)
 			end if		
 
 # if defined (WET_DRY)
@@ -2306,7 +2305,6 @@ Subroutine Calc_Erosion
         cycle
       end if
 # endif
-
     end do
   end do
 
@@ -2478,7 +2476,8 @@ Subroutine Calc_Erosion_Rate(m,taub,tau_c_p,tau_c_s,rho_p,ufact,mass,zactv,frac,
 			end do
 		case ('concrete_bottom')
 			do i=1,m
-				Erate(i)=MAX(rho_p*ks0*1.035*ufact*(taub(i)-tau_c_p(i)),0.0)
+				! Use kinematic formulation: divide by reference water density to get proper scaling
+				Erate(i)=MAX((rho_p/Wrho0)*ks0*1.035*ufact*(taub(i)-tau_c_p(i)),0.0)
 			end do
 		case ('active_bottom')
 			cmud = 1.035*exp(-19.87*mudp0**0.86)+0.0981*mudp0**0.15
@@ -2627,7 +2626,7 @@ Subroutine Calc_Deposition
     end do
   end do
 
-#elif
+#else
 
   !Loop over plastic classes and spatial points       
   do iplast=1,nplast
@@ -2675,7 +2674,12 @@ Subroutine Calc_Deposition
 
 		if(dbg_set(dbg_sbr)) write(ipt,*) "Start: Settling advection"
 			!set up cycles (use max(CFL) == 1)
-			DTmax = Settle_CFL*minval(dx(1:kbm1)/wset(1:kbm1))
+			! Protect against zero wset values
+			if (minval(wset(1:kbm1)) > 1.0e-10) then
+				DTmax = Settle_CFL*minval(dx(1:kbm1)/wset(1:kbm1))
+			else
+				DTmax = DTplast  ! No subcycling needed if wset is zero
+			end if
 			mcyc = int(DTplast/DTmax + 1. - eps)
 			DTdep = DTplast/float(mcyc)
 
@@ -3474,9 +3478,10 @@ Subroutine Update_Bottom
 	!   bed(:,1,itchk)     to reflect changed bed thickness properties
 	!==========================================================================
 
-  use lims, only: m
+  use lims, only: m, kbm1
+  use all_vars, only: d, dz, h, el, min_depth
   implicit none
-  real(sp) :: dz,accum,flux,tflux_b,ratio_mass,eps
+  real(sp) :: accum,flux,tflux_b,ratio_mass,eps
   real(sp) :: tmass_b(m),tbdflx_f(m)
   integer  :: i,iplast
   real(sp) :: afrac(m),bfrac(m)
@@ -3531,7 +3536,7 @@ Subroutine Update_Bottom
 				plast(iplast)%mass_d(i) = max(accum*(1.0-ratio_mass),0.0)
 			end do
 		end do
-#elif
+#else
 		do i=1,m
 			do iplast=1,nplast
 			flux = (plast(iplast)%eflx(i)-plast(iplast)%dflx(i))
@@ -3581,24 +3586,34 @@ Subroutine Update_Bottom
 	  if (tox_vector) then
 		if(dbg_set(dbg_sbr)) write(ipt,*) "Start: Toxic mass updating"
 				
-			!do iplast=1,nplast
-					
-				!Kinetics on bottom embedded toxin mass
-				!  Call Calc_Linear_Bottom_Kinetics(DTplast,m,plast(iplast)%tox_leach_k, &
-				!		plast(iplast)%tmass_b,tmass_b)
-				!   do i=1,m
-				!	  plast(iplast)%tbdflx_f(i)=tmass_b(i)-plast(iplast)%tmass_b(i)
-				!	  plast(iplast)%tmass_b(i)=tmass_b(i)
-				!   end do
-							
-				!Kinetics on free toxin mass
-				!   Call Calc_Linear_Bottom_Kinetics(DTplast,m,-plast(iplast)%tox_gen_k, &
-				!		plast(iplast)%tmass_b,tmass_b)
-				!   do i=1,m
-				!	  plast(iplast)%tmass_b(i)=tmass_b(i)
-				!   end do
-					
-			!end do
+		do iplast=1,nplast
+			do i=1,m
+				
+				!Leaching kinetic terms for bonded and free toxin at the bottom
+				
+				!Calculate flux for water column coupling (mass leached from bottom)
+				plast(iplast)%tbdflx_f(i) = DTplast*plast(iplast)%tox_leach_k_uniform*plast(iplast)%tmass_b(i)
+				
+				!Add leached toxin flux to bottom water layer (same pattern as erosion flux)
+# if defined (WET_DRY)
+				if(iswetn(i)==1) then
+# endif
+					plast(iplast)%tconc_f(i,kbm1) = plast(iplast)%tconc_f(i,kbm1) + &
+					    plast(iplast)%tbdflx_f(i)/(d(i)*dz(i,kbm1))
+# if defined (WET_DRY)
+				end if
+# endif
+				
+				!Bonded toxin bottom mass decreases by leaching
+				plast(iplast)%tmass_b(i) = plast(iplast)%tmass_b(i) - DTplast*plast(iplast)%tox_leach_k_uniform*plast(iplast)%tmass_b(i)
+				
+				!Generation kinetic terms for bonded toxin at the bottom (if tox_gen_k > 0)
+				if (plast(iplast)%tox_gen_k > 0.0) then
+					plast(iplast)%tmass_b(i) = plast(iplast)%tmass_b(i)*(1.0+DTplast*plast(iplast)%tox_gen_k)
+				end if
+				
+			end do
+		end do
 
 		if(dbg_set(dbg_sbr)) write(ipt,*) "End: Toxic mass updating"
 	  end if
@@ -3690,11 +3705,16 @@ Subroutine Calc_Toxic_Fraction(mass_p,mass_t,bfrac)
 	integer :: i
 
 	do i = 1, m
-      !if (mass_p(i) > 0.0) then
-      !  bfrac(i) = mass_t(i) / mass_p(i)
-      !else
+      if (mass_p(i) > 0.0) then
+        bfrac(i) = mass_t(i) / mass_p(i)
+        ! Cap toxic fraction - toxic mass should not exceed plastic mass physically
+        ! (bonded toxics are carried by plastics)
+        if (bfrac(i) > 1.0) then
+          bfrac(i) = 1.0
+        end if
+      else
         bfrac(i) = 0.0
-      !end if
+      end if
     end do
 
 End Subroutine Calc_Toxic_Fraction

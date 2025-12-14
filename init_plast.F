@@ -36,7 +36,7 @@
   real(sp), allocatable :: Tsed_temp(:)
   real(sp), allocatable :: wDcy_temp(:)
   real(sp), allocatable :: Lsed_temp(:)
-#if defined (SEDIMENT) && (ORIG_SED) || (SEDIMENT) && (CSTMS_SED) 
+#if defined (SEDIMENT)
   real(sp), allocatable :: conc_a(:,:)
   real(sp), allocatable :: conc_d(:,:)
   real(sp), allocatable :: cnew_a(:,:)
@@ -114,7 +114,7 @@
 		End do
 	End if
 
-#if defined (SEDIMENT) && (ORIG_SED) || (SEDIMENT) && (CSTMS_SED)
+#if defined (SEDIMENT)
 	if (floc_intract) then
 		allocate(mass_a_tmp(0:mt,nplast)) ; mass_a_tmp = 0.0
 		allocate(mass_d_tmp(0:mt,nplast)) ; mass_d_tmp = 0.0
@@ -141,15 +141,15 @@
 	End do
 	
 	if (tox_vector) then
-		!Setup initial bonded toxic mass on the bottom
+		!Setup initial bonded toxic mass on the bottom using TOX_INR ratio
 		Do i=1,m
 			Do iplast=1,Nplast
-				plast(iplast)%tmass_b(i) = tmass0
+				plast(iplast)%tmass_b(i) = plast(iplast)%tox_r * plast(iplast)%mass(i)
 			End do 
 		End do
 	End if
 
-#if defined (SEDIMENT) && (ORIG_SED) || (SEDIMENT) && (CSTMS_SED)
+#if defined (SEDIMENT)
 	if (floc_intract) then
 		Do i=1,m
 			Do iplast=1,nplast
@@ -196,7 +196,7 @@
   
   End if
 
-#if defined (SEDIMENT) && (ORIG_SED) || (SEDIMENT) && (CSTMS_SED)
+#if defined (SEDIMENT)
   !--------------------------------------------------
   !Split concentrations into aggregated and disaggregated fractions
   !--------------------------------------------------
