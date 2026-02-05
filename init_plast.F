@@ -264,17 +264,21 @@
 		bottom(i,idens) = dens0
 		bottom(i,imudp) = mudp0
 		bottom(i,iporo) = poro0
-		bottom(i,iTsed) = temp0
-		bottom(i,iwDcy) = darv0
-		bottom(i,iLsed) = infil_max_depth
+		if (plast_infil) then
+			bottom(i,iTsed) = temp0
+			bottom(i,iwDcy) = darv0
+			bottom(i,iLsed) = infil_max_depth
+		end if
 	End do	
 
     ! Clamp to safe defaults if any constant inputs are non-physical
     Do i=1,m
       if (bottom(i,isd50) <= 0.0_sp) bottom(i,isd50) = sd50_0
       if (bottom(i,iporo) <= 0.0_sp) bottom(i,iporo) = poro0
-      if (bottom(i,iTsed) <= 0.0_sp) bottom(i,iTsed) = temp0
-      if (bottom(i,iLsed) <= 0.0_sp) bottom(i,iLsed) = infil_max_depth
+      if (plast_infil) then
+        if (bottom(i,iTsed) <= 0.0_sp) bottom(i,iTsed) = temp0
+        if (bottom(i,iLsed) <= 0.0_sp) bottom(i,iLsed) = infil_max_depth
+      end if
     End do
   end if
 
@@ -284,9 +288,11 @@
 	allocate(dens_temp(m))
 	allocate(mudp_temp(m))
 	allocate(poro_temp(m))
-	allocate(Tsed_temp(m))
-	allocate(wDcy_temp(m))
-	allocate(Lsed_temp(m))
+	if (plast_infil) then
+		allocate(Tsed_temp(m))
+		allocate(wDcy_temp(m))
+		allocate(Lsed_temp(m))
+	end if
 
 	call LOAD_BOTTOM_FEATURES(sd50_temp,dens_temp,mudp_temp,poro_temp,Tsed_temp,wDcy_temp,Lsed_temp)
 	Do i=1,m
@@ -294,9 +300,11 @@
 		bottom(i,idens) = dens_temp(i)
 		bottom(i,imudp) = mudp_temp(i)
 		bottom(i,iporo) = poro_temp(i)
-		bottom(i,iTsed) = Tsed_temp(i)
-		bottom(i,iwDcy) = wDcy_temp(i)
-		bottom(i,iLsed) = Lsed_temp(i)
+		if (plast_infil) then
+			bottom(i,iTsed) = Tsed_temp(i)
+			bottom(i,iwDcy) = wDcy_temp(i)
+			bottom(i,iLsed) = Lsed_temp(i)
+		end if
 	End Do
   End if
 

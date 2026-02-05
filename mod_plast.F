@@ -1034,10 +1034,12 @@ Subroutine Advance_plast(DTin,Tin,taub_in,s_in,t_in)
 		Call Calc_floc_MP_Disaggregation_Rate(m,kbm1,DTplast,plast(i)%dequ,plast(i)%lambda_a(1:m,1:kbm1),plast(i)%lambda_d(1:m,1:kbm1))
 	end do
 # if defined (MULTIPROCESSOR)
-	do i=1,nplast
-		call aexchange(nc,myid,nprocs,plast(i)%lambda_a)
-		call aexchange(nc,myid,nprocs,plast(i)%lambda_d)
-	end do
+	if(par)then
+		do i=1,nplast
+			call aexchange(nc,myid,nprocs,plast(i)%lambda_a)
+			call aexchange(nc,myid,nprocs,plast(i)%lambda_d)
+		end do
+	end if
 # endif
   end if
 # endif

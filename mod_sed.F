@@ -1024,6 +1024,7 @@ End Subroutine Setup_Sed
 !J. Ge for tracer advection
 
 
+      !Apply FCT limiter for stability - prevents overshoots/undershoots
       call fct_sed(sed(i)%conc,sed(i)%cnew)
   
     end do
@@ -1093,10 +1094,14 @@ End Subroutine Setup_Sed
   end do
 
   !------------------------------------------------------
-  ! Limit to Non-Negative (modify to Venkat Limiter) 
+  ! Limit to Non-Negative and check for unrealistic values
   !------------------------------------------------------
   do i=1,nsed
     sed(i)%conc = max(sed(i)%cnew,0.0)
+    ! Check for unrealistically large values that indicate instability
+    where (sed(i)%conc > 100.0)
+      sed(i)%conc = 100.0
+    end where
   end do
   
   !-----------------------Jianzhong----------------------  
@@ -1847,6 +1852,9 @@ End Subroutine Setup_Sed
   ! ------ new: Karsten Lettmann ---
   real(sp) :: dz_bed, eflux_avail
   ! --------------------------------
+  
+  ! Variables for concentration rate limiter
+  real(sp) :: old_conc, new_conc, delta_conc
 
   if(dbg_set(dbg_sbr)) write(ipt,*) "Start: Calc_Erosion "
   ! Compute bottom velocity at node
@@ -1905,11 +1913,11 @@ End Subroutine Setup_Sed
       active   = (1.0-bed_por)*Bed_Frac*(tau_w/tau_ce-1.0)*sed_bottom(i,iactv) + dep
       !erosion_orig  = MAX(DTsed*Erate*(1.0-bed_por)*Bed_Frac*(tau_w/tau_ce-1.0),0.0)
       !sed(ised)%eflx(i) = erosion_orig 
-      sed(ised)%eflx(i) = 0.0_sp*DTsed*erosion(erate,bed_por,bed_frac,tau_w,tau_ce) !min(erosion,active) !geoff
+      sed(ised)%eflx(i) = DTsed*erosion(erate,bed_por,bed_frac,tau_w,tau_ce)
       !sed(ised)%eflx(i) = DTsed*min(erosion(erate,bed_por,bed_frac,tau_w,tau_ce),active) !min(erosion,active) !geoff
 
       !shutdown erosion if node is inactive 
-      sed(ised)%eflx(i) = 0.0_sp*sed(ised)%eflx(i)*sed_bottom(i,bflag)
+      sed(ised)%eflx(i) = sed(ised)%eflx(i)*sed_bottom(i,bflag)
 
       ! ========= new: Karsten Lettmann, Okt. 2012 ==========
       ! limit the eflux by the thickness of the top layer_report
@@ -1939,7 +1947,22 @@ End Subroutine Setup_Sed
       if(iswetn(i)==1)then
 # endif
         if(d(i)*dz(i,kbm1) > 0.0) then
-          sed(ised)%conc(i,kbm1) = sed(ised)%conc(i,kbm1) + sed(ised)%eflx(i)/(d(i)*dz(i,kbm1))
+          ! Store old concentration to check for extreme changes
+          old_conc = sed(ised)%conc(i,kbm1)
+          new_conc = old_conc + sed(ised)%eflx(i)/(d(i)*dz(i,kbm1))
+          delta_conc = new_conc - old_conc
+          
+          ! Limit the concentration change to prevent instability
+          ! If change is more than 10x the original, limit it
+          if (old_conc > 1.0e-6 .and. abs(delta_conc) > 10.0*old_conc) then
+            if (delta_conc > 0.0) then
+              new_conc = old_conc * 10.0  ! Limit increase to 10x
+            else
+              new_conc = old_conc * 0.1   ! Limit decrease to 0.1x
+            endif
+          endif
+          
+          sed(ised)%conc(i,kbm1) = new_conc
         else
           write(*,*) 'WARNING: d*dz<=0 at i=', i, ' d=', d(i), ' dz=', dz(i,kbm1)
           sed(ised)%conc(i,kbm1) = 0.0_sp
@@ -2108,10 +2131,10 @@ End Subroutine Setup_Sed
       sed(ised)%conc(i,1:kbm1) = c(1:kbm1)
 
       !store depositional flux
-      sed(ised)%dflx(i) = 0.0_sp*flux 
+      sed(ised)%dflx(i) = flux 
 
       !shutdown deposition if node is inactive 
-      sed(ised)%dflx(i) = 0.0_sp*sed(ised)%dflx(i)
+      sed(ised)%dflx(i) = sed(ised)%dflx(i)*sed_bottom(i,bflag)
     else
       sed(ised)%dflx(i) = 0.0
     endif
