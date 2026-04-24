@@ -1215,19 +1215,32 @@ if (floc_intract) then
 				! Store old concentrations to avoid self-referencing errors
 				c_a_old = plast(iplast)%cnew_a(i,k)
 				c_d_old = plast(iplast)%cnew_d(i,k)
-				
+
+				! Stability check: limit kinetic rate coefficients to prevent instability
+				! CFL-like criterion: lambda * DT should not be too large (>> 1)
+				real_temp1 = min(plast(iplast)%lambda_a(i,k)*DTplast, 1.0_sp)
+				real_temp2 = min(plast(iplast)%lambda_d(i,k)*DTplast, 1.0_sp)
+
 				! Update aggregated concentration: gain from aggregation, loss from disaggregation
 				plast(iplast)%cnew_a(i,k) = c_a_old + &
-					DTplast*plast(iplast)%lambda_a(i,k)*c_d_old - &
-					DTplast*plast(iplast)%lambda_d(i,k)*c_a_old
-				
+					real_temp1*c_d_old - &
+					real_temp2*c_a_old
+
 				! Update disaggregated concentration: loss from aggregation, gain from disaggregation
 				plast(iplast)%cnew_d(i,k) = c_d_old - &
-					DTplast*plast(iplast)%lambda_a(i,k)*c_d_old + &
-					DTplast*plast(iplast)%lambda_d(i,k)*c_a_old
-			end do
+					real_temp1*c_d_old + &
+					real_temp2*c_a_old
+				end do
 		end do
 
+  end do
+
+  !------------------------------------------------------
+  ! Upper bound limiter for stability (similar to sediment module)
+  !------------------------------------------------------
+  do iplast=1,nplast
+		where (plast(iplast)%cnew_a > 100.0) plast(iplast)%cnew_a = 100.0
+		where (plast(iplast)%cnew_d > 100.0) plast(iplast)%cnew_d = 100.0
   end do
 
 endif 
@@ -2257,23 +2270,52 @@ Subroutine Calc_Erosion
         if (plast(iplast)%conc(i,kbm1) > 1.0e-12) then
           ratio_bottom=plast(iplast)%conc_a(i,kbm1)/plast(iplast)%conc(i,kbm1)
         else
-          ! Default: assume initial erosion is 50% aggregated, 50% disaggregated
-          ! Or use the bottom mass ratio if available
-          ratio_bottom = 0.5_sp
+          ! Default: if no water column concentration exists, eroded material
+          ! should enter as disaggregated (conc_d) until aggregation occurs
+          ! This prevents artificial mass loss when lambda=0
+          ratio_bottom = 0.0_sp
         end if
         
         if (plast(iplast)%conc(i,1) > 1.0e-12) then
           ratio_surface=plast(iplast)%conc_a(i,1)/plast(iplast)%conc(i,1)
         else
-          ratio_surface = 0.5_sp
+          ! Default to disaggregated for surface inputs
+          ratio_surface = 0.0_sp
         end if
 
-		plast(iplast)%conc_a(i,kbm1) = plast(iplast)%conc_a(i,kbm1) + plast(iplast)%eflx(i)/(d(i)*dz(i,kbm1))*ratio_bottom
-		plast(iplast)%conc_d(i,kbm1) = plast(iplast)%conc_d(i,kbm1) + plast(iplast)%eflx(i)/(d(i)*dz(i,kbm1))*(1.0-ratio_bottom)
-		plast(iplast)%conc(i,kbm1) = plast(iplast)%conc(i,kbm1) + plast(iplast)%eflx(i)/(d(i)*dz(i,kbm1))
-		plast(iplast)%conc_a(i,1) = plast(iplast)%conc_a(i,1) + plast(iplast)%pflx(i)/(d(i)*dz(i,1))*ratio_surface
-		plast(iplast)%conc_d(i,1) = plast(iplast)%conc_d(i,1) + plast(iplast)%pflx(i)/(d(i)*dz(i,1))*(1.0-ratio_surface)
-		plast(iplast)%conc(i,1) = plast(iplast)%conc(i,1) + plast(iplast)%pflx(i)/(d(i)*dz(i,1))
+		! Apply rate-of-change limiter for erosion (max 10x increase per timestep)
+		real_temp1 = plast(iplast)%conc_a(i,kbm1)
+		real_temp2 = real_temp1 + plast(iplast)%eflx(i)/(d(i)*dz(i,kbm1))*ratio_bottom
+		if (real_temp1 > 1.0e-6 .and. real_temp2 > 10.0*real_temp1) then
+			real_temp2 = 10.0*real_temp1
+		end if
+		plast(iplast)%conc_a(i,kbm1) = real_temp2
+
+		real_temp1 = plast(iplast)%conc_d(i,kbm1)
+		real_temp2 = real_temp1 + plast(iplast)%eflx(i)/(d(i)*dz(i,kbm1))*(1.0-ratio_bottom)
+		if (real_temp1 > 1.0e-6 .and. real_temp2 > 10.0*real_temp1) then
+			real_temp2 = 10.0*real_temp1
+		end if
+		plast(iplast)%conc_d(i,kbm1) = real_temp2
+
+		plast(iplast)%conc(i,kbm1) = plast(iplast)%conc_a(i,kbm1) + plast(iplast)%conc_d(i,kbm1)
+
+		! Surface flux (precipitation) with limiter
+		real_temp1 = plast(iplast)%conc_a(i,1)
+		real_temp2 = real_temp1 + plast(iplast)%pflx(i)/(d(i)*dz(i,1))*ratio_surface
+		if (real_temp1 > 1.0e-6 .and. real_temp2 > 10.0*real_temp1) then
+			real_temp2 = 10.0*real_temp1
+		end if
+		plast(iplast)%conc_a(i,1) = real_temp2
+
+		real_temp1 = plast(iplast)%conc_d(i,1)
+		real_temp2 = real_temp1 + plast(iplast)%pflx(i)/(d(i)*dz(i,1))*(1.0-ratio_surface)
+		if (real_temp1 > 1.0e-6 .and. real_temp2 > 10.0*real_temp1) then
+			real_temp2 = 10.0*real_temp1
+		end if
+		plast(iplast)%conc_d(i,1) = real_temp2
+
+		plast(iplast)%conc(i,1) = plast(iplast)%conc_a(i,1) + plast(iplast)%conc_d(i,1)
 
 # if defined (WET_DRY)
       else
@@ -3483,7 +3525,7 @@ Subroutine Update_Bottom
   use lims, only: m, kbm1
   use all_vars, only: d, dz, h, el, min_depth
   implicit none
-  real(sp) :: accum,flux,tflux_b,ratio_mass,eps
+  real(sp) :: accum,flux,tflux_b,ratio_mass,eps,split_mass
   real(sp) :: tmass_b(m),tbdflx_f(m)
   integer  :: i,iplast
   real(sp) :: afrac(m),bfrac(m)
@@ -3529,7 +3571,14 @@ Subroutine Update_Bottom
 		do i=1,m
 			do iplast=1,nplast
 				flux = (plast(iplast)%eflx(i)-plast(iplast)%dflx(i))
-				ratio_mass = plast(iplast)%mass_a(i)/plast(iplast)%mass(i)
+				split_mass = max(plast(iplast)%mass_a(i),0.0_sp) + max(plast(iplast)%mass_d(i),0.0_sp)
+				if (plast(iplast)%mass(i) > eps .and. split_mass > eps) then
+					ratio_mass = max(plast(iplast)%mass_a(i),0.0_sp)/split_mass
+				else if (plast(iplast)%mass(i) > eps) then
+					ratio_mass = max(0.0_sp,min(Arate_m0,1.0_sp))
+				else
+					ratio_mass = 0.0_sp
+				end if
 				
 				!change top layer bed mass of each plastic type 
 				accum  = plast(iplast)%mass(i) - flux 

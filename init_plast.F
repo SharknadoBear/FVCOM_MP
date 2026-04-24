@@ -116,14 +116,11 @@
 
 #if defined (SEDIMENT)
 	if (floc_intract) then
-		allocate(mass_a_tmp(0:mt,nplast)) ; mass_a_tmp = 0.0
-		allocate(mass_d_tmp(0:mt,nplast)) ; mass_d_tmp = 0.0
-		
 		!Setup initial aggregated/dis-aggregated plastic mass on the bottom
 		Do i=1,m
 			Do iplast=1,Nplast
-				plast(iplast)%mass_a(i) = mass_a_tmp(i,iplast)
-				plast(iplast)%mass_d(i) = mass_d_tmp(i,iplast)
+				plast(iplast)%mass_a(i) = plast(iplast)%mass(i)*Arate_m0
+				plast(iplast)%mass_d(i) = plast(iplast)%mass(i)*(1.0-Arate_m0)
 			End do 
 		End do
 	end if

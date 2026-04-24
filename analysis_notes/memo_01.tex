@@ -1,0 +1,167 @@
+\documentclass[11pt]{article}
+\usepackage[margin=1in]{geometry}
+\usepackage{amsmath}
+\usepackage{array}
+\usepackage{booktabs}
+\usepackage{longtable}
+
+\title{Memo 01: Mass-Conservation Review of \texttt{conc\_a} and \texttt{conc\_d}}
+\author{Codex review for FVCOM-MP floc diagnostics}
+\date{\today}
+
+\begin{document}
+\maketitle
+
+\section{Purpose}
+This memo summarizes the present numerical treatment of the floc-enabled plastic tracers
+\texttt{conc\_a} (aggregated microplastic) and \texttt{conc\_d} (disaggregated microplastic)
+in \texttt{mod\_plast.F}, with a focus on mass conservation when the interaction term is active.
+It also records the leading hypotheses for the observed mass loss.
+
+\section{Present Numerical Treatment}
+\subsection{State Variables}
+With \texttt{PLAST\_FLOC = T}, the water-column plastic state is split into two tracers:
+\[
+C = C_a + C_d,
+\]
+where $C_a$ is stored in \texttt{conc\_a} and $C_d$ is stored in \texttt{conc\_d}. The bed
+state is represented by the total areal mass \texttt{mass} together with split bookkeeping
+\texttt{mass\_a} and \texttt{mass\_d}.
+
+\subsection{Operator Sequence in the Current Code}
+The actual chronology in \texttt{Advance\_plast} is summarized below.
+
+\begin{longtable}{>{\raggedright\arraybackslash}p{0.20\textwidth} >{\raggedright\arraybackslash}p{0.72\textwidth}}
+\toprule
+Checkpoint & Current treatment \\
+\midrule
+\endfirsthead
+\toprule
+Checkpoint & Current treatment \\
+\midrule
+\endhead
+Step start &
+The code rebuilds the combined concentration \texttt{conc = conc\_a + conc\_d}, and then enters
+the bed-exchange operators. \\
+After deposition &
+Settling is solved separately for \texttt{conc\_a} and \texttt{conc\_d}. Aggregated plastic
+uses a floc/sediment settling velocity, while disaggregated plastic uses the plastic settling
+velocity. The stored depositional flux is only the combined scalar
+\[
+\texttt{dflx} = \texttt{dflx\_a} + \texttt{dflx\_d}.
+\]
+No separate bed fluxes are retained for the split states. \\
+After erosion &
+The bed erosion flux \texttt{eflx} is first computed as a total plastic flux. It is then
+partitioned back into \texttt{conc\_a} and \texttt{conc\_d} using the instantaneous bottom-layer
+ratio
+\[
+r_b = \frac{\texttt{conc\_a}(k_{bm1})}{\texttt{conc}(k_{bm1})},
+\]
+with a fallback to purely disaggregated input if the denominator is too small. A similar split
+is used for the surface precipitation flux. Both additions are passed through local growth
+limiters. \\
+After \texttt{Update\_Bottom} &
+The total bed mass is updated through the net bed exchange
+\[
+\Delta M_b \propto \texttt{eflx} - \texttt{dflx},
+\]
+but the split bed masses are not updated from separate depositional fluxes. Instead, the current
+bed split ratio is reused to repartition the updated total mass. In other words, the bed split
+evolves by bookkeeping ratio, not by resolved split deposition. \\
+After advection/diffusion &
+\texttt{conc\_a} and \texttt{conc\_d} are advected independently by two calls to
+\texttt{adv\_scal}, then vertically diffused independently by two calls to
+\texttt{vdif\_scal}. \\
+After kinetics &
+The floc interaction step applies the pairwise update
+\(C_a^{n+1} = C_a^* + \alpha C_d^* - \beta C_a^*\) and
+\(C_d^{n+1} = C_d^* - \alpha C_d^* + \beta C_a^*\),
+with $\alpha = \min(\lambda_a \Delta t, 1)$ and $\beta = \min(\lambda_d \Delta t, 1)$.
+Algebraically, this step preserves $C_a + C_d$ pointwise before later clipping. \\
+After clamps/limiters &
+Two non-conservative corrections remain in the floc path: an upper cap
+\texttt{cnew\_a > 100} or \texttt{cnew\_d > 100}, and the final nonnegative clip
+\texttt{conc\_a = max(cnew\_a, 0)} and \texttt{conc\_d = max(cnew\_d, 0)}. The final combined concentration is then rebuilt
+from the clipped split fields. \\
+\bottomrule
+\end{longtable}
+
+\subsection{Initialization and Restart Notes}
+\begin{itemize}
+\item Initial water-column concentration is split by \texttt{INI\_CONC\_AG\_RATE}.
+\item Initial bottom mass is now split consistently by \texttt{INI\_MASS\_AG\_RATE} for both
+constant and static bottom-mass initialization paths.
+\item Hot-start support still restores only the combined plastic concentration in the current
+restart reader, so floc-state restart consistency remains a concern.
+\end{itemize}
+
+\section{Conservation Expectations}
+If external sources and open-boundary forcing are disabled, the following operators should be
+internally conservative in total plastic mass:
+\begin{itemize}
+\item separate settling plus bed update, provided the water-column loss exactly matches the bed gain;
+\item separate erosion plus bed update, provided the bed loss exactly matches the water-column gain;
+\item the pairwise aggregation/disaggregation kinetics, because the gain in one split state is the
+loss in the other;
+\item interior advection and diffusion, up to the conservation properties of the transport scheme.
+\end{itemize}
+
+Therefore, any drift in the internal total
+\[
+\text{water total} + \text{bed total}
+\]
+should point to clipping, limiter truncation, split-state bookkeeping inconsistency, or an
+operator mismatch between the water-column and bed updates.
+
+\section{Leading Hypotheses for the Observed Mass Loss}
+\subsection*{1. Floc-only hard caps and clips are explicit sinks or gains}
+The upper cap on \texttt{cnew\_a} and \texttt{cnew\_d} removes positive mass directly. The
+nonnegative clip removes negative values, which acts as a positive mass correction.
+
+\subsection*{2. Erosion and surface growth limiters can decouple bed and water updates}
+The erosion and surface additions are limiter-controlled in the water column, but the bed update
+still uses the full total fluxes \texttt{eflx} and \texttt{dflx}. If the limiter truncates the
+water-column increment while the bed still loses the full amount, the difference appears as an
+artificial sink.
+
+\subsection*{3. Reuse of one \texttt{cflx} array across both tracer solves may distort floc-mode OBC handling}
+Both \texttt{conc\_a} and \texttt{conc\_d} currently call \texttt{adv\_scal} with the same
+\texttt{cflx} storage. This may be harmless for strictly interior transport, but it is a plausible
+source of distorted boundary-flux bookkeeping when open boundaries are active.
+
+\subsection*{4. Bed split bookkeeping is not driven by split deposition}
+The total bed mass is updated with the combined net bed flux, but \texttt{mass\_a} and
+\texttt{mass\_d} are then reconstructed from a ratio rather than from resolved split deposition and
+erosion fluxes. That makes the split bed inventory diagnostic rather than prognostically exact, and
+it can hide where the mismatch is generated.
+
+\section{Suggested Diagnostic Interpretation}
+A future diagnostic pass should report domain-integrated values for:
+\begin{itemize}
+\item water \texttt{a}, water \texttt{d}, water total;
+\item bed total, bed \texttt{a}, bed \texttt{d};
+\item checkpoint-to-checkpoint totals at:
+\texttt{step\_start}, \texttt{after\_deposition}, \texttt{after\_erosion},
+\texttt{after\_update\_bottom}, \texttt{after\_advdiff}, \texttt{after\_kinetics}, and
+\texttt{after\_clamps};
+\item explicit correction counters for upper-cap loss, nonnegative-clip gain, erosion-limiter
+truncation, surface-limiter truncation, and bed-split reconciliation.
+\end{itemize}
+
+For an internal-isolation test with no point sources and no open-boundary forcing, the most useful
+checks are:
+\begin{enumerate}
+\item the total change from \texttt{after\_advdiff} to \texttt{after\_kinetics}, which should be
+near zero if the kinetic exchange is behaving conservatively;
+\item the total change from \texttt{step\_start} to \texttt{after\_clamps}, which should be
+explained by the reported correction counters.
+\end{enumerate}
+
+\section{Bottom Line}
+The interaction step itself is algebraically conservative; the stronger candidates for significant
+mass loss are the floc-only truncation operators and the mismatch between total bed fluxes and
+split-state water-column limiters/bookkeeping. These checkpoints are the first places to inspect in
+a later diagnostic pass.
+
+\end{document}
