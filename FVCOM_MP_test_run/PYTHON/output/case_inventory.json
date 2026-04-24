@@ -1,0 +1,610 @@
+{
+  "generated_at": "2026-04-24T12:04:12",
+  "input_inventory": [
+    {
+      "name": "generic_plastic.inp",
+      "size_bytes": 8318,
+      "modified": "2026-02-03T16:07:05"
+    },
+    {
+      "name": "generic_plastic_a.inp",
+      "size_bytes": 8345,
+      "modified": "2026-02-03T18:28:34"
+    },
+    {
+      "name": "generic_plastic_b.inp",
+      "size_bytes": 8345,
+      "modified": "2026-02-04T08:50:10"
+    },
+    {
+      "name": "generic_plastic_c.inp",
+      "size_bytes": 8345,
+      "modified": "2026-02-05T16:09:16"
+    },
+    {
+      "name": "generic_sediment.inp",
+      "size_bytes": 9717,
+      "modified": "2026-02-03T21:26:41"
+    },
+    {
+      "name": "generic_sediment_c.inp",
+      "size_bytes": 9717,
+      "modified": "2026-02-05T16:10:32"
+    },
+    {
+      "name": "waterPACT_cor.dat",
+      "size_bytes": 2599829,
+      "modified": "2024-06-17T22:50:01"
+    },
+    {
+      "name": "waterPACT_dep.dat",
+      "size_bytes": 2554787,
+      "modified": "2024-06-17T22:50:01"
+    },
+    {
+      "name": "waterPACT_DRE_its.nc",
+      "size_bytes": 16420984,
+      "modified": "2026-02-04T08:11:54"
+    },
+    {
+      "name": "waterPACT_DRE_pres_2019.nc",
+      "size_bytes": 22151432,
+      "modified": "2024-05-24T19:15:33"
+    },
+    {
+      "name": "waterPACT_DRE_wind_2019.nc",
+      "size_bytes": 44051596,
+      "modified": "2024-05-24T19:15:34"
+    },
+    {
+      "name": "waterPACT_grd.dat",
+      "size_bytes": 6072627,
+      "modified": "2024-06-17T22:50:01"
+    },
+    {
+      "name": "waterPACT_obc.dat",
+      "size_bytes": 820,
+      "modified": "2024-06-17T22:50:01"
+    },
+    {
+      "name": "waterPACT_obc_2019.nc",
+      "size_bytes": 38895924,
+      "modified": "2024-05-24T19:15:32"
+    },
+    {
+      "name": "waterPACT_riv_floc_MP.nc",
+      "size_bytes": 1929640,
+      "modified": "2026-02-03T21:02:39"
+    },
+    {
+      "name": "waterPACT_riv_floc_MP.nml",
+      "size_bytes": 1621,
+      "modified": "2026-02-03T22:09:39"
+    },
+    {
+      "name": "waterPACT_sig.dat",
+      "size_bytes": 564,
+      "modified": "2024-06-17T22:50:01"
+    },
+    {
+      "name": "waterPACT_spg.dat",
+      "size_bytes": 2831,
+      "modified": "2024-06-17T22:50:01"
+    },
+    {
+      "name": "waterPACT_tsobc_2019.nc",
+      "size_bytes": 70188176,
+      "modified": "2024-06-17T16:10:31"
+    }
+  ],
+  "cases": {
+    "a": {
+      "case_id": "a",
+      "run_file": "C:\\Users\\huan111\\OneDrive - PNNL\\Desktop\\WaterPACT_Local\\1_Model_Build\\Model_develop\\FVCOM_source_repo_github\\FVCOM_MP_test_run\\RUN_a\\waterPACT_a_run.nml",
+      "job_file": "C:\\Users\\huan111\\OneDrive - PNNL\\Desktop\\WaterPACT_Local\\1_Model_Build\\Model_develop\\FVCOM_source_repo_github\\FVCOM_MP_test_run\\RUN_a\\job_Kestrel.sh",
+      "job": {
+        "sbatch_time": "07-00:00:00",
+        "partition": "long",
+        "casename": "waterPACT_a"
+      },
+      "run": {
+        "start_date": "days=58485.0",
+        "end_date": "days=58848.0",
+        "startup_ts_type": "observed",
+        "startup_t_vals": 20.0,
+        "startup_s_vals": 30.0,
+        "restart_first_out": "days=58490.0",
+        "netcdf_first_out": "days=58490.0",
+        "output_dir": "../OUTPUT_a",
+        "sediment_model": false,
+        "plastic_model": true,
+        "plastic_model_file": "generic_plastic_a.inp",
+        "sediment_model_file": "generic_sediment.inp"
+      },
+      "plastic": {
+        "file": "generic_plastic_a.inp",
+        "plast_floc": false,
+        "plast_ptsource": true,
+        "plast_bedset": "concrete_bottom",
+        "plast_unit": "kg/m^3",
+        "plast_name": "mp1",
+        "plast_shape": "sphere",
+        "plast_density_kgm3": 950.0,
+        "plast_wssed_ms": 0.01,
+        "ambient_water_density_kgm3": 1025.0,
+        "ini_mass_kg": 0.0,
+        "source_ag_rate": 0.0
+      },
+      "sediment": {
+        "file": null,
+        "sed_on": false,
+        "sed_name": null,
+        "sed_type": null,
+        "sed_sd50_mm": null,
+        "sed_wset_mms": null,
+        "sed_tau_e_nm2": null,
+        "sed_tau_d_nm2": null,
+        "sed_inf_bed": null
+      },
+      "output_files": []
+    },
+    "b": {
+      "case_id": "b",
+      "run_file": "C:\\Users\\huan111\\OneDrive - PNNL\\Desktop\\WaterPACT_Local\\1_Model_Build\\Model_develop\\FVCOM_source_repo_github\\FVCOM_MP_test_run\\RUN_b\\waterPACT_b_run.nml",
+      "job_file": "C:\\Users\\huan111\\OneDrive - PNNL\\Desktop\\WaterPACT_Local\\1_Model_Build\\Model_develop\\FVCOM_source_repo_github\\FVCOM_MP_test_run\\RUN_b\\job_Kestrel.sh",
+      "job": {
+        "sbatch_time": "07-00:00:00",
+        "partition": "long",
+        "casename": "waterPACT_b"
+      },
+      "run": {
+        "start_date": "days=58485.0",
+        "end_date": "days=58848.0",
+        "startup_ts_type": "constant",
+        "startup_t_vals": 20.0,
+        "startup_s_vals": 30.0,
+        "restart_first_out": "days=58485.0",
+        "netcdf_first_out": "days=58485.0",
+        "output_dir": "../OUTPUT_b",
+        "sediment_model": true,
+        "plastic_model": true,
+        "plastic_model_file": "generic_plastic_b.inp",
+        "sediment_model_file": "generic_sediment.inp"
+      },
+      "plastic": {
+        "file": "generic_plastic_b.inp",
+        "plast_floc": true,
+        "plast_ptsource": true,
+        "plast_bedset": "concrete_bottom",
+        "plast_unit": "kg/m^3",
+        "plast_name": "mp1",
+        "plast_shape": "sphere",
+        "plast_density_kgm3": 950.0,
+        "plast_wssed_ms": 0.01,
+        "ambient_water_density_kgm3": 1025.0,
+        "ini_mass_kg": 0.0,
+        "source_ag_rate": 0.0
+      },
+      "sediment": {
+        "file": "generic_sediment.inp",
+        "sed_on": true,
+        "sed_name": "coarse_sand_1",
+        "sed_type": "non-cohesive",
+        "sed_sd50_mm": 0.1,
+        "sed_wset_mms": 3.0,
+        "sed_tau_e_nm2": 0.1,
+        "sed_tau_d_nm2": 0.1,
+        "sed_inf_bed": true
+      },
+      "output_files": []
+    },
+    "c": {
+      "case_id": "c",
+      "run_file": "C:\\Users\\huan111\\OneDrive - PNNL\\Desktop\\WaterPACT_Local\\1_Model_Build\\Model_develop\\FVCOM_source_repo_github\\FVCOM_MP_test_run\\RUN_c\\waterPACT_c_run.nml",
+      "job_file": "C:\\Users\\huan111\\OneDrive - PNNL\\Desktop\\WaterPACT_Local\\1_Model_Build\\Model_develop\\FVCOM_source_repo_github\\FVCOM_MP_test_run\\RUN_c\\job_Kestrel.sh",
+      "job": {
+        "sbatch_time": "02-00:00:00",
+        "partition": "standard",
+        "casename": "waterPACT_c"
+      },
+      "run": {
+        "start_date": "days=58485.0",
+        "end_date": "days=58848.0",
+        "startup_ts_type": "constant",
+        "startup_t_vals": 20.0,
+        "startup_s_vals": 30.0,
+        "restart_first_out": "days=58485.0",
+        "netcdf_first_out": "days=58485.0",
+        "output_dir": "../OUTPUT_c",
+        "sediment_model": true,
+        "plastic_model": true,
+        "plastic_model_file": "generic_plastic_c.inp",
+        "sediment_model_file": "generic_sediment_c.inp"
+      },
+      "plastic": {
+        "file": "generic_plastic_c.inp",
+        "plast_floc": true,
+        "plast_ptsource": true,
+        "plast_bedset": "concrete_bottom",
+        "plast_unit": "kg/m^3",
+        "plast_name": "mp1",
+        "plast_shape": "sphere",
+        "plast_density_kgm3": 950.0,
+        "plast_wssed_ms": 0.01,
+        "ambient_water_density_kgm3": 1025.0,
+        "ini_mass_kg": 0.0,
+        "source_ag_rate": 0.0
+      },
+      "sediment": {
+        "file": "generic_sediment_c.inp",
+        "sed_on": true,
+        "sed_name": "coarse_sand_1",
+        "sed_type": "non-cohesive",
+        "sed_sd50_mm": 1.0,
+        "sed_wset_mms": 3.0,
+        "sed_tau_e_nm2": 0.1,
+        "sed_tau_d_nm2": 0.1,
+        "sed_inf_bed": true
+      },
+      "output_files": []
+    }
+  },
+  "scenario_notes": [
+    "Case a is the no-floc baseline, while case b turns PLAST_FLOC on.",
+    "Cases b and c use different plastic filenames, but the file contents are identical.",
+    "Case c changes only the sediment grain size from 0.1 mm to 1.0 mm relative to case b.",
+    "Case a and case b do not share the same startup salinity/temperature treatment.",
+    "OUTPUT_a, OUTPUT_b, and OUTPUT_c are currently empty, so the original scenario intent must be inferred from inputs alone."
+  ],
+  "river_entries": [
+    {
+      "section": "NML_RIVER",
+      "RIVER_NAME": "DR_1",
+      "RIVER_FILE": "waterPACT_riv_floc_MP.nc",
+      "RIVER_GRID_LOCATION": 68412,
+      "RIVER_VERTICAL_DISTRIBUTION": "30*0.03333333333"
+    },
+    {
+      "section": "NML_RIVER",
+      "RIVER_NAME": "DR_2",
+      "RIVER_FILE": "waterPACT_riv_floc_MP.nc",
+      "RIVER_GRID_LOCATION": 68416,
+      "RIVER_VERTICAL_DISTRIBUTION": "30*0.03333333333"
+    },
+    {
+      "section": "NML_RIVER",
+      "RIVER_NAME": "DR_3",
+      "RIVER_FILE": "waterPACT_riv_floc_MP.nc",
+      "RIVER_GRID_LOCATION": 68413,
+      "RIVER_VERTICAL_DISTRIBUTION": "30*0.03333333333"
+    },
+    {
+      "section": "NML_RIVER",
+      "RIVER_NAME": "DR_4",
+      "RIVER_FILE": "waterPACT_riv_floc_MP.nc",
+      "RIVER_GRID_LOCATION": 68414,
+      "RIVER_VERTICAL_DISTRIBUTION": "30*0.03333333333"
+    },
+    {
+      "section": "NML_RIVER",
+      "RIVER_NAME": "DR_5",
+      "RIVER_FILE": "waterPACT_riv_floc_MP.nc",
+      "RIVER_GRID_LOCATION": 68415,
+      "RIVER_VERTICAL_DISTRIBUTION": "30*0.03333333333"
+    },
+    {
+      "section": "NML_RIVER",
+      "RIVER_NAME": "DR_6",
+      "RIVER_FILE": "waterPACT_riv_floc_MP.nc",
+      "RIVER_GRID_LOCATION": 68410,
+      "RIVER_VERTICAL_DISTRIBUTION": "30*0.03333333333"
+    },
+    {
+      "section": "NML_RIVER",
+      "RIVER_NAME": "SR_1",
+      "RIVER_FILE": "waterPACT_riv_floc_MP.nc",
+      "RIVER_GRID_LOCATION": 55093,
+      "RIVER_VERTICAL_DISTRIBUTION": "30*0.03333333333"
+    },
+    {
+      "section": "NML_RIVER",
+      "RIVER_NAME": "SR_2",
+      "RIVER_FILE": "waterPACT_riv_floc_MP.nc",
+      "RIVER_GRID_LOCATION": 55092,
+      "RIVER_VERTICAL_DISTRIBUTION": "30*0.03333333333"
+    },
+    {
+      "section": "NML_RIVER",
+      "RIVER_NAME": "SR_3",
+      "RIVER_FILE": "waterPACT_riv_floc_MP.nc",
+      "RIVER_GRID_LOCATION": 55075,
+      "RIVER_VERTICAL_DISTRIBUTION": "30*0.03333333333"
+    }
+  ],
+  "river_forcing": {
+    "time_span": {
+      "first": "2019/01/01 00:00:01",
+      "last": "2020/01/01 00:00:01",
+      "raw_first": 58484.0,
+      "raw_last": 58849.0,
+      "units": "days since 1858-11-17 00:00:00"
+    },
+    "river_names": [
+      "DR_1",
+      "DR_2",
+      "DR_3",
+      "DR_4",
+      "DR_5",
+      "DR_6",
+      "SR_1",
+      "SR_2",
+      "SR_3"
+    ],
+    "river_count": 9,
+    "vertical_distribution_note": "Each river uses 30 * 0.03333333333 in waterPACT_riv_floc_MP.nml.",
+    "global_variable_stats": {
+      "river_flux_min_m3s": 5.484020233154297,
+      "river_flux_max_m3s": 477.6100158691406,
+      "river_flux_mean_m3s": 62.38031380647249,
+      "sediment_min_gl": 0.00045160914305597544,
+      "sediment_max_gl": 0.016096899285912514,
+      "sediment_mean_gl": 0.0030250938719656056,
+      "plastic_conc_kgm3": 1.7549069752931246e-06
+    },
+    "per_river": {
+      "DR_1": {
+        "river_flux_min_m3s": 13.497674942016602,
+        "river_flux_max_m3s": 312.4286804199219,
+        "river_flux_mean_m3s": 72.87941463395568,
+        "sediment_min_gl": 0.0009283049148507416,
+        "sediment_max_gl": 0.011462627910077572,
+        "sediment_mean_gl": 0.0034515494039172073,
+        "plastic_conc_kgm3": 1.7549069752931246e-06
+      },
+      "DR_2": {
+        "river_flux_min_m3s": 13.497674942016602,
+        "river_flux_max_m3s": 312.4286804199219,
+        "river_flux_mean_m3s": 72.87941463395568,
+        "sediment_min_gl": 0.0009283049148507416,
+        "sediment_max_gl": 0.011462627910077572,
+        "sediment_mean_gl": 0.0034515494039172073,
+        "plastic_conc_kgm3": 1.7549069752931246e-06
+      },
+      "DR_3": {
+        "river_flux_min_m3s": 13.497674942016602,
+        "river_flux_max_m3s": 312.4286804199219,
+        "river_flux_mean_m3s": 72.87941463395568,
+        "sediment_min_gl": 0.0009283049148507416,
+        "sediment_max_gl": 0.011462627910077572,
+        "sediment_mean_gl": 0.0034515494039172073,
+        "plastic_conc_kgm3": 1.7549069752931246e-06
+      },
+      "DR_4": {
+        "river_flux_min_m3s": 13.497674942016602,
+        "river_flux_max_m3s": 312.4286804199219,
+        "river_flux_mean_m3s": 72.87941463395568,
+        "sediment_min_gl": 0.0009283049148507416,
+        "sediment_max_gl": 0.011462627910077572,
+        "sediment_mean_gl": 0.0034515494039172073,
+        "plastic_conc_kgm3": 1.7549069752931246e-06
+      },
+      "DR_5": {
+        "river_flux_min_m3s": 13.497674942016602,
+        "river_flux_max_m3s": 312.4286804199219,
+        "river_flux_mean_m3s": 72.87941463395568,
+        "sediment_min_gl": 0.0009283049148507416,
+        "sediment_max_gl": 0.011462627910077572,
+        "sediment_mean_gl": 0.0034515494039172073,
+        "plastic_conc_kgm3": 1.7549069752931246e-06
+      },
+      "DR_6": {
+        "river_flux_min_m3s": 13.497674942016602,
+        "river_flux_max_m3s": 312.4286804199219,
+        "river_flux_mean_m3s": 72.87941463395568,
+        "sediment_min_gl": 0.0009283049148507416,
+        "sediment_max_gl": 0.011462627910077572,
+        "sediment_mean_gl": 0.0034515494039172073,
+        "plastic_conc_kgm3": 1.7549069752931246e-06
+      },
+      "SR_1": {
+        "river_flux_min_m3s": 5.484020233154297,
+        "river_flux_max_m3s": 477.6100158691406,
+        "river_flux_mean_m3s": 41.382112151506135,
+        "sediment_min_gl": 0.00045160914305597544,
+        "sediment_max_gl": 0.016096899285912514,
+        "sediment_mean_gl": 0.002172182808062403,
+        "plastic_conc_kgm3": 1.7549069752931246e-06
+      },
+      "SR_2": {
+        "river_flux_min_m3s": 5.484020233154297,
+        "river_flux_max_m3s": 477.6100158691406,
+        "river_flux_mean_m3s": 41.382112151506135,
+        "sediment_min_gl": 0.00045160914305597544,
+        "sediment_max_gl": 0.016096899285912514,
+        "sediment_mean_gl": 0.002172182808062403,
+        "plastic_conc_kgm3": 1.7549069752931246e-06
+      },
+      "SR_3": {
+        "river_flux_min_m3s": 5.484020233154297,
+        "river_flux_max_m3s": 477.6100158691406,
+        "river_flux_mean_m3s": 41.382112151506135,
+        "sediment_min_gl": 0.00045160914305597544,
+        "sediment_max_gl": 0.016096899285912514,
+        "sediment_mean_gl": 0.002172182808062403,
+        "plastic_conc_kgm3": 1.7549069752931246e-06
+      }
+    },
+    "integrated_totals": {
+      "water_m3": {
+        "Delaware": 13789578451.526642,
+        "Schuylkill": 3915004877.399254,
+        "All": 17704583328.925896
+      },
+      "plastic_kg": {
+        "Delaware": 24199.42741093587,
+        "Schuylkill": 6870.469367654554,
+        "All": 31069.896778590424
+      },
+      "sediment_kg": {
+        "Delaware": 65782598.475131005,
+        "Schuylkill": 13510844.540665582,
+        "All": 79293443.01579659
+      }
+    }
+  },
+  "startup_profiles": {
+    "ssl": {
+      "shape": [
+        1,
+        30,
+        68416
+      ],
+      "min": -0.0028063401114195585,
+      "max": 35.187774658203125,
+      "mean": 9.81994409298288,
+      "surface_mean": 9.717321042401855,
+      "bottom_mean": 9.934278749692426
+    },
+    "tsl": {
+      "shape": [
+        1,
+        30,
+        68416
+      ],
+      "min": 4.817855358123779,
+      "max": 13.433357238769531,
+      "mean": 6.333037291900006,
+      "surface_mean": 6.367743302314386,
+      "bottom_mean": 6.333581863635048
+    },
+    "time_span": {
+      "first": "2019-01-02T00:00:00.000000",
+      "last": "2019-01-02T00:00:00.000000",
+      "raw_first": 58485.0,
+      "raw_last": 58485.0,
+      "units": "days since 0.0"
+    }
+  },
+  "netcdf_files": {
+    "waterPACT_DRE_its.nc": {
+      "path": "C:\\Users\\huan111\\OneDrive - PNNL\\Desktop\\WaterPACT_Local\\1_Model_Build\\Model_develop\\FVCOM_source_repo_github\\FVCOM_MP_test_run\\INPUT\\waterPACT_DRE_its.nc",
+      "dimensions": {
+        "ksl": 30,
+        "node": 68416,
+        "time": 1,
+        "DateStrLen": 26
+      },
+      "variables": [
+        "time",
+        "Itime",
+        "Itime2",
+        "Times",
+        "zsl",
+        "ssl",
+        "tsl"
+      ],
+      "time_span": {
+        "first": "2019-01-02T00:00:00.000000",
+        "last": "2019-01-02T00:00:00.000000",
+        "raw_first": 58485.0,
+        "raw_last": 58485.0,
+        "units": "days since 0.0"
+      }
+    },
+    "waterPACT_obc_2019.nc": {
+      "path": "C:\\Users\\huan111\\OneDrive - PNNL\\Desktop\\WaterPACT_Local\\1_Model_Build\\Model_develop\\FVCOM_source_repo_github\\FVCOM_MP_test_run\\INPUT\\waterPACT_obc_2019.nc",
+      "dimensions": {
+        "nobc": 100,
+        "time": 87600,
+        "DateStrLen": 26
+      },
+      "variables": [
+        "obc_nodes",
+        "iint",
+        "time",
+        "Itime",
+        "Itime2",
+        "Times",
+        "elevation"
+      ],
+      "time_span": {
+        "first": "2019/01/01 00:00:00.000000",
+        "last": "2019/12/31 23:54:00.000000",
+        "raw_first": 58484.0,
+        "raw_last": 58848.99609375,
+        "units": "days since 1858-11-17 00:00:00"
+      }
+    },
+    "waterPACT_tsobc_2019.nc": {
+      "path": "C:\\Users\\huan111\\OneDrive - PNNL\\Desktop\\WaterPACT_Local\\1_Model_Build\\Model_develop\\FVCOM_source_repo_github\\FVCOM_MP_test_run\\INPUT\\waterPACT_tsobc_2019.nc",
+      "dimensions": {
+        "nobc": 100,
+        "DateStrLen": 26,
+        "time": 2920,
+        "siglay": 30,
+        "siglev": 31
+      },
+      "variables": [
+        "Times",
+        "obc_nodes",
+        "obc_h",
+        "siglev",
+        "siglay",
+        "obc_temp",
+        "obc_salinity"
+      ],
+      "time_span": {
+        "first": "2019/01/01 00:00:00.000000",
+        "last": "2019/12/31 21:00:00.000000",
+        "raw_first": null,
+        "raw_last": null,
+        "units": null
+      }
+    },
+    "waterPACT_DRE_wind_2019.nc": {
+      "path": "C:\\Users\\huan111\\OneDrive - PNNL\\Desktop\\WaterPACT_Local\\1_Model_Build\\Model_develop\\FVCOM_source_repo_github\\FVCOM_MP_test_run\\INPUT\\waterPACT_DRE_wind_2019.nc",
+      "dimensions": {
+        "south_north": 25,
+        "west_east": 25,
+        "time": 8760,
+        "DateStrLen": 26
+      },
+      "variables": [
+        "XLAT",
+        "XLONG",
+        "Times",
+        "U10",
+        "V10"
+      ],
+      "time_span": {
+        "first": "2019-01-01T00:00:00.000000",
+        "last": "2019-12-31T23:00:00.000000",
+        "raw_first": null,
+        "raw_last": null,
+        "units": null
+      }
+    },
+    "waterPACT_DRE_pres_2019.nc": {
+      "path": "C:\\Users\\huan111\\OneDrive - PNNL\\Desktop\\WaterPACT_Local\\1_Model_Build\\Model_develop\\FVCOM_source_repo_github\\FVCOM_MP_test_run\\INPUT\\waterPACT_DRE_pres_2019.nc",
+      "dimensions": {
+        "south_north": 25,
+        "west_east": 25,
+        "time": 8760,
+        "DateStrLen": 26
+      },
+      "variables": [
+        "XLAT",
+        "XLONG",
+        "Times",
+        "air_pressure"
+      ],
+      "time_span": {
+        "first": "2019-01-01T00:00:00.000000",
+        "last": "2019-12-31T23:00:00.000000",
+        "raw_first": null,
+        "raw_last": null,
+        "units": null
+      }
+    }
+  }
+}

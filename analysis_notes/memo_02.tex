@@ -1,0 +1,170 @@
+\documentclass[11pt]{article}
+\usepackage[margin=1in]{geometry}
+\usepackage{amsmath}
+\usepackage{array}
+\usepackage{booktabs}
+\usepackage{longtable}
+
+\title{Memo 02: Reconstructed Delaware River Test Scenarios}
+\author{Codex review for FVCOM-MP test-case recovery}
+\date{\today}
+
+\begin{document}
+\maketitle
+
+\section{Purpose}
+This memo reconstructs the intent of the three Delaware River test cases stored in
+\texttt{FVCOM\_MP\_test\_run}: cases \texttt{a}, \texttt{b}, and \texttt{c}. The goal is to recover
+what is shared across the setups, what actually differs among them, and what those differences imply
+for later mass-conservation testing of the floc-enabled plastic model.
+
+\section{Recovered Test Bundle}
+\subsection{Shared Domain and Forcing Files}
+The common input bundle in \texttt{FVCOM\_MP\_test\_run/INPUT} defines a single Delaware River Estuary
+configuration with:
+\begin{itemize}
+\item 68416 mesh nodes and 30 sigma layers from \texttt{waterPACT\_DRE\_its.nc};
+\item 100 open-boundary nodes in \texttt{waterPACT\_obc\_2019.nc} and \texttt{waterPACT\_tsobc\_2019.nc};
+\item 9 river entries in \texttt{waterPACT\_riv\_floc\_MP.nml}: 6 Delaware River points
+(\texttt{DR\_1}--\texttt{DR\_6}) and 3 Schuylkill River points (\texttt{SR\_1}--\texttt{SR\_3});
+\item hourly wind and pressure forcing for calendar year 2019;
+\item a river forcing file that spans \texttt{2019/01/01 00:00:01} to \texttt{2020/01/01 00:00:01}.
+\end{itemize}
+
+The model runs themselves are set from modified Julian day 58485.0 to 58848.0, i.e.
+\texttt{2019-01-02 00:00:00} through \texttt{2019-12-31 00:00:00}. Therefore the shared forcing files
+provide roughly a one-day pad before the model start.
+
+\subsection{River Source Characteristics}
+The river forcing file \texttt{waterPACT\_riv\_floc\_MP.nc} contains:
+\begin{itemize}
+\item \texttt{river\_flux} in \(\mathrm{m^3\,s^{-1}}\);
+\item \texttt{coarse\_sand\_1} in \(\mathrm{g\,L^{-1}}\);
+\item \texttt{mp1} in \(\mathrm{kg\,m^{-3}}\).
+\end{itemize}
+
+Two points are especially clear:
+\begin{enumerate}
+\item \texttt{mp1} is constant in time and identical for all 9 rivers:
+\[
+\texttt{mp1} = 1.754906975\times 10^{-6}\ \mathrm{kg\,m^{-3}}.
+\]
+\item \texttt{coarse\_sand\_1} varies in time, with domain-wide minimum and maximum values
+\[
+4.516\times 10^{-4}\ \mathrm{g\,L^{-1}} \le \texttt{coarse\_sand\_1} \le 1.6097\times 10^{-2}\ \mathrm{g\,L^{-1}}.
+\]
+\end{enumerate}
+
+Because the plastic concentration is constant, the imposed plastic source differs among rivers only
+through the discharge \texttt{river\_flux}. Using the hourly records in \texttt{Times}, the implied annual
+river-source totals are approximately:
+\begin{itemize}
+\item Delaware group: \(1.379\times 10^{10}\ \mathrm{m^3}\) water,
+\(2.420\times 10^{4}\ \mathrm{kg}\) plastic,
+\(6.578\times 10^{7}\ \mathrm{kg}\) sediment;
+\item Schuylkill group: \(3.915\times 10^{9}\ \mathrm{m^3}\) water,
+\(6.870\times 10^{3}\ \mathrm{kg}\) plastic,
+\(1.351\times 10^{7}\ \mathrm{kg}\) sediment.
+\end{itemize}
+
+\section{Case-by-Case Reconstruction}
+\begin{longtable}{>{\raggedright\arraybackslash}p{0.08\textwidth} >{\raggedright\arraybackslash}p{0.24\textwidth} >{\raggedright\arraybackslash}p{0.18\textwidth} >{\raggedright\arraybackslash}p{0.18\textwidth} >{\raggedright\arraybackslash}p{0.18\textwidth}}
+\toprule
+Case & Intended role recovered from files & Plastic floc switch & Sediment setting & Other notable differences \\
+\midrule
+\endfirsthead
+\toprule
+Case & Intended role recovered from files & Plastic floc switch & Sediment setting & Other notable differences \\
+\midrule
+\endhead
+\texttt{a} &
+Baseline plastic transport case without active plastic--sediment floc interaction. &
+\texttt{PLAST\_FLOC = F} in \texttt{generic\_plastic\_a.inp}. &
+\texttt{SEDIMENT\_MODEL = F}. The sediment file name is still present in the namelist but should be inactive. &
+Uses \texttt{STARTUP\_TS\_TYPE = 'observed'} from \texttt{waterPACT\_DRE\_its.nc}. NetCDF and restart output begin on MJD 58490.0, i.e. 5 days after the model start. \\
+\texttt{b} &
+Main floc-enabled Delaware test with active suspended sediment and river plastic input. &
+\texttt{PLAST\_FLOC = T} in \texttt{generic\_plastic\_b.inp}. &
+\texttt{SEDIMENT\_MODEL = T} with \texttt{generic\_sediment.inp}; the only sediment class is \texttt{coarse\_sand\_1} with \texttt{SED\_SD50 = 0.1 mm}. &
+Uses \texttt{STARTUP\_TS\_TYPE = 'constant'} with constant $T=20^\circ\mathrm{C}$ and $S=30$ PSU. NetCDF and restart output begin at the model start. \\
+\texttt{c} &
+Sensitivity test relative to case \texttt{b}, most likely aimed at changing sediment character while keeping the plastic settings fixed. &
+\texttt{PLAST\_FLOC = T}. \texttt{generic\_plastic\_c.inp} is byte-for-byte identical to \texttt{generic\_plastic\_b.inp}. &
+\texttt{SEDIMENT\_MODEL = T} with \texttt{generic\_sediment\_c.inp}. The only actual change is \texttt{SED\_SD50 = 1.0 mm} instead of \(0.1\) mm. &
+Same run configuration as case \texttt{b} except for output directory, sediment file name, plastic file name, and a shorter batch request on the cluster script. \\
+\bottomrule
+\end{longtable}
+
+\section{Important Non-Obvious Differences}
+\subsection{Case \texttt{a} is not a clean one-switch control for case \texttt{b}}
+At first glance, cases \texttt{a} and \texttt{b} look like a simple \texttt{PLAST\_FLOC} off/on pair. They
+are not. In addition to enabling sediment and floc interaction in case \texttt{b}, the run namelists also
+change:
+\begin{itemize}
+\item \texttt{STARTUP\_TS\_TYPE}: \texttt{observed} in \texttt{a}, \texttt{constant} in \texttt{b};
+\item \texttt{RST\_FIRST\_OUT}: day 58490.0 in \texttt{a}, day 58485.0 in \texttt{b};
+\item \texttt{NC\_FIRST\_OUT}: day 58490.0 in \texttt{a}, day 58485.0 in \texttt{b}.
+\end{itemize}
+
+The startup file used by case \texttt{a} contains nontrivial vertical structure:
+\begin{itemize}
+\item salinity \texttt{ssl} ranges from about \(-0.0028\) to \(35.19\) PSU;
+\item temperature \texttt{tsl} ranges from about \(4.82\) to \(13.43^\circ\mathrm{C}\).
+\end{itemize}
+
+By contrast, cases \texttt{b} and \texttt{c} start from spatially uniform
+constant $T=20^\circ\mathrm{C}$ and $S=30$ PSU. Therefore case \texttt{a} differs from case \texttt{b}
+in both the plastic/sediment physics and the hydrodynamic initialization.
+
+\subsection{Case \texttt{c} only changes sediment grain size, not the plastic setup}
+The \texttt{generic\_plastic\_b.inp} and \texttt{generic\_plastic\_c.inp} files are identical. The only
+content difference recovered between \texttt{b} and \texttt{c} is:
+\[
+\texttt{SED\_SD50}: 0.1\ \mathrm{mm} \rightarrow 1.0\ \mathrm{mm}.
+\]
+
+Other sediment parameters such as \texttt{SED\_WSET}, \texttt{SED\_TAUE}, and \texttt{SED\_TAUD} remain
+unchanged in the provided files. So case \texttt{c} is best interpreted as a grain-size sensitivity test,
+not a broader sediment physics retuning.
+
+\subsection{No preserved model outputs are available in the case output folders}
+The directories \texttt{OUTPUT\_a}, \texttt{OUTPUT\_b}, and \texttt{OUTPUT\_c} are presently empty. That means
+the original scenario intent has to be inferred entirely from the inputs and batch scripts; there is no
+saved output available here to confirm what diagnostics were originally examined.
+
+\section{Implications for the Next Mass-Conservation Test Design}
+For later diagnosis of \texttt{conc\_a}/\texttt{conc\_d} mass conservation, the recovered files suggest the
+following:
+\begin{enumerate}
+\item Case \texttt{a} is a useful broad baseline, but not a strict one-parameter control for case
+\texttt{b}, because the startup salinity/temperature treatment is also different.
+\item Case \texttt{b} is the clearest representation of the intended floc-enabled Delaware forcing case.
+\item Case \texttt{c} is best interpreted as a sediment-size sensitivity around case \texttt{b}.
+\item If the next objective is to isolate internal \texttt{conc\_a}--\texttt{conc\_d} conservation, it will
+be worth designing a cleaner pair of cases that keeps hydrodynamic initialization, output timing, and
+all plastic/sediment parameters fixed except the one switch or parameter being tested.
+\end{enumerate}
+
+\section{Supporting Scripts}
+Reusable inspection utilities have been placed in \texttt{FVCOM\_MP\_test\_run/PYTHON}. The main script
+\texttt{inspect\_delaware\_cases.py} writes:
+\begin{itemize}
+\item \texttt{FVCOM\_MP\_test\_run/PYTHON/output/case\_inventory.json};
+\item \texttt{FVCOM\_MP\_test\_run/PYTHON/output/case\_inventory.md}.
+\end{itemize}
+
+These files provide a machine-readable and human-readable summary of the same recovered scenario information.
+
+\section{Bottom Line}
+The recovered intent is most consistent with:
+\begin{itemize}
+\item \texttt{a}: no-floc baseline;
+\item \texttt{b}: floc-enabled reference case;
+\item \texttt{c}: floc-enabled sediment-size sensitivity case.
+\end{itemize}
+
+The main caution is that case \texttt{a} differs from case \texttt{b} in more than the floc switch, so a
+later conservation campaign should probably build a cleaner control pair before interpreting mass-balance
+differences too aggressively.
+
+\end{document}
