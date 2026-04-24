@@ -2196,6 +2196,7 @@ Subroutine Calc_Erosion
   real(sp) :: tau_c_p(m)
   real(sp) :: tau_c_s(m)
   real(sp) :: Erate(m)
+  real(sp) :: real_temp1, real_temp2
 #if defined (SEDIMENT)
   real(sp) :: ratio_bottom,ratio_surface
 #endif
