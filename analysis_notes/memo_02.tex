@@ -86,35 +86,85 @@ Uses \texttt{STARTUP\_TS\_TYPE = 'observed'} from \texttt{waterPACT\_DRE\_its.nc
 Main floc-enabled Delaware test with active suspended sediment and river plastic input. &
 \texttt{PLAST\_FLOC = T} in \texttt{generic\_plastic\_b.inp}. &
 \texttt{SEDIMENT\_MODEL = T} with \texttt{generic\_sediment.inp}; the only sediment class is \texttt{coarse\_sand\_1} with \texttt{SED\_SD50 = 0.1 mm}. &
-Uses \texttt{STARTUP\_TS\_TYPE = 'constant'} with constant $T=20^\circ\mathrm{C}$ and $S=30$ PSU. NetCDF and restart output begin at the model start. \\
+Now uses \texttt{STARTUP\_TS\_TYPE = 'observed'} from \texttt{waterPACT\_DRE\_its.nc}, matching case \texttt{a}. NetCDF and restart output begin at the model start. \\
 \texttt{c} &
 Sensitivity test relative to case \texttt{b}, most likely aimed at changing sediment character while keeping the plastic settings fixed. &
 \texttt{PLAST\_FLOC = T}. \texttt{generic\_plastic\_c.inp} is byte-for-byte identical to \texttt{generic\_plastic\_b.inp}. &
 \texttt{SEDIMENT\_MODEL = T} with \texttt{generic\_sediment\_c.inp}. The only actual change is \texttt{SED\_SD50 = 1.0 mm} instead of \(0.1\) mm. &
-Same run configuration as case \texttt{b} except for output directory, sediment file name, plastic file name, and a shorter batch request on the cluster script. \\
+Same run configuration as case \texttt{b} except for output directory, sediment file name, plastic file name, and a shorter batch request on the cluster script. It now also uses \texttt{STARTUP\_TS\_TYPE = 'observed'}. \\
 \bottomrule
 \end{longtable}
 
 \section{Important Non-Obvious Differences}
-\subsection{Case \texttt{a} is not a clean one-switch control for case \texttt{b}}
-At first glance, cases \texttt{a} and \texttt{b} look like a simple \texttt{PLAST\_FLOC} off/on pair. They
-are not. In addition to enabling sediment and floc interaction in case \texttt{b}, the run namelists also
-change:
+\subsection{The floc interaction term is explicitly sediment-size dependent}
+The water-column floc interaction is built from two rate fields in \texttt{mod\_plast.F}:
+\(\lambda_a\) for aggregation and \(\lambda_d\) for disaggregation. These are recomputed every step when
+\texttt{PLAST\_FLOC = T}. The sediment median diameter \texttt{sed(ised)\%Sd50} enters the interaction in
+several direct ways:
 \begin{itemize}
-\item \texttt{STARTUP\_TS\_TYPE}: \texttt{observed} in \texttt{a}, \texttt{constant} in \texttt{b};
-\item \texttt{RST\_FIRST\_OUT}: day 58490.0 in \texttt{a}, day 58485.0 in \texttt{b};
-\item \texttt{NC\_FIRST\_OUT}: day 58490.0 in \texttt{a}, day 58485.0 in \texttt{b}.
+\item In \texttt{Calc\_floc\_MP\_Aggregation\_Rate}, each sediment class defines a floc-size gate
+\(d_{MP}^{max}\) from \texttt{Sd50}. If the plastic size exceeds this gate, that sediment class contributes
+zero aggregation.
+\item The same routine uses \texttt{Sd50} to define the sediment particle radius \(r_{sed}\), which enters
+both the turbulent shear kernel \((r_{sed}+r_{plast})^3\) and the differential-settling kernel
+\((r_{sed}+r_{plast})^2 |w_{sed}-w_{plast}|\).
+\item The sediment mass concentration is converted to a number density using a spherical-particle mass
+\(\propto r_{sed}^3\), so larger \texttt{Sd50} means fewer particles for the same sediment mass
+concentration.
+\item In \texttt{Calc\_floc\_MP\_Disaggregation\_Rate}, the maximum active sediment size across classes is used
+to rebuild the same \(d_{MP}^{max}\) gate, which then appears in the disaggregation coefficient.
 \end{itemize}
 
-The startup file used by case \texttt{a} contains nontrivial vertical structure:
+\subsection{Current consequence for the Delaware test cases}
+For the present Delaware inputs, the plastic particle size is approximately \(0.100\ \mathrm{mm}\)
+\(=100\ \mu\mathrm{m}\). The sediment-size gate therefore behaves very differently in cases
+\texttt{b} and \texttt{c}:
+\begin{itemize}
+\item Case \texttt{b}: \texttt{SED\_SD50 = 0.1 mm = 100 \(\mu\)m}. The implemented gate gives
+\[
+d_{MP}^{max} = -0.0002\,d_{floc}^2 + 0.36\,d_{floc} \approx 34\ \mu\mathrm{m},
+\]
+so a \(100\ \mu\mathrm{m}\) microplastic is larger than the permitted size. In practice this means the
+aggregation kernel is strongly size-excluded.
+\item Case \texttt{c}: \texttt{SED\_SD50 = 1.0 mm = 1000 \(\mu\)m}. The code then uses the large-floc cap
+\[
+d_{MP}^{max} = 162\ \mu\mathrm{m},
+\]
+so the same \(100\ \mu\mathrm{m}\) microplastic is now allowed to aggregate.
+\end{itemize}
+
+This is not a small secondary effect. It means case \texttt{b} may behave close to a no-aggregation limit,
+while case \texttt{c} is the first case in this bundle that can genuinely exercise the floc aggregation
+kinetics for the chosen \(100\ \mu\mathrm{m}\) plastic.
+
+\subsection{Aggregation changes the settling branch as well as the split state}
+The same code path assigns different settling velocities to the two plastic sub-states:
+\begin{itemize}
+\item \texttt{conc\_d} uses \texttt{Calc\_Wset\_Plastic}, which for the present
+\(\rho_p = 950\ \mathrm{kg\,m^{-3}}\) plastic in seawater gives a negative settling velocity
+(upward or buoyant motion);
+\item \texttt{conc\_a} is settled with the sediment settling velocity from the sediment model
+(\texttt{sed(1)\%Wset} in the current implementation).
+\end{itemize}
+
+Therefore the floc interaction does not merely repartition \texttt{conc\_a} and \texttt{conc\_d}; once
+aggregation is active it can switch plastic from a buoyant branch to a downward-settling branch.
+
+\subsection{The startup T/S mismatch has now been removed}
+The run namelists for cases \texttt{b} and \texttt{c} have now been updated so that all three cases use
+\texttt{STARTUP\_TS\_TYPE = 'observed'} with the same startup file \texttt{waterPACT\_DRE\_its.nc}. The
+startup file contains nontrivial vertical structure:
 \begin{itemize}
 \item salinity \texttt{ssl} ranges from about \(-0.0028\) to \(35.19\) PSU;
 \item temperature \texttt{tsl} ranges from about \(4.82\) to \(13.43^\circ\mathrm{C}\).
 \end{itemize}
 
-By contrast, cases \texttt{b} and \texttt{c} start from spatially uniform
-constant $T=20^\circ\mathrm{C}$ and $S=30$ PSU. Therefore case \texttt{a} differs from case \texttt{b}
-in both the plastic/sediment physics and the hydrodynamic initialization.
+This removes one physical confounder from the original comparison between cases \texttt{a}, \texttt{b},
+and \texttt{c}. A run-control difference still remains in the output timing:
+\begin{itemize}
+\item \texttt{RST\_FIRST\_OUT}: day 58490.0 in \texttt{a}, day 58485.0 in \texttt{b}/\texttt{c};
+\item \texttt{NC\_FIRST\_OUT}: day 58490.0 in \texttt{a}, day 58485.0 in \texttt{b}/\texttt{c}.
+\end{itemize}
 
 \subsection{Case \texttt{c} only changes sediment grain size, not the plastic setup}
 The \texttt{generic\_plastic\_b.inp} and \texttt{generic\_plastic\_c.inp} files are identical. The only
@@ -132,18 +182,64 @@ The directories \texttt{OUTPUT\_a}, \texttt{OUTPUT\_b}, and \texttt{OUTPUT\_c} a
 the original scenario intent has to be inferred entirely from the inputs and batch scripts; there is no
 saved output available here to confirm what diagnostics were originally examined.
 
-\section{Implications for the Next Mass-Conservation Test Design}
-For later diagnosis of \texttt{conc\_a}/\texttt{conc\_d} mass conservation, the recovered files suggest the
-following:
+\section{Expected Mass-Conserving Signatures}
+If the model is internally mass conservative, the comparison among \texttt{a}, \texttt{b}, and \texttt{c}
+should look like a redistribution problem rather than a creation/loss problem.
+
+\subsection{Closed-system expectation}
+In a closed or internally isolated test, the correct quantity to compare is the total plastic inventory
+\[
+M_{tot} = M_{water} + M_{bed}.
+\]
+For all three cases, \(M_{tot}\) should remain constant up to numerical truncation. The floc interaction
+should only move plastic among:
 \begin{enumerate}
-\item Case \texttt{a} is a useful broad baseline, but not a strict one-parameter control for case
-\texttt{b}, because the startup salinity/temperature treatment is also different.
-\item Case \texttt{b} is the clearest representation of the intended floc-enabled Delaware forcing case.
-\item Case \texttt{c} is best interpreted as a sediment-size sensitivity around case \texttt{b}.
-\item If the next objective is to isolate internal \texttt{conc\_a}--\texttt{conc\_d} conservation, it will
-be worth designing a cleaner pair of cases that keeps hydrodynamic initialization, output timing, and
-all plastic/sediment parameters fixed except the one switch or parameter being tested.
+\item disaggregated water-column plastic \texttt{conc\_d},
+\item aggregated water-column plastic \texttt{conc\_a},
+\item bottom or bed plastic mass.
 \end{enumerate}
+
+\subsection{What case \texttt{a} versus case \texttt{b} should look like}
+Because the current size gate in case \texttt{b} appears to exclude aggregation for a
+\(100\ \mu\mathrm{m}\) microplastic in \(100\ \mu\mathrm{m}\) sediment, case \texttt{b} should be close to
+the no-floc baseline in its floc kinetics:
+\begin{itemize}
+\item \texttt{conc\_a} should remain near zero or at least much smaller than \texttt{conc\_d};
+\item the total plastic inventory in case \texttt{b} should closely track case \texttt{a} when summed over
+water plus bed;
+\item if case \texttt{b} shows a large total-mass deficit relative to case \texttt{a}, that would be more
+consistent with a numerical leak than with the intended floc physics.
+\end{itemize}
+
+\subsection{What case \texttt{a} versus case \texttt{c} should look like}
+Case \texttt{c} is the one that should reveal the sediment-size sensitivity most clearly:
+\begin{itemize}
+\item \texttt{conc\_a} should become nonzero where suspended sediment is present;
+\item \texttt{conc\_d} should decrease where aggregation is active;
+\item the water-column plastic inventory can drop relative to case \texttt{a}, but that drop should be
+matched by an increase in bed plastic mass rather than by a loss of total plastic;
+\item because aggregated plastic uses the sediment settling branch while disaggregated plastic is buoyant,
+case \texttt{c} should show a stronger downward redistribution than case \texttt{a}.
+\end{itemize}
+
+\subsection{What case \texttt{b} versus case \texttt{c} should look like}
+If the floc model is working and mass is conserved:
+\begin{itemize}
+\item case \texttt{c} should have more \texttt{conc\_a} and more bed plastic than case \texttt{b};
+\item case \texttt{c} should have less floating or disaggregated plastic than case \texttt{b};
+\item the difference should be mainly in partitioning and vertical redistribution, not in total
+\(M_{tot}\).
+\end{itemize}
+
+\subsection{Open-boundary caveat}
+With realistic river and open-boundary forcing active, domain-integrated water-column mass does not need to
+match among cases at every output time because aggregation can change residence time and export. Even so, an
+internally conservative solution should still satisfy:
+\begin{itemize}
+\item no unexplained jump in \(\texttt{conc\_a}+\texttt{conc\_d}\) across the kinetics step itself;
+\item no persistent loss of \(M_{water}+M_{bed}\) that cannot be explained by diagnosed export through open
+boundaries.
+\end{itemize}
 
 \section{Supporting Scripts}
 Reusable inspection utilities have been placed in \texttt{FVCOM\_MP\_test\_run/PYTHON}. The main script
@@ -163,8 +259,10 @@ The recovered intent is most consistent with:
 \item \texttt{c}: floc-enabled sediment-size sensitivity case.
 \end{itemize}
 
-The main caution is that case \texttt{a} differs from case \texttt{b} in more than the floc switch, so a
-later conservation campaign should probably build a cleaner control pair before interpreting mass-balance
-differences too aggressively.
+The most important code-level finding is that the floc interaction depends directly on sediment size, and
+with the present inputs that dependence likely suppresses aggregation in case \texttt{b} while allowing it
+in case \texttt{c}. After aligning startup T/S across all three run namelists, the main physical comparison
+to watch is whether case \texttt{c} shows redistribution into \texttt{conc\_a} and the bed without losing
+total plastic mass.
 
 \end{document}

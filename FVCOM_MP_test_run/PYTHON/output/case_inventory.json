@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-04-24T12:04:12",
+  "generated_at": "2026-04-24T12:19:37",
   "input_inventory": [
     {
       "name": "generic_plastic.inp",
@@ -160,7 +160,7 @@
       "run": {
         "start_date": "days=58485.0",
         "end_date": "days=58848.0",
-        "startup_ts_type": "constant",
+        "startup_ts_type": "observed",
         "startup_t_vals": 20.0,
         "startup_s_vals": 30.0,
         "restart_first_out": "days=58485.0",
@@ -210,7 +210,7 @@
       "run": {
         "start_date": "days=58485.0",
         "end_date": "days=58848.0",
-        "startup_ts_type": "constant",
+        "startup_ts_type": "observed",
         "startup_t_vals": 20.0,
         "startup_s_vals": 30.0,
         "restart_first_out": "days=58485.0",
@@ -253,7 +253,6 @@
     "Case a is the no-floc baseline, while case b turns PLAST_FLOC on.",
     "Cases b and c use different plastic filenames, but the file contents are identical.",
     "Case c changes only the sediment grain size from 0.1 mm to 1.0 mm relative to case b.",
-    "Case a and case b do not share the same startup salinity/temperature treatment.",
     "OUTPUT_a, OUTPUT_b, and OUTPUT_c are currently empty, so the original scenario intent must be inferred from inputs alone."
   ],
   "river_entries": [

@@ -26,7 +26,7 @@
  STARTUP_FILE      = 'waterPACT_DRE_its.nc'
  STARTUP_UV_TYPE   = 'default'
  STARTUP_TURB_TYPE = 'default'
- STARTUP_TS_TYPE   = 'constant'
+ STARTUP_TS_TYPE   = 'observed'
  STARTUP_T_VALS    = 20.0
  STARTUP_S_VALS    = 30.0
  STARTUP_U_VALS    = 0.0
