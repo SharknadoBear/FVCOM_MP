@@ -1,0 +1,173 @@
+\documentclass[11pt]{article}
+\usepackage[margin=1in]{geometry}
+\usepackage{booktabs}
+\usepackage{hyperref}
+\usepackage{amsmath}
+
+\title{Memo 03: MP1 Mass-Conservation Check and Diagnostic Hypotheses}
+\author{FVCOM-MP Delaware Test Cases}
+\date{April 28, 2026}
+
+\begin{document}
+\sloppy
+\maketitle
+
+\section*{Purpose}
+This memo summarizes the latest mass-budget extraction for experiments
+\texttt{a}, \texttt{b}, and \texttt{c}, and lists concise diagnostic
+hypotheses for the apparent mass loss and oscillation in the floc-enabled
+cases.
+
+\section*{Current Evidence}
+The MATLAB extractors integrate water-column and bed MP1 mass from the
+NetCDF output files. The Python script
+\texttt{FVCOM\_MP\_test\_run/PYTHON/analyze\_mp1\_mass\_conservation.py}
+then compares the MAT files using a common absolute time axis. Case
+\texttt{a} has now been rerun for the full 10-day window with output
+beginning at the same model day as cases \texttt{b}/\texttt{c}; all three
+cases start at FVCOM day \texttt{58485.0}.
+
+\begin{table}[h]
+\centering
+\begin{tabular}{lrrrrr}
+\toprule
+Case & Records & Time window & Initial total & Final total & Final bed \\
+ & & (comparison days) & (kg) & (kg) & (kg) \\
+\midrule
+\texttt{a} & 240 & 0.00--9.96 & 0.00 & 1001.25 & 0.00 \\
+\texttt{b} & 240 & 0.00--9.96 & 0.00 & 154.71 & 0.00 \\
+\texttt{c} & 240 & 0.00--9.96 & 0.00 & 183.58 & 0.58 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+The common comparison window is now day \(0.00\)--\(9.96\). At the shared
+endpoint, the retained total masses are approximately
+\[
+  M_a = 1001.25~\mathrm{kg}, \qquad
+  M_b = 154.71~\mathrm{kg}, \qquad
+  M_c = 183.58~\mathrm{kg}.
+\]
+Thus case \texttt{b} retains about \(15.5\%\) of case-\texttt{a} mass and
+case \texttt{c} retains about \(18.3\%\). The corrected full-window comparison
+confirms that the large deficit in the floc-enabled cases is not an artifact
+of the previous case-\texttt{a} output offset.
+
+\section*{Important Consistency Check}
+For floc cases, the split variables are internally consistent at output:
+\[
+  \texttt{mp1\_agg} + \texttt{mp1\_dis} \approx \texttt{mp1}.
+\]
+The maximum mismatch is zero for case \texttt{b} and approximately
+\(1.35\times10^{-7}\) kg for case \texttt{c}. Therefore, the saved-output
+recombination of \texttt{conc\_a} and \texttt{conc\_d} is not the leading
+suspect.
+
+\section*{Source-Path Check}
+\texttt{plast(iplast)\%cdis} is the river-source concentration path, not the
+open-boundary flux workspace. It is filled from the river NetCDF variable
+\texttt{mp1(time,rivers)} and paired with \texttt{river\_flux(time,rivers)}
+inside \texttt{adv\_scal}. For the present files, \texttt{mp1} is in
+\(\mathrm{kg\,m^{-3}}\), and the cases use
+\texttt{RIVER\_TS\_SETTING='calculated'}, so
+\texttt{bcond\_scal\_PTsource} does not add a second source. With
+\texttt{SOURCE\_AG\_RATE=0}, the floc-mode river input is
+\[
+  Q C = Q C(1-\texttt{SOURCE\_AG\_RATE})
+\]
+into \texttt{conc\_d}, and zero into \texttt{conc\_a}. Therefore, the present
+working assumption is that the imposed river mass source is conservative.
+
+\section*{Diagnostic Hypotheses}
+\begin{enumerate}
+\item \textbf{Null-floc split path is not guaranteed identical to no-floc path.}
+The most focused question is now: when the aggregation/disaggregation kinetic
+terms are disabled and \texttt{SOURCE\_AG\_RATE=0}, why does the floc
+\texttt{conc\_d} pathway not reproduce the no-floc \texttt{conc} pathway?
+This comparison should be exact if every operator applied to \texttt{conc\_d}
+is numerically identical to the operator applied to \texttt{conc}.
+
+\item \textbf{Final exchange/recombination ordering was asymmetric.}
+The split path previously clipped \texttt{conc\_a}/\texttt{conc\_d} but then
+exchanged \texttt{cnew\_a}/\texttt{cnew\_d}; the no-floc path exchanged the
+clipped combined \texttt{conc}. This could leave exchanged halo state and
+prognostic split state inconsistent. The code has been patched so the split
+path now clips \texttt{cnew\_a}/\texttt{cnew\_d}, exchanges those same arrays,
+then sets
+\[
+  \texttt{conc}=\texttt{cnew}=\texttt{conc\_a}+\texttt{conc\_d}.
+\]
+
+\item \textbf{Floc-only clips and caps can act as silent sinks.}
+The floc path applies upper caps to \texttt{cnew\_a}/\texttt{cnew\_d} and
+nonnegative clipping after transport. If split advection creates undershoots,
+the limiter removes mass unless the removed amount is tracked. This remains a
+high-priority checkpoint for a null-floc comparison.
+
+\item \textbf{Erosion and surface-flux update are not algebraically identical.}
+In the floc branch, erosion and surface inputs are split by
+\texttt{ratio\_bottom}/\texttt{ratio\_surface} and are subject to a per-step
+``10x'' growth limiter. In the no-floc branch, \texttt{eflx} and \texttt{pflx}
+are added directly to \texttt{conc}. This is a concrete asymmetry even when
+kinetics are disabled.
+
+\item \textbf{Bed exchange is unlikely to explain the large loss in this run.}
+Case \texttt{b} has essentially no bed mass, and case \texttt{c} has only
+about \(0.58\) kg bed mass at the end. Deposition/erosion is therefore not
+large enough by itself to explain the \(817\)--\(847\) kg difference relative
+to case \texttt{a}.
+
+\item \textbf{Open-boundary flux storage is lower priority for the null test.}
+\texttt{cflx} is an open-boundary flux workspace, not the river source. It is
+still worth logging, but with \texttt{OBC\_AG\_RATE=0} and all source mass
+entering \texttt{conc\_d}, it is not currently the leading explanation for
+why \texttt{conc\_d} should fail to match \texttt{conc} in the null-kinetics
+test.
+\end{enumerate}
+
+\section*{Asymmetry Checklist for \texttt{conc} vs. \texttt{conc\_d}}
+For the next debugging pass, step through these operators in order and compare
+domain-integrated mass and field differences after each one:
+\begin{enumerate}
+\item \textbf{Initialization and river input.} With
+\texttt{INI\_CONC\_AG\_RATE=0}, \texttt{INI\_MASS\_AG\_RATE=0}, and
+\texttt{SOURCE\_AG\_RATE=0}, initial and river-source mass should enter only
+\texttt{conc\_d}; the source integral should match no-floc \(\sum Q C\).
+
+\item \textbf{Settling/deposition.} In the null-floc limit, \texttt{conc\_d}
+uses \texttt{Calc\_Wset\_Plastic} and \texttt{settle\_flux\_new}, matching
+the no-floc \texttt{conc} branch. Confirm identical \texttt{wset},
+\texttt{dflx}, and water-column mass change.
+
+\item \textbf{Erosion/surface update.} Compare direct no-floc addition against
+the split branch's ratio logic and 10x limiter. This is currently a leading
+candidate for non-equivalence if erosion or surface flux is active.
+
+\item \textbf{Horizontal advection and vertical diffusion.} Compare
+\texttt{adv\_scal} and \texttt{vdif\_scal} outputs for \texttt{conc} and
+\texttt{conc\_d}. In null-floc mode, these should match to roundoff.
+
+\item \textbf{Kinetics.} Force \texttt{lambda\_a=lambda\_d=0} or bypass the
+kinetic update, then verify that this block is exactly conservative and makes
+no change to \texttt{conc\_d}.
+
+\item \textbf{Caps, nonnegative clips, and MPI exchange.} Track mass removed
+by hard caps and nonnegative clipping. After exchange, verify
+\(\texttt{conc}=\texttt{conc\_a}+\texttt{conc\_d}\) and
+\(\texttt{mass}=\texttt{mass\_a}+\texttt{mass\_d}\).
+\end{enumerate}
+
+\section*{Focused Next Test}
+\begin{enumerate}
+\item Run a dedicated null-floc case with \texttt{PLAST\_FLOC=T},
+\texttt{SOURCE\_AG\_RATE=0}, \texttt{INI\_CONC\_AG\_RATE=0}, and
+\texttt{lambda\_a=lambda\_d=0}. Compare \texttt{mp1\_dis} directly against
+case-\texttt{a} \texttt{mp1}.
+\item First run this comparison on one processor. If it matches in serial but
+not in parallel, the remaining issue is likely an exchange/halo-state
+ordering problem.
+\item If serial already diverges, walk through the asymmetry checklist above,
+starting with settling/deposition and erosion/surface update.
+\end{enumerate}
+
+\end{document}

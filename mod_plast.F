@@ -1243,6 +1243,40 @@ if (floc_intract) then
 		where (plast(iplast)%cnew_d > 100.0) plast(iplast)%cnew_d = 100.0
   end do
 
+else
+
+  ! SEDIMENT build with PLAST_FLOC=F: transport the combined concentration.
+  if(.not. oned_model)then
+     d_cdis = 1
+     if(numqbc > 0) d_cdis = numqbc
+     d_cflx = 1
+     if(Nobc > 0) d_cflx = Nobc
+
+     do iplast=1,nplast
+
+      if(numqbc > 0 .and. PLAST_source)then
+        plast(iplast)%cdis(1:numqbc) = plastdis(1:numqbc,iplast)
+      endif
+
+      call adv_scal(plast(iplast)%conc, &
+                      plast(iplast)%cnew, &
+                      d_cdis,      &
+                      plast(iplast)%cdis(1:numqbc), &
+                      d_cflx,      &
+                      plast(iplast)%cflx, &
+                      DTplast,PLAST_source)
+
+    end do
+  else
+    do iplast=1,nplast
+      plast(iplast)%cnew = plast(iplast)%conc
+    end do
+  endif
+
+  do iplast=1,nplast
+    call vdif_scal(plast(iplast)%cnew,DTplast)
+  end do
+
 endif 
 
 # else
@@ -1481,6 +1515,14 @@ endif
 			call aexchange(nc,myid,nprocs,plast(iplast)%cnew_d)
 			call aexchange(nc,myid,nprocs,plast(iplast)%cnew)
 		end do
+	else
+		do iplast=1,nplast
+			call aexchange(nc,myid,nprocs,plast(iplast)%cnew)
+			if (tox_vector) then
+				call aexchange(nc,myid,nprocs,plast(iplast)%tcnew_f)
+				call aexchange(nc,myid,nprocs,plast(iplast)%tcnew_b)
+			end if
+		end do
 	end if
   end if
 
@@ -1512,6 +1554,37 @@ endif
                            temp) 
 	   enddo
 
+	else
+
+	   if(PLAST_ramp == 0) PLAST_ramp = 1
+       temp = min(float(PLAST_its/PLAST_ramp), 1.0)*PLAST_alpha
+       if(.not.plast_nudge) temp = 0.0
+	   do iplast=1,nplast
+		  call bcond_scal_OBC(plast(iplast)%conc, &
+                           plast(iplast)%cnew, &
+                           plast(iplast)%cflx, &
+                           plast(iplast)%cobc, &
+                           DTplast,       &
+                           temp)
+	   enddo
+
+	   if (tox_vector) then
+	      do iplast=1,nplast
+		     call bcond_scal_OBC(plast(iplast)%tconc_b, &
+                              plast(iplast)%tcnew_b, &
+                              plast(iplast)%tcflx_b, &
+                              plast(iplast)%tcobc_b, &
+                              DTplast,       &
+                              temp)
+		     call bcond_scal_OBC(plast(iplast)%tconc_f, &
+                              plast(iplast)%tcnew_f, &
+                              plast(iplast)%tcflx_f, &
+                              plast(iplast)%tcobc_f, &
+                              DTplast,       &
+                              temp)
+	      enddo
+	   endif
+
 	endif
 
   endif
@@ -1540,6 +1613,17 @@ endif
                                plast(iplast)%cnew, &
                                plast(iplast)%cdis) 
 		end do
+
+		if (tox_vector) then
+			do i=1,nplast
+				call bcond_scal_PTsource(plast(i)%tconc_b, &
+                               plast(i)%tcnew_b, &
+                               plast(i)%tcdis_b)
+				call bcond_scal_PTsource(plast(i)%tconc_f, &
+                               plast(i)%tcnew_f, &
+                               plast(i)%tcdis_f)
+			end do
+		end if
 	
 	end if
 
@@ -1550,9 +1634,21 @@ endif
   !------------------------------------------------------
   if (floc_intract) then
 	do iplast=1,nplast
-		plast(iplast)%conc_a = plast(iplast)%cnew_a
-		plast(iplast)%conc_d = plast(iplast)%cnew_d
+		! Split fields are assigned after the clamp and MPI exchange below.
+		! This keeps conc_a + conc_d exactly consistent with the exchanged
+		! combined concentration used at the next step.
+		continue
 	 end do
+  else
+	do iplast=1,nplast
+		plast(iplast)%conc = plast(iplast)%cnew
+	end do
+	if (tox_vector) then
+		do i=1,nplast
+			plast(i)%tconc_b = plast(i)%tcnew_b
+			plast(i)%tconc_f = plast(i)%tcnew_f
+		end do
+	end if
   end if
 
   !------------------------------------------------------
@@ -1560,9 +1656,19 @@ endif
   !------------------------------------------------------
   if (floc_intract) then
 	do iplast=1,nplast
-		plast(iplast)%conc_a = max(plast(iplast)%cnew_a,0.0)
-		plast(iplast)%conc_d = max(plast(iplast)%cnew_d,0.0)
+		plast(iplast)%cnew_a = max(plast(iplast)%cnew_a,0.0_sp)
+		plast(iplast)%cnew_d = max(plast(iplast)%cnew_d,0.0_sp)
 	end do
+  else
+	do iplast=1,nplast
+		plast(iplast)%conc = max(plast(iplast)%cnew,0.0)
+	end do
+	if (tox_vector) then
+		do i=1,nplast
+			plast(i)%tconc_b = max(plast(i)%tcnew_b,0.0)
+			plast(i)%tconc_f = max(plast(i)%tcnew_f,0.0)
+		end do
+	end if
   end if
   
   !------------------------------------------------------
@@ -1580,6 +1686,19 @@ endif
 		call aexchange(nc,myid,nprocs,tauf)
 		call aexchange(nc,myid,nprocs,taub)
 		call aexchange(nc,myid,nprocs,rho_water)
+	else
+		do iplast=1,nplast
+			call aexchange(nc,myid,nprocs,plast(iplast)%conc)
+			call aexchange(nc,myid,nprocs,plast(iplast)%mass)
+			if (tox_vector) then
+				call aexchange(nc,myid,nprocs,plast(iplast)%tconc_b)
+				call aexchange(nc,myid,nprocs,plast(iplast)%tconc_f)
+				call aexchange(nc,myid,nprocs,plast(iplast)%tmass_b)
+			end if
+		end do
+		call aexchange(nc,myid,nprocs,tauf)
+		call aexchange(nc,myid,nprocs,taub)
+		call aexchange(nc,myid,nprocs,rho_water)
 	end if
   end if
 # endif
@@ -1589,12 +1708,12 @@ endif
   !------------------------------------------------------
   if (floc_intract) then
 	do iplast=1,nplast
-		do i=1,m
-			do k=1,kb
-				plast(iplast)%cnew(i,k) = plast(iplast)%cnew_a(i,k) + plast(iplast)%cnew_d(i,k)
-				plast(iplast)%conc(i,k) = plast(iplast)%conc_a(i,k) + plast(iplast)%conc_d(i,k)
-			end do
-		end do
+		plast(iplast)%conc_a = plast(iplast)%cnew_a
+		plast(iplast)%conc_d = plast(iplast)%cnew_d
+		plast(iplast)%mass = max(plast(iplast)%mass_a,0.0_sp) + &
+		                     max(plast(iplast)%mass_d,0.0_sp)
+		plast(iplast)%conc = plast(iplast)%conc_a + plast(iplast)%conc_d
+		plast(iplast)%cnew = plast(iplast)%conc
 	end do
   end if
 
@@ -2261,6 +2380,8 @@ Subroutine Calc_Erosion
   !Update Concentration in Bottom of Water Column
 #if defined (SEDIMENT)
 
+  if (floc_intract) then
+
   do iplast=1,nplast
     do i=1,m
 
@@ -2326,6 +2447,32 @@ Subroutine Calc_Erosion
 
     end do
   end do
+
+  else
+
+  do iplast=1,nplast
+    do i=1,m
+
+# if defined (WET_DRY)
+      if(iswetn(i)==1) then
+# endif
+
+	plast(iplast)%conc(i,kbm1) = plast(iplast)%conc(i,kbm1) + plast(iplast)%eflx(i)/(d(i)*dz(i,kbm1))
+	plast(iplast)%conc(i,1) = plast(iplast)%conc(i,1) + plast(iplast)%pflx(i)/(d(i)*dz(i,1))
+
+			if (tox_vector) then
+				plast(iplast)%tconc_b(i,kbm1) = plast(iplast)%tconc_b(i,kbm1) + plast(iplast)%teflx_b(i)/(d(i)*dz(i,kbm1))
+			end if
+
+# if defined (WET_DRY)
+      else
+        cycle
+      end if
+# endif
+    end do
+  end do
+
+  end if
 
 #else
 
@@ -2564,8 +2711,10 @@ Subroutine Calc_Deposition
 #if defined (SEDIMENT)
   integer  :: iplast ,i,k
   integer  :: mcyc_plast,ncyc_plast,mcyc_sed,ncyc_sed
+  integer  :: mcyc,ncyc
   real(sp) :: wset_sed(kbm1),wset_plast(kbm1),c_a(kbm1),c_d(kbm1),dx(kbm1)
   real(sp) :: dflux_a,dflux_d,fflux_a,fflux_d,DTmax_plast,DTmax_sed,eps,DTdep_plast,DTdep_sed,da,db,dc,rhop,dequ
+  real(sp) :: wset(kbm1),c(kbm1),ctb(kbm1),dflux,fflux,tfluxb,DTmax,DTdep
 #else
   integer  :: iplast ,i,mcyc,ncyc,k
   real(sp) :: wset(kbm1),c(kbm1),ctb(kbm1),dx(kbm1),dflux,fflux,tfluxb,DTmax,eps,DTdep,da,db,dc,rhop
@@ -2576,6 +2725,8 @@ Subroutine Calc_Deposition
   eps = epsilon(eps)
 
 # if defined (SEDIMENT)
+
+  if (floc_intract) then
 
   !Loop over plastic classes and spatial points       
   do iplast=1,nplast
@@ -2671,6 +2822,80 @@ Subroutine Calc_Deposition
     end do
   end do
 
+  else
+
+  ! SEDIMENT build with PLAST_FLOC=F: use the legacy combined concentration.
+  do iplast=1,nplast
+    do i=1,m
+
+# if defined (WET_DRY)
+      if (iswetn(i)/=1) cycle
+# endif
+
+      dflux = 0.0
+	  fflux = 0.0
+	  if (Tox_vector) then
+		tfluxb = 0.0
+	  end if
+
+	  wset(1:kbm1) = 0.0
+      c(1:kbm1) = plast(iplast)%conc(i,1:kbm1)
+	  if (Tox_vector) then
+		ctb(1:kbm1) = plast(iplast)%tconc_b(i,1:kbm1)
+	  end if
+      dx(1:kbm1) = dz(i,1:kbm1)*d(i)
+
+	  rhop = plast(iplast)%Prho
+	  da = plast(iplast)%aaxis
+	  db = plast(iplast)%baxis
+	  dc = plast(iplast)%caxis
+	  if(dbg_set(dbg_sbr)) write(ipt,*) "Start: Calc_Wset_Plastic"
+		call Calc_Wset_Plastic(kbm1,rho_water(i,1:kbm1),rhop,da,db,dc,wset)
+	  if(dbg_set(dbg_sbr)) write(ipt,*) "End: Calc_Wset_Plastic"
+
+	  if (maxval(abs(c(1:kbm1))) < 1.0e-12) then
+		dflux = 0.0
+		fflux = 0.0
+		if (Tox_vector) then
+			tfluxb = 0.0
+		end if
+	  else
+		if(dbg_set(dbg_sbr)) write(ipt,*) "Start: Settling advection"
+			if (minval(wset(1:kbm1)) > 1.0e-10) then
+				DTmax = Settle_CFL*minval(dx(1:kbm1)/wset(1:kbm1))
+			else
+				DTmax = DTplast
+			end if
+			mcyc = int(DTplast/DTmax + 1. - eps)
+			DTdep = DTplast/float(mcyc)
+
+			do ncyc = 1,mcyc
+				call settle_flux_new(kbm1,c,dx,wset,dflux,fflux,DTdep)
+			end do
+
+			if (Tox_vector) then
+				do ncyc = 1,mcyc
+					call settle_tflux_new(kbm1,ctb,dx,wset,tfluxb,DTdep)
+				end do
+			end if
+	  end if
+
+		plast(iplast)%conc(i,1:kbm1) = c(1:kbm1)
+		plast(iplast)%wset(i,1:kbm1) = wset(1:kbm1)
+		plast(iplast)%dflx(i) = dflux
+		plast(iplast)%fflx(i) = fflux
+
+		if (Tox_vector) then
+			plast(iplast)%tconc_b(i,1:kbm1) = ctb(1:kbm1)
+			plast(iplast)%tdflx_b(i) = tfluxb
+		end if
+
+	  if(dbg_set(dbg_sbr)) write(ipt,*) "End: Settling advection"
+    end do
+  end do
+
+  end if
+
 #else
 
   !Loop over plastic classes and spatial points       
@@ -2692,10 +2917,10 @@ Subroutine Calc_Deposition
 	  !initialize wset array to prevent garbage values
 	  wset(1:kbm1) = 0.0
 
-      !setup 1D concentration and grid arrays
+	  !setup 1D concentration and grid arrays
       c(1:kbm1) = plast(iplast)%conc(i,1:kbm1)
 	  if (Tox_vector) then
-		ctb(1:kb) = plast(iplast)%tconc_b(i,1:kbm1)
+		ctb(1:kbm1) = plast(iplast)%tconc_b(i,1:kbm1)
 	  end if
       dx(1:kbm1) = dz(i,1:kbm1)*d(i)
 
@@ -3569,25 +3794,37 @@ Subroutine Update_Bottom
 		if(dbg_set(dbg_sbr)) write(ipt,*) "Start: Mass depositing"
 
 #if defined (SEDIMENT)
-		do i=1,m
-			do iplast=1,nplast
-				flux = (plast(iplast)%eflx(i)-plast(iplast)%dflx(i))
-				split_mass = max(plast(iplast)%mass_a(i),0.0_sp) + max(plast(iplast)%mass_d(i),0.0_sp)
-				if (plast(iplast)%mass(i) > eps .and. split_mass > eps) then
-					ratio_mass = max(plast(iplast)%mass_a(i),0.0_sp)/split_mass
-				else if (plast(iplast)%mass(i) > eps) then
-					ratio_mass = max(0.0_sp,min(Arate_m0,1.0_sp))
-				else
-					ratio_mass = 0.0_sp
-				end if
-				
-				!change top layer bed mass of each plastic type 
-				accum  = plast(iplast)%mass(i) - flux 
-				plast(iplast)%mass(i) = max(accum,0.0) 
-				plast(iplast)%mass_a(i) = max(accum*ratio_mass,0.0)
-				plast(iplast)%mass_d(i) = max(accum*(1.0-ratio_mass),0.0)
+		if (floc_intract) then
+			do i=1,m
+				do iplast=1,nplast
+					flux = (plast(iplast)%eflx(i)-plast(iplast)%dflx(i))
+					split_mass = max(plast(iplast)%mass_a(i),0.0_sp) + max(plast(iplast)%mass_d(i),0.0_sp)
+					if (plast(iplast)%mass(i) > eps .and. split_mass > eps) then
+						ratio_mass = max(plast(iplast)%mass_a(i),0.0_sp)/split_mass
+					else if (plast(iplast)%mass(i) > eps) then
+						ratio_mass = max(0.0_sp,min(Arate_m0,1.0_sp))
+					else
+						ratio_mass = 0.0_sp
+					end if
+
+					!change top layer bed mass of each plastic type
+					accum  = plast(iplast)%mass(i) - flux
+					plast(iplast)%mass(i) = max(accum,0.0)
+					plast(iplast)%mass_a(i) = max(accum*ratio_mass,0.0)
+					plast(iplast)%mass_d(i) = max(accum*(1.0-ratio_mass),0.0)
+				end do
 			end do
-		end do
+		else
+			do i=1,m
+				do iplast=1,nplast
+					flux = (plast(iplast)%eflx(i)-plast(iplast)%dflx(i))
+
+					!change top layer bed mass of each plastic type
+					accum  = plast(iplast)%mass(i) - flux
+					plast(iplast)%mass(i) = max(accum,0.0)
+				end do
+			end do
+		end if
 #else
 		do i=1,m
 			do iplast=1,nplast

@@ -182,6 +182,64 @@ The directories \texttt{OUTPUT\_a}, \texttt{OUTPUT\_b}, and \texttt{OUTPUT\_c} a
 the original scenario intent has to be inferred entirely from the inputs and batch scripts; there is no
 saved output available here to confirm what diagnostics were originally examined.
 
+\section{Case \texttt{b} Output NetCDF Structure}
+The first successful case-\texttt{b} output stack inspected on Kestrel is:
+\[
+\texttt{/kfs3/scratch/yhuang168/waterPACT\_MP\_floc/OUTPUT\_b/waterPACT\_b\_0001.nc}.
+\]
+It is a 64-bit NetCDF file with 160 records on the unlimited \texttt{time} dimension. A fuller
+script-oriented inventory has been saved separately as
+\texttt{analysis\_notes/waterPACT\_netcdf\_structure\_b.md}. The no-floc baseline structure for
+experiment \texttt{a} is recorded in
+\texttt{analysis\_notes/waterPACT\_netcdf\_structure\_a.md}.
+
+\subsection{Core Dimensions}
+\begin{center}
+\begin{tabular}{lr}
+\toprule
+Dimension & Size \\
+\midrule
+\texttt{nele} & 126722 \\
+\texttt{node} & 68416 \\
+\texttt{siglay} & 30 \\
+\texttt{siglev} & 31 \\
+\texttt{three} & 3 \\
+\texttt{time} & 160, unlimited \\
+\texttt{maxnode} & 11 \\
+\texttt{maxelem} & 9 \\
+\texttt{four} & 4 \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\subsection{Diagnostic-Relevant Variables}
+The fields most relevant for later mass-budget scripts are:
+\begin{itemize}
+\item geometry and volumes: \texttt{art1(node)}, \texttt{h(node)}, \texttt{zeta(node,time)},
+\texttt{siglay(node,siglay)}, and \texttt{siglev(node,siglev)};
+\item sediment forcing/state: \texttt{coarse\_sand\_1(node,siglay,time)} and
+\texttt{coarse\_sand\_1\_bedfrac(node,time)};
+\item total suspended plastic: \texttt{mp1(node,siglay,time)};
+\item floc split: \texttt{mp1\_agg(node,siglay,time)} and
+\texttt{mp1\_dis(node,siglay,time)};
+\item interaction rates and settling: \texttt{lambda\_a\_mp1}, \texttt{lambda\_d\_mp1},
+\texttt{settle\_vel\_mp1}, and \texttt{settle\_vel\_floc\_mp1};
+\item bed exchange and bed inventory: \texttt{dep\_flux\_mp1(node,time)},
+\texttt{ero\_flux\_mp1(node,time)}, \texttt{bot\_mass\_mp1(node,time)},
+\texttt{bot\_mass\_agg\_mp1(node,time)}, and \texttt{bot\_mass\_dis\_mp1(node,time)};
+\item supporting stress/density fields: \texttt{taub\_total(node,time)}, \texttt{bottom\_stress(node,time)},
+\texttt{tau\_ce\_mp1(node,time)}, and \texttt{ambient\_rho(node,siglay,time)}.
+\end{itemize}
+
+For script design, the main consistency check is:
+\[
+\texttt{mp1} \approx \texttt{mp1\_agg} + \texttt{mp1\_dis}.
+\]
+Water-column inventory should use node-control-volume areas, likely \texttt{art1}, together with
+time-varying water depth and sigma-layer thickness. Bed inventory should use area integration of
+\texttt{bot\_mass\_*} fields. For the no-floc baseline case \texttt{a}, floc-only output variables may be
+absent after the NetCDF-registration fix because \texttt{PLAST\_FLOC = F}.
+
 \section{Expected Mass-Conserving Signatures}
 If the model is internally mass conservative, the comparison among \texttt{a}, \texttt{b}, and \texttt{c}
 should look like a redistribution problem rather than a creation/loss problem.

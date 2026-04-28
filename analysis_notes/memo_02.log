@@ -1,4 +1,4 @@
-This is pdfTeX, Version 3.141592653-2.6-1.40.24 (MiKTeX 22.11.25) (preloaded format=pdflatex 2026.4.12)  24 APR 2026 12:19
+This is pdfTeX, Version 3.141592653-2.6-1.40.24 (MiKTeX 22.11.25) (preloaded format=pdflatex 2026.4.12)  27 APR 2026 17:47
 entering extended mode
  restricted \write18 enabled.
  %&-line parsing enabled.
@@ -281,13 +281,52 @@ Overfull \hbox (10.10257pt too wide) in paragraph at lines 154--157
 
 LaTeX Font Info:    Font shape `OT1/cmtt/bx/n' in size <12> not available
 (Font)              Font shape `OT1/cmtt/m/n' tried instead on input line 169.
-[4] [5] [6] (memo_02.aux) ) 
+LaTeX Font Info:    Font shape `OT1/cmtt/bx/n' in size <14.4> not available
+(Font)              Font shape `OT1/cmtt/m/n' tried instead on input line 185.
+[4]
+Overfull \hbox (55.63925pt too wide) in paragraph at lines 189--195
+\OT1/cmr/m/n/10.95 no-floc base-line struc-ture for ex-per-i-ment \OT1/cmtt/m/n
+/10.95 a \OT1/cmr/m/n/10.95 is recorded in \OT1/cmtt/m/n/10.95 analysis[]notes/
+waterPACT[]netcdf[]structure[]a.md\OT1/cmr/m/n/10.95 . 
+ []
+
+
+Overfull \hbox (50.59145pt too wide) in paragraph at lines 220--222
+[]\OT1/cmr/m/n/10.95 sediment forc-ing/state: \OT1/cmtt/m/n/10.95 coarse[]sand[
+]1(node,siglay,time) \OT1/cmr/m/n/10.95 and \OT1/cmtt/m/n/10.95 coarse[]sand[]1
+[]bedfrac(node,time)\OT1/cmr/m/n/10.95 ; 
+ []
+
+
+Overfull \hbox (53.30876pt too wide) in paragraph at lines 225--227
+[]\OT1/cmr/m/n/10.95 interaction rates and set-tling: \OT1/cmtt/m/n/10.95 lambd
+a[]a[]mp1\OT1/cmr/m/n/10.95 , \OT1/cmtt/m/n/10.95 lambda[]d[]mp1\OT1/cmr/m/n/10
+.95 , \OT1/cmtt/m/n/10.95 settle[]vel[]mp1\OT1/cmr/m/n/10.95 , and \OT1/cmtt/m/
+n/10.95 settle[]vel[]floc[]mp1\OT1/cmr/m/n/10.95 ; 
+ []
+
+
+Overfull \hbox (21.9453pt too wide) in paragraph at lines 227--230
+\OT1/cmtt/m/n/10.95 bot[]mass[]mp1(node,time)\OT1/cmr/m/n/10.95 , \OT1/cmtt/m/n
+/10.95 bot[]mass[]agg[]mp1(node,time)\OT1/cmr/m/n/10.95 , and \OT1/cmtt/m/n/10.
+95 bot[]mass[]dis[]mp1(node,time)\OT1/cmr/m/n/10.95 ; 
+ []
+
+
+Overfull \hbox (99.10344pt too wide) in paragraph at lines 230--232
+[]\OT1/cmr/m/n/10.95 supporting stress/density fields: \OT1/cmtt/m/n/10.95 taub
+[]total(node,time)\OT1/cmr/m/n/10.95 , \OT1/cmtt/m/n/10.95 bottom[]stress(node,
+time)\OT1/cmr/m/n/10.95 , \OT1/cmtt/m/n/10.95 tau[]ce[]mp1(node,time)\OT1/cmr/m
+/n/10.95 ,
+ []
+
+[5] [6] [7] (memo_02.aux) ) 
 Here is how much of TeX's memory you used:
- 2043 strings out of 475284
- 32957 string characters out of 2773161
+ 2045 strings out of 475284
+ 32992 string characters out of 2773161
  393628 words of memory out of 3000000
- 23548 multiletter control sequences out of 15000+600000
- 476034 words of font info for 53 fonts, out of 8000000 for 9000
+ 23550 multiletter control sequences out of 15000+600000
+ 476203 words of font info for 54 fonts, out of 8000000 for 9000
  1141 hyphenation exceptions out of 8191
  55i,6n,62p,302b,203s stack positions out of 10000i,1000n,20000p,200000b,80000s
  <C:\Users\huan111\AppData\Local\MiKTeX\fonts/pk/ljf
@@ -304,9 +343,9 @@ s/type1/public/amsfonts/cm/cmsy10.pfb><C:/Users/huan111/AppData/Local/Programs/
 MiKTeX/fonts/type1/public/amsfonts/cm/cmsy8.pfb><C:/Users/huan111/AppData/Local
 /Programs/MiKTeX/fonts/type1/public/amsfonts/cm/cmtt10.pfb><C:/Users/huan111/Ap
 pData/Local/Programs/MiKTeX/fonts/type1/public/amsfonts/cm/cmtt12.pfb>
-Output written on memo_02.pdf (6 pages, 164151 bytes).
+Output written on memo_02.pdf (7 pages, 169415 bytes).
 PDF statistics:
- 81 PDF objects out of 1000 (max. 8388607)
+ 86 PDF objects out of 1000 (max. 8388607)
  0 named destinations out of 1000 (max. 500000)
  1 words of extra memory for PDF output out of 10000 (max. 10000000)
 

@@ -53,14 +53,14 @@
 
  &NML_RESTART
  RST_ON  = T,
- RST_FIRST_OUT      = 'days=58490.0'
+ RST_FIRST_OUT      = 'days=58485.0'
  RST_OUT_INTERVAL   = 'days=10.0'
  RST_OUTPUT_STACK   =  0
  /
 
  &NML_NETCDF
  NC_ON   = T,
- NC_FIRST_OUT    = 'days=58490.0',
+ NC_FIRST_OUT    = 'days=58485.0',
  NC_OUT_INTERVAL = 'seconds=3600.0',
  NC_OUTPUT_STACK = 240,
  NC_GRID_METRICS = T,
