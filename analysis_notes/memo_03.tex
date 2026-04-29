@@ -4,170 +4,193 @@
 \usepackage{hyperref}
 \usepackage{amsmath}
 
-\title{Memo 03: MP1 Mass-Conservation Check and Diagnostic Hypotheses}
+\title{Memo 03: MP1 Mass-Conservation Check and Updated Hypotheses}
 \author{FVCOM-MP Delaware Test Cases}
-\date{April 28, 2026}
+\date{April 29, 2026}
 
 \begin{document}
 \sloppy
 \maketitle
 
 \section*{Purpose}
-This memo summarizes the latest mass-budget extraction for experiments
-\texttt{a}, \texttt{b}, and \texttt{c}, and lists concise diagnostic
-hypotheses for the apparent mass loss and oscillation in the floc-enabled
-cases.
+This memo records the latest 10-day comparison of cases \texttt{a},
+\texttt{b}, and \texttt{c}, and updates the diagnostic hypotheses after the
+recent improvement to the split-field \texttt{conc}/\texttt{cnew} update before
+processor exchange.  The main target is the null-floc comparison:
+\texttt{conc} in case \texttt{a} should match \texttt{conc\_d} in case
+\texttt{b} when the kinetic interaction terms and aggregation fractions are
+zero.
 
 \section*{Current Evidence}
-The MATLAB extractors integrate water-column and bed MP1 mass from the
-NetCDF output files. The Python script
-\texttt{FVCOM\_MP\_test\_run/PYTHON/analyze\_mp1\_mass\_conservation.py}
-then compares the MAT files using a common absolute time axis. Case
-\texttt{a} has now been rerun for the full 10-day window with output
-beginning at the same model day as cases \texttt{b}/\texttt{c}; all three
-cases start at FVCOM day \texttt{58485.0}.
+All three extracted MAT files now cover the same model-day window,
+FVCOM day \(58485.0\)--\(58494.957031\), or comparison day
+\(0.00\)--\(9.96\).  The updated Python comparison uses this shared time
+origin.
 
 \begin{table}[h]
 \centering
 \begin{tabular}{lrrrrr}
 \toprule
-Case & Records & Time window & Initial total & Final total & Final bed \\
- & & (comparison days) & (kg) & (kg) & (kg) \\
+Case & Records & Final water & Final bed & Final total & Retained vs. \texttt{a} \\
+ & & (kg) & (kg) & (kg) & (\%) \\
 \midrule
-\texttt{a} & 240 & 0.00--9.96 & 0.00 & 1001.25 & 0.00 \\
-\texttt{b} & 240 & 0.00--9.96 & 0.00 & 154.71 & 0.00 \\
-\texttt{c} & 240 & 0.00--9.96 & 0.00 & 183.58 & 0.58 \\
+\texttt{a} & 240 & 1001.25 & 0.00 & 1001.25 & 100.0 \\
+\texttt{b} & 240 & 371.85 & 0.00 & 371.85 & 37.1 \\
+\texttt{c} & 240 & 504.26 & 24.29 & 528.55 & 52.8 \\
 \bottomrule
 \end{tabular}
 \end{table}
 
-The common comparison window is now day \(0.00\)--\(9.96\). At the shared
-endpoint, the retained total masses are approximately
-\[
-  M_a = 1001.25~\mathrm{kg}, \qquad
-  M_b = 154.71~\mathrm{kg}, \qquad
-  M_c = 183.58~\mathrm{kg}.
-\]
-Thus case \texttt{b} retains about \(15.5\%\) of case-\texttt{a} mass and
-case \texttt{c} retains about \(18.3\%\). The corrected full-window comparison
-confirms that the large deficit in the floc-enabled cases is not an artifact
-of the previous case-\texttt{a} output offset.
+The split-field exchange/recombination change recovered substantial mass in
+case \texttt{b} relative to the earlier comparison, but it did not close the
+budget.  Case \texttt{b} still ends \(629.40~\mathrm{kg}\) below case
+\texttt{a}; case \texttt{c} ends \(472.70~\mathrm{kg}\) below case
+\texttt{a}.  In case \texttt{b}, all retained mass is in
+\texttt{mp1\_dis}; \texttt{mp1\_agg} remains zero in the saved output, which
+is the expected null-kinetics behavior.
 
-\section*{Important Consistency Check}
-For floc cases, the split variables are internally consistent at output:
+\section*{Cap and Split Checks}
+The hard cap is no longer a leading explanation for this 10-day test.  The
+largest extracted concentrations are far below the code cap of
+\(100~\mathrm{kg\,m^{-3}}\):
 \[
-  \texttt{mp1\_agg} + \texttt{mp1\_dis} \approx \texttt{mp1}.
+\max C_a = 4.43\times 10^{-4}, \qquad
+\max C_b = 6.98\times 10^{-3}, \qquad
+\max C_c = 1.45\times 10^{-2}~\mathrm{kg\,m^{-3}}.
 \]
-The maximum mismatch is zero for case \texttt{b} and approximately
-\(1.35\times10^{-7}\) kg for case \texttt{c}. Therefore, the saved-output
-recombination of \texttt{conc\_a} and \texttt{conc\_d} is not the leading
-suspect.
+The cap-threshold counters are zero for all split variables in cases
+\texttt{b} and \texttt{c}.  The cap code remains present in
+\texttt{mod\_plast.F:1242--1243}, but the present output indicates it is not
+active.
 
-\section*{Source-Path Check}
-\texttt{plast(iplast)\%cdis} is the river-source concentration path, not the
-open-boundary flux workspace. It is filled from the river NetCDF variable
-\texttt{mp1(time,rivers)} and paired with \texttt{river\_flux(time,rivers)}
-inside \texttt{adv\_scal}. For the present files, \texttt{mp1} is in
-\(\mathrm{kg\,m^{-3}}\), and the cases use
-\texttt{RIVER\_TS\_SETTING='calculated'}, so
-\texttt{bcond\_scal\_PTsource} does not add a second source. With
-\texttt{SOURCE\_AG\_RATE=0}, the floc-mode river input is
+The saved split fields are internally consistent:
 \[
-  Q C = Q C(1-\texttt{SOURCE\_AG\_RATE})
+\texttt{mp1\_agg}+\texttt{mp1\_dis}\approx\texttt{mp1}.
 \]
-into \texttt{conc\_d}, and zero into \texttt{conc\_a}. Therefore, the present
-working assumption is that the imposed river mass source is conservative.
+The maximum total split-minus-combined mismatch is zero for case \texttt{b}
+and \(1.83\times10^{-7}~\mathrm{kg}\) for case \texttt{c}.  Therefore the
+saved-output recombination is not the present sink.
 
-\section*{Diagnostic Hypotheses}
+\section*{Coding Symmetry Check}
+The static setup is mostly symmetric.  In \texttt{init\_plast.F:200--208},
+\texttt{INI\_CONC\_AG\_RATE=0} initializes
+\(\texttt{conc\_a}=0\), \(\texttt{conc\_d}=\texttt{conc}\), and matching
+\texttt{cnew\_a}/\texttt{cnew\_d}.  The generic plastic input files also match
+except for \texttt{PLAST\_FLOC}: source aggregation, initial aggregation, mass
+aggregation, and OBC aggregation are all zero.
+
+The main remaining code-path differences are:
 \begin{enumerate}
-\item \textbf{Null-floc split path is not guaranteed identical to no-floc path.}
-The most focused question is now: when the aggregation/disaggregation kinetic
-terms are disabled and \texttt{SOURCE\_AG\_RATE=0}, why does the floc
-\texttt{conc\_d} pathway not reproduce the no-floc \texttt{conc} pathway?
-This comparison should be exact if every operator applied to \texttt{conc\_d}
-is numerically identical to the operator applied to \texttt{conc}.
+\item \textbf{Runtime namelist asymmetry.} Case \texttt{a} uses
+\texttt{SEDIMENT\_MODEL=F}, while case \texttt{b} uses
+\texttt{SEDIMENT\_MODEL=T}.  This means the two cases are not only
+\texttt{PLAST\_FLOC=F} versus \texttt{PLAST\_FLOC=T}; they also enter
+different compiled/runtime sediment branches.
 
-\item \textbf{Final exchange/recombination ordering was asymmetric.}
-The split path previously clipped \texttt{conc\_a}/\texttt{conc\_d} but then
-exchanged \texttt{cnew\_a}/\texttt{cnew\_d}; the no-floc path exchanged the
-clipped combined \texttt{conc}. This could leave exchanged halo state and
-prognostic split state inconsistent. The code has been patched so the split
-path now clips \texttt{cnew\_a}/\texttt{cnew\_d}, exchanges those same arrays,
-then sets
-\[
-  \texttt{conc}=\texttt{cnew}=\texttt{conc\_a}+\texttt{conc\_d}.
-\]
+\item \textbf{Transport is one combined tracer versus two split tracers.}
+Case \texttt{a} calls \texttt{adv\_scal} once on \texttt{conc}
+(\texttt{mod\_plast.F:1261--1267}).  Case \texttt{b} calls \texttt{adv\_scal}
+first on \texttt{conc\_a} and then on \texttt{conc\_d}
+(\texttt{mod\_plast.F:1166--1183}).  With
+\texttt{SOURCE\_AG\_RATE=0}, the \texttt{conc\_d} source should equal the
+combined source, but the split path still performs an extra zero-tracer pass
+for \texttt{conc\_a}.
 
-\item \textbf{Floc-only clips and caps can act as silent sinks.}
-The floc path applies upper caps to \texttt{cnew\_a}/\texttt{cnew\_d} and
-nonnegative clipping after transport. If split advection creates undershoots,
-the limiter removes mass unless the removed amount is tracked. This remains a
-high-priority checkpoint for a null-floc comparison.
+\item \textbf{Vertical diffusion is also split.} The floc path calls
+\texttt{vdif\_scal} on \texttt{cnew\_a} and \texttt{cnew\_d}
+(\texttt{mod\_plast.F:1202--1204}); the no-floc path calls it once on
+\texttt{cnew} (\texttt{mod\_plast.F:1276--1278}).  In exact arithmetic this
+should be equivalent when \texttt{cnew\_a}=0, but it is still a checkpoint
+for roundoff, wet/dry, and halo-state differences.
 
-\item \textbf{Erosion and surface-flux update are not algebraically identical.}
-In the floc branch, erosion and surface inputs are split by
-\texttt{ratio\_bottom}/\texttt{ratio\_surface} and are subject to a per-step
-``10x'' growth limiter. In the no-floc branch, \texttt{eflx} and \texttt{pflx}
-are added directly to \texttt{conc}. This is a concrete asymmetry even when
-kinetics are disabled.
+\item \textbf{Open-boundary and point-source boundary conditions are split.}
+The floc path applies OBC and point-source boundary calls separately to
+\texttt{conc\_a}/\texttt{conc\_d}
+(\texttt{mod\_plast.F:1543--1554} and
+\texttt{mod\_plast.F:1600--1605}); the no-floc path applies them once to
+\texttt{conc} (\texttt{mod\_plast.F:1563--1568} and
+\texttt{mod\_plast.F:1612--1614}).  Because \texttt{OBC\_AG\_RATE=0} and
+\texttt{SOURCE\_AG\_RATE=0}, \texttt{conc\_d} should receive the full
+boundary/source value, but this remains a leading place to compare
+post-operator mass.
 
-\item \textbf{Bed exchange is unlikely to explain the large loss in this run.}
-Case \texttt{b} has essentially no bed mass, and case \texttt{c} has only
-about \(0.58\) kg bed mass at the end. Deposition/erosion is therefore not
-large enough by itself to explain the \(817\)--\(847\) kg difference relative
-to case \texttt{a}.
+\item \textbf{The first MPI exchange still exchanges combined \texttt{cnew}
+in the split branch.} Before OBC handling, the floc branch exchanges
+\texttt{cnew\_a}, \texttt{cnew\_d}, and \texttt{cnew}
+(\texttt{mod\_plast.F:1513--1516}).  At that point the meaningful updated
+state is split; combined \texttt{cnew} is not rebuilt until
+\texttt{mod\_plast.F:1715--1716}.  This may be harmless if no code consumes
+combined \texttt{cnew} in between, but it is not strictly symmetric and should
+be cleaned or checkpointed.
 
-\item \textbf{Open-boundary flux storage is lower priority for the null test.}
-\texttt{cflx} is an open-boundary flux workspace, not the river source. It is
-still worth logging, but with \texttt{OBC\_AG\_RATE=0} and all source mass
-entering \texttt{conc\_d}, it is not currently the leading explanation for
-why \texttt{conc\_d} should fail to match \texttt{conc} in the null-kinetics
-test.
+\item \textbf{Final exchange/recombination was improved but should remain an
+invariant check.} The split path now clips \texttt{cnew\_a}/\texttt{cnew\_d},
+exchanges those same arrays, then rebuilds
+\(\texttt{conc}=\texttt{cnew}=\texttt{conc\_a}+\texttt{conc\_d}\)
+(\texttt{mod\_plast.F:1657--1716}).  The mass recovery in case
+\texttt{b} supports this as a real previous asymmetry.
+
+\item \textbf{Bed/surface update is algebraically different but inactive for
+case \texttt{b}.} The floc branch splits erosion and surface input by
+\texttt{ratio\_bottom}/\texttt{ratio\_surface} and applies a 10x growth limiter
+(\texttt{mod\_plast.F:2383--2440}); the no-floc branch adds directly to
+\texttt{conc} (\texttt{mod\_plast.F:2451--2461}).  However, the extracted
+case-\texttt{a}/\texttt{b} bed mass and sampled dep/ero integrals are zero, so
+this is not the leading explanation for the current \texttt{a}/\texttt{b}
+gap.
 \end{enumerate}
 
-\section*{Asymmetry Checklist for \texttt{conc} vs. \texttt{conc\_d}}
-For the next debugging pass, step through these operators in order and compare
-domain-integrated mass and field differences after each one:
+\section*{Updated Hypotheses}
 \begin{enumerate}
-\item \textbf{Initialization and river input.} With
-\texttt{INI\_CONC\_AG\_RATE=0}, \texttt{INI\_MASS\_AG\_RATE=0}, and
-\texttt{SOURCE\_AG\_RATE=0}, initial and river-source mass should enter only
-\texttt{conc\_d}; the source integral should match no-floc \(\sum Q C\).
+\item \textbf{Leading hypothesis: transport/OBC/source operator asymmetry.}
+Since the cap is inactive and bed exchange is zero for case \texttt{b}, the
+remaining mass deficit most likely appears between \texttt{adv\_scal},
+\texttt{vdif\_scal}, \texttt{bcond\_scal\_OBC}, \texttt{bcond\_scal\_PTsource},
+and the final nonnegative clamp/exchange.  A checkpoint budget after each of
+these operators should show the first divergence.
 
-\item \textbf{Settling/deposition.} In the null-floc limit, \texttt{conc\_d}
-uses \texttt{Calc\_Wset\_Plastic} and \texttt{settle\_flux\_new}, matching
-the no-floc \texttt{conc} branch. Confirm identical \texttt{wset},
-\texttt{dflx}, and water-column mass change.
+\item \textbf{Configuration asymmetry must be isolated.} A true symmetry test
+should compare no-floc and null-floc runs with the same
+\texttt{SEDIMENT\_MODEL} setting.  The cleanest next pair is an
+\texttt{a\_sedT} case using \texttt{PLAST\_FLOC=F} and
+\texttt{SEDIMENT\_MODEL=T} versus the current null-floc case \texttt{b}.
 
-\item \textbf{Erosion/surface update.} Compare direct no-floc addition against
-the split branch's ratio logic and 10x limiter. This is currently a leading
-candidate for non-equivalence if erosion or surface flux is active.
+\item \textbf{Hard cap is demoted for this run.} The cap remains a real
+non-conservative code site, but current maxima and threshold counts show it is
+not active in the present 10-day outputs.
 
-\item \textbf{Horizontal advection and vertical diffusion.} Compare
-\texttt{adv\_scal} and \texttt{vdif\_scal} outputs for \texttt{conc} and
-\texttt{conc\_d}. In null-floc mode, these should match to roundoff.
+\item \textbf{Nonnegative clipping remains possible.} The current extraction
+tracks cap counts and negative saved mass, but it does not measure mass
+removed internally by \texttt{max(...,0)} before output.  This is still a
+plausible silent sink if the split transport path produces transient negative
+undershoots that are clipped before the saved time slice.
 
-\item \textbf{Kinetics.} Force \texttt{lambda\_a=lambda\_d=0} or bypass the
-kinetic update, then verify that this block is exactly conservative and makes
-no change to \texttt{conc\_d}.
-
-\item \textbf{Caps, nonnegative clips, and MPI exchange.} Track mass removed
-by hard caps and nonnegative clipping. After exchange, verify
-\(\texttt{conc}=\texttt{conc\_a}+\texttt{conc\_d}\) and
-\(\texttt{mass}=\texttt{mass\_a}+\texttt{mass\_d}\).
+\item \textbf{Bed-exchange and erosion/surface limiters are secondary for the
+case-\texttt{a}/\texttt{b} mismatch.} They remain important for case
+\texttt{c} and full floc interaction, but the present null-floc case
+\texttt{b} has zero final bed mass and zero sampled dep/ero exchange.
 \end{enumerate}
 
 \section*{Focused Next Test}
 \begin{enumerate}
-\item Run a dedicated null-floc case with \texttt{PLAST\_FLOC=T},
-\texttt{SOURCE\_AG\_RATE=0}, \texttt{INI\_CONC\_AG\_RATE=0}, and
-\texttt{lambda\_a=lambda\_d=0}. Compare \texttt{mp1\_dis} directly against
-case-\texttt{a} \texttt{mp1}.
-\item First run this comparison on one processor. If it matches in serial but
-not in parallel, the remaining issue is likely an exchange/halo-state
-ordering problem.
-\item If serial already diverges, walk through the asymmetry checklist above,
-starting with settling/deposition and erosion/surface update.
+\item Run a matched \texttt{SEDIMENT\_MODEL=T}, \texttt{PLAST\_FLOC=F}
+baseline.  If this aligns with case \texttt{b}, the current difference is
+mostly a sediment-runtime comparison issue.  If it aligns with case
+\texttt{a}, the split path remains the cause.
+
+\item Add a short internal checkpoint diagnostic for one small run.  Record
+domain-integrated mass for \texttt{conc}, \texttt{conc\_d}, and
+\(\texttt{conc\_a}+\texttt{conc\_d}\) after: start, deposition, erosion/surface
+update, \texttt{adv\_scal}, \texttt{vdif\_scal}, OBC, point-source BC,
+nonnegative clamp, MPI exchange, and recombination.
+
+\item For the same diagnostic, explicitly accumulate mass removed by
+nonnegative clipping and the hard cap.  The cap should remain zero in this
+test; any nonzero clipping loss would be immediately informative.
+
+\item If serial and parallel runs differ, focus on the two exchange locations:
+\texttt{mod\_plast.F:1513--1516} before OBC and
+\texttt{mod\_plast.F:1677--1716} at the final split recombination.
 \end{enumerate}
 
 \end{document}

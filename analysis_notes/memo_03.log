@@ -1,4 +1,4 @@
-This is pdfTeX, Version 3.141592653-2.6-1.40.24 (MiKTeX 22.11.25) (preloaded format=pdflatex 2026.4.12)  28 APR 2026 14:43
+This is pdfTeX, Version 3.141592653-2.6-1.40.24 (MiKTeX 22.11.25) (preloaded format=pdflatex 2026.4.12)  29 APR 2026 09:46
 entering extended mode
  restricted \write18 enabled.
  %&-line parsing enabled.
@@ -354,22 +354,61 @@ Package hyperref Info: Link coloring OFF on input line 11.
 \@outlinefile=\write3
 \openout3 = `memo_03.out'.
 
-
-Underfull \hbox (badness 1824) in paragraph at lines 67--75
-\OT1/cmtt/m/n/10.95 plast(iplast)%cdis \OT1/cmr/m/n/10.95 is the river-source c
-on-cen-tra-tion path, not the open-boundary flux
- []
-
-[1
+ [1
 
 {C:/Users/huan111/AppData/Local/MiKTeX/fonts/map/pdftex/pdftex.map}]
-LaTeX Font Info:    Font shape `OT1/cmtt/bx/n' in size <14.4> not available
-(Font)              Font shape `OT1/cmtt/m/n' tried instead on input line 128.
- [2]
-Underfull \hbox (badness 1796) in paragraph at lines 137--141
-[]\OT1/cmr/bx/n/10.95 Settling/deposition. \OT1/cmr/m/n/10.95 In the null-floc 
-limit, \OT1/cmtt/m/n/10.95 conc[]d \OT1/cmr/m/n/10.95 uses \OT1/cmtt/m/n/10.95 
-Calc[]Wset[]Plastic \OT1/cmr/m/n/10.95 and
+Underfull \hbox (badness 2221) in paragraph at lines 84--89
+[]\OT1/cmr/bx/n/10.95 Runtime namelist asym-me-try. \OT1/cmr/m/n/10.95 Case \OT
+1/cmtt/m/n/10.95 a \OT1/cmr/m/n/10.95 uses \OT1/cmtt/m/n/10.95 SEDIMENT[]MODEL=
+F\OT1/cmr/m/n/10.95 , while case \OT1/cmtt/m/n/10.95 b
+ []
+
+
+Underfull \hbox (badness 3302) in paragraph at lines 99--105
+[]\OT1/cmr/bx/n/10.95 Vertical dif-fu-sion is also split. \OT1/cmr/m/n/10.95 Th
+e floc path calls \OT1/cmtt/m/n/10.95 vdif[]scal \OT1/cmr/m/n/10.95 on \OT1/cmt
+t/m/n/10.95 cnew[]a
+ []
+
+
+Underfull \hbox (badness 4072) in paragraph at lines 99--105
+\OT1/cmr/m/n/10.95 and \OT1/cmtt/m/n/10.95 cnew[]d \OT1/cmr/m/n/10.95 (\OT1/cmt
+t/m/n/10.95 mod[]plast.F:1202--1204\OT1/cmr/m/n/10.95 ); the no-floc path calls
+ it once on \OT1/cmtt/m/n/10.95 cnew
+ []
+
+
+Underfull \hbox (badness 1226) in paragraph at lines 106--116
+[]\OT1/cmr/bx/n/10.95 Open-boundary and point-source bound-ary con-di-tions are
+ split. \OT1/cmr/m/n/10.95 The floc
+ []
+
+
+Underfull \hbox (badness 4531) in paragraph at lines 106--116
+\OT1/cmr/m/n/10.95 path ap-plies OBC and point-source bound-ary calls sep-a-rat
+ely to \OT1/cmtt/m/n/10.95 conc[]a\OT1/cmr/m/n/10.95 /\OT1/cmtt/m/n/10.95 conc[
+]d
+ []
+
+
+Underfull \hbox (badness 3568) in paragraph at lines 106--116
+\OT1/cmr/m/n/10.95 once to \OT1/cmtt/m/n/10.95 conc \OT1/cmr/m/n/10.95 (\OT1/cm
+tt/m/n/10.95 mod[]plast.F:1563--1568 \OT1/cmr/m/n/10.95 and \OT1/cmtt/m/n/10.95
+ mod[]plast.F:1612--1614\OT1/cmr/m/n/10.95 ). Be-cause
+ []
+
+LaTeX Font Info:    Font shape `OT1/cmtt/bx/n' in size <10.95> not available
+(Font)              Font shape `OT1/cmtt/m/n' tried instead on input line 118.
+
+Underfull \hbox (badness 5359) in paragraph at lines 118--125
+[]\OT1/cmr/bx/n/10.95 The first MPI ex-change still ex-changes com-bined \OT1/c
+mtt/m/n/10.95 cnew \OT1/cmr/bx/n/10.95 in the split
+ []
+
+[2]
+Underfull \hbox (badness 10000) in paragraph at lines 191--194
+[]\OT1/cmr/m/n/10.95 If se-rial and par-al-lel runs dif-fer, fo-cus on the two 
+ex-change lo-ca-tions:
  []
 
 [3] (memo_03.aux)
@@ -377,31 +416,29 @@ Package rerunfilecheck Info: File `memo_03.out' has not changed.
 (rerunfilecheck)             Checksum: D41D8CD98F00B204E9800998ECF8427E;0.
  ) 
 Here is how much of TeX's memory you used:
- 8589 strings out of 475284
- 137430 string characters out of 2773161
- 495163 words of memory out of 3000000
- 29970 multiletter control sequences out of 15000+600000
- 475694 words of font info for 52 fonts, out of 8000000 for 9000
+ 8587 strings out of 475284
+ 137405 string characters out of 2773161
+ 497160 words of memory out of 3000000
+ 29969 multiletter control sequences out of 15000+600000
+ 475525 words of font info for 51 fonts, out of 8000000 for 9000
  1141 hyphenation exceptions out of 8191
- 72i,8n,77p,255b,496s stack positions out of 10000i,1000n,20000p,200000b,80000s
+ 72i,8n,77p,255b,529s stack positions out of 10000i,1000n,20000p,200000b,80000s
 <C:/Users/huan111/AppData/Local/Programs/MiKTeX/fonts/type1/public/amsfonts/c
 m/cmbx10.pfb><C:/Users/huan111/AppData/Local/Programs/MiKTeX/fonts/type1/public
 /amsfonts/cm/cmbx12.pfb><C:/Users/huan111/AppData/Local/Programs/MiKTeX/fonts/t
-ype1/public/amsfonts/cm/cmex10.pfb><C:/Users/huan111/AppData/Local/Programs/MiK
-TeX/fonts/type1/public/amsfonts/cm/cmmi10.pfb><C:/Users/huan111/AppData/Local/P
-rograms/MiKTeX/fonts/type1/public/amsfonts/cm/cmmi8.pfb><C:/Users/huan111/AppDa
-ta/Local/Programs/MiKTeX/fonts/type1/public/amsfonts/cm/cmr10.pfb><C:/Users/hua
-n111/AppData/Local/Programs/MiKTeX/fonts/type1/public/amsfonts/cm/cmr12.pfb><C:
-/Users/huan111/AppData/Local/Programs/MiKTeX/fonts/type1/public/amsfonts/cm/cmr
-17.pfb><C:/Users/huan111/AppData/Local/Programs/MiKTeX/fonts/type1/public/amsfo
-nts/cm/cmr8.pfb><C:/Users/huan111/AppData/Local/Programs/MiKTeX/fonts/type1/pub
-lic/amsfonts/cm/cmsy10.pfb><C:/Users/huan111/AppData/Local/Programs/MiKTeX/font
-s/type1/public/amsfonts/cm/cmsy8.pfb><C:/Users/huan111/AppData/Local/Programs/M
-iKTeX/fonts/type1/public/amsfonts/cm/cmtt10.pfb><C:/Users/huan111/AppData/Local
-/Programs/MiKTeX/fonts/type1/public/amsfonts/cm/cmtt12.pfb>
-Output written on memo_03.pdf (3 pages, 173508 bytes).
+ype1/public/amsfonts/cm/cmmi10.pfb><C:/Users/huan111/AppData/Local/Programs/MiK
+TeX/fonts/type1/public/amsfonts/cm/cmmi8.pfb><C:/Users/huan111/AppData/Local/Pr
+ograms/MiKTeX/fonts/type1/public/amsfonts/cm/cmr10.pfb><C:/Users/huan111/AppDat
+a/Local/Programs/MiKTeX/fonts/type1/public/amsfonts/cm/cmr12.pfb><C:/Users/huan
+111/AppData/Local/Programs/MiKTeX/fonts/type1/public/amsfonts/cm/cmr17.pfb><C:/
+Users/huan111/AppData/Local/Programs/MiKTeX/fonts/type1/public/amsfonts/cm/cmr8
+.pfb><C:/Users/huan111/AppData/Local/Programs/MiKTeX/fonts/type1/public/amsfont
+s/cm/cmsy10.pfb><C:/Users/huan111/AppData/Local/Programs/MiKTeX/fonts/type1/pub
+lic/amsfonts/cm/cmsy8.pfb><C:/Users/huan111/AppData/Local/Programs/MiKTeX/fonts
+/type1/public/amsfonts/cm/cmtt10.pfb>
+Output written on memo_03.pdf (3 pages, 159599 bytes).
 PDF statistics:
- 111 PDF objects out of 1000 (max. 8388607)
+ 101 PDF objects out of 1000 (max. 8388607)
  26 named destinations out of 1000 (max. 500000)
  1 words of extra memory for PDF output out of 10000 (max. 10000000)
 
