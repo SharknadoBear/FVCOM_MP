@@ -7,7 +7,7 @@
 
 \title{Memo 03: MP1 Mass-Conservation Check and Updated Diagnosis}
 \author{FVCOM-MP Delaware Test Cases}
-\date{April 29, 2026}
+\date{April 30, 2026}
 
 \begin{document}
 \sloppy
@@ -21,7 +21,7 @@ case \texttt{a} as no-floc plastic with sediment runtime on, versus case
 plastic.
 
 \section*{Archived Analysis Outputs}
-Two mass-conservation snapshots are now preserved under
+Three mass-conservation snapshots are now preserved under
 \texttt{FVCOM\_MP\_test\_run/PYTHON/output/mass\_conservation/archive/}.
 
 \begin{table}[h]
@@ -34,12 +34,16 @@ Version & Archive label & Meaning \\
 \texttt{v001} & \texttt{v001\_before\_case\_a\_sediment\_on} &
 old comparison with case \texttt{a} using \texttt{SEDIMENT\_MODEL=F} \\
 \texttt{v002} & \texttt{v002\_case\_a\_sediment\_on\_full10d} &
-new comparison with case \texttt{a} using \texttt{SEDIMENT\_MODEL=T} \\
+comparison with case \texttt{a} using \texttt{SEDIMENT\_MODEL=T} and the
+original sediment BBL settings \\
+\texttt{v003} & \texttt{v003\_case\_a\_sediment\_on\_no\_bbl} &
+case-\texttt{a} diagnostic with \texttt{SEDIMENT\_MODEL=T} but sediment BBL
+roughness switches disabled \\
 \bottomrule
 \end{tabular}
 \end{table}
 
-The live analysis folder has also been regenerated from the \texttt{v002}
+The live analysis folder has also been regenerated from the \texttt{v003}
 state.  The archived files include \texttt{mass\_summary.csv},
 \texttt{mass\_timeseries\_long.csv}, and all current comparison plots.
 
@@ -54,23 +58,27 @@ All three current MAT files cover the same FVCOM model-day window,
 Case & Sediment runtime & Final water & Final bed & Final total & Retained vs. \texttt{a} \\
  & & (kg) & (kg) & (kg) & (\%) \\
 \midrule
-\texttt{a} & on & 582.41 & 0.00 & 582.41 & 100.0 \\
-\texttt{b} & on & 371.85 & 0.00 & 371.85 & 63.8 \\
-\texttt{c} & on & 504.26 & 24.29 & 528.55 & 90.8 \\
+\texttt{a} & on, BBL off & 573.28 & 0.00 & 573.28 & 100.0 \\
+\texttt{b} & on & 371.85 & 0.00 & 371.85 & 64.9 \\
+\texttt{c} & on & 504.26 & 24.29 & 528.55 & 92.2 \\
 \bottomrule
 \end{tabular}
 \end{table}
 
-The major new finding is that enabling sediment runtime in case \texttt{a}
-reduced the final domain MP1 mass from the old archived value
-\(1001.25~\mathrm{kg}\) to \(582.41~\mathrm{kg}\).  Therefore a large part of
-the old case-\texttt{a}/case-\texttt{b} gap was not caused by the split floc
-path alone; it came from comparing different sediment-runtime states.
+The major finding from \texttt{v002} remains that enabling sediment runtime in
+case \texttt{a} reduced the final domain MP1 mass from the old archived value
+\(1001.25~\mathrm{kg}\) to \(582.41~\mathrm{kg}\).  The new \texttt{v003}
+BBL-off diagnostic ends at \(573.28~\mathrm{kg}\), only
+\(9.13~\mathrm{kg}\) below the \texttt{v002} BBL-on value.  Therefore a large
+part of the old case-\texttt{a}/case-\texttt{b} gap was not caused by the split
+floc path alone, and the BBL-off test suggests the sediment-runtime effect is
+not primarily controlled by sediment BBL roughness.
 
 The remaining null-floc mismatch is still meaningful.  With sediment runtime
-matched, case \texttt{b} ends \(210.56~\mathrm{kg}\) below case \texttt{a},
-retaining \(63.8\%\) of the sediment-on no-floc baseline.  Case \texttt{c}
-ends \(53.85~\mathrm{kg}\) below case \texttt{a}, retaining \(90.8\%\), with
+matched in the latest \texttt{v003} comparison, case \texttt{b} ends
+\(201.43~\mathrm{kg}\) below case \texttt{a}, retaining \(64.9\%\) of the
+sediment-on no-floc baseline.  Case \texttt{c} ends
+\(44.73~\mathrm{kg}\) below case \texttt{a}, retaining \(92.2\%\), with
 \(24.29~\mathrm{kg}\) stored in the bed.
 
 \section*{New Negative Test: BBL-Off Case \texttt{a}}
@@ -81,12 +89,32 @@ bottom roughness, a case-\texttt{a} diagnostic sediment input was prepared:
 \texttt{MB\_BBL\_USE=F}, \texttt{SG\_BBL\_USE=F},
 \texttt{SSW\_BBL\_USE=F}, and \texttt{SSW\_CALC\_ZNOT=F}.
 
-The preliminary run showed almost no change relative to the sediment-on
-case-\texttt{a} run with the original BBL settings.  This is important
-negative evidence: the sediment/plastic interference is unlikely to be
-explained only by the Sherwood/Signell/Warner BBL roughness feedback.  It also
-means that either the HPC build did not actively use that BBL path, or another
-sediment-enabled code path dominates the plastic difference.
+The resulting analysis is archived as
+\texttt{v003\_case\_a\_sediment\_on\_no\_bbl}.  It showed almost no change
+relative to the sediment-on case-\texttt{a} run with the original BBL settings:
+case \texttt{a} ended at \(573.28~\mathrm{kg}\) in \texttt{v003}, compared
+with \(582.41~\mathrm{kg}\) in \texttt{v002}.  This is important negative
+evidence: the sediment/plastic interference is unlikely to be explained only by
+the Sherwood/Signell/Warner BBL roughness feedback.  It also means that either
+the HPC build did not actively use that BBL path, or another sediment-enabled
+code path dominates the plastic difference.
+
+\section*{New Isolation Test: Delayed \texttt{Advance\_Sed}}
+A sharper test was then prepared using
+\texttt{generic\_sediment\_a\_inactive.inp}.  This keeps
+\texttt{SEDIMENT\_MODEL=T} and the sediment setup path active, but sets
+\texttt{SED\_START = 999999999}.  In \texttt{mod\_sed.F:883},
+\texttt{Advance\_Sed} returns immediately when
+\texttt{iint < sed\_start}.  Therefore this test keeps sediment initialization,
+the sediment/plastic compile path, and the river-forcing optional-argument path,
+but removes active runtime sediment transport.
+
+The recent partial run is already diagnostically useful: the
+\texttt{total\_mass\_by\_case.png} curve is reported to overlay the original
+\texttt{v001} behavior.  Assuming the completed run preserves this result, the
+main interference is not from sediment setup, sediment namelist presence, or the
+compile-time river-forcing path.  It is instead localized to code executed after
+the early return in \texttt{Advance\_Sed}, i.e. the active sediment operator.
 
 \section*{Cap, Bed, and Split Checks}
 The hard concentration cap remains inactive in the present outputs.  The
@@ -157,11 +185,11 @@ environment and/or open-boundary export enough to strongly affect domain MP1
 mass.  This is not necessarily a plastic mass sink by itself; the plotted
 domain mass does not include cumulative open-boundary export.
 
-\item \textbf{BBL roughness is now demoted.} The
-\texttt{generic\_sediment\_a\_no\_bbl.inp} test suggests that changing the
-sediment BBL switches is not enough to recover the old case-\texttt{a} mass.
-Bottom-stress feedback should remain documented, but it is no longer the
-leading explanation for the present discrepancy.
+\item \textbf{BBL roughness is now demoted.} The archived \texttt{v003}
+\texttt{generic\_sediment\_a\_no\_bbl.inp} test changed case-\texttt{a} final
+mass by only \(9.13~\mathrm{kg}\) relative to the \texttt{v002} BBL-on
+sediment case.  Bottom-stress feedback should remain documented, but it is no
+longer the leading explanation for the present discrepancy.
 
 \item \textbf{The no-floc plastic path itself changes when sediment is
 compiled/enabled.} In \texttt{mod\_plast.F}, the update enters a
@@ -172,25 +200,43 @@ uses the sediment-build no-floc branch around
 without \texttt{-DSEDIMENT} is not a strict code-path match to a sediment-build
 case-\texttt{a} run.
 
-\item \textbf{River forcing/source updating is a high-priority suspect.} The
-river update call changes at compile time.  With plastic only,
+\item \textbf{River forcing/source updating is now demoted.} The river update
+call still changes at compile time: with plastic only,
 \texttt{bcond\_gcn.F:645} calls \texttt{UPDATE\_RIVERS} with
 \texttt{PLAST=PLASTDIS}; with sediment and plastic,
 \texttt{bcond\_gcn.F:648} calls it with both \texttt{SED=SEDDIS} and
-\texttt{PLAST=PLASTDIS}.  The plastic variables are still read in
-\texttt{mod\_force.F:13096--13115}, but this optional-argument path should be
-verified directly by logging the instantaneous and cumulative river MP input,
-approximately \(\sum_r Q_r C_{\mathrm{plast},r}\Delta t\).
+\texttt{PLAST=PLASTDIS}.  However, the delayed-\texttt{Advance\_Sed} test keeps
+this compile/setup path while recovering the \texttt{v001}-like mass curve.
+Thus river optional-argument handling is unlikely to be the primary cause of
+the present case-\texttt{a} discrepancy, although cumulative river MP input
+should still be logged for closure.
 
-\item \textbf{\texttt{ADVANCE\_SED} side effects remain possible.}
-\texttt{ADVANCE\_SED} is called before \texttt{ADVANCE\_PLAST} each internal
-step.  With \texttt{MORPHO\_MODEL=F}, bathymetry should not be updated, and
-with BBL disabled the roughness route is weakened.  The next isolation is to
-keep \texttt{SEDIMENT\_MODEL=T} but set \texttt{SED\_START} to a very large
-value so sediment is initialized but \texttt{ADVANCE\_SED} returns before
-doing transport.  If plastic mass still follows the sediment-on result, the
-cause is setup/forcing/compile-path; if it returns toward the old result, the
-cause is inside \texttt{ADVANCE\_SED} or its side effects.
+\item \textbf{The leading suspect is now active \texttt{Advance\_Sed}
+side effects.} \texttt{Advance\_Sed} is called before
+\texttt{Advance\_Plast} each internal step.  With
+\texttt{MORPHO\_MODEL=F}, bathymetry should not be updated, and with BBL
+disabled the roughness route is weakened.  The delayed-\texttt{Advance\_Sed}
+test localizes the main discrepancy to the active sediment operator, especially
+the shared scalar-transport calls and any shared model state they leave behind
+before plastic advances.
+
+\item \textbf{Shared scalar-transport state is a concrete mechanism to test.}
+Inside \texttt{mod\_sed.F:1016--1028}, sediment calls
+\texttt{adv\_scal\_backward} and \texttt{fct\_sed}.  The shared scalar routine
+writes global bottom-gradient arrays \texttt{PFPXB}/\texttt{PFPYB} in
+\texttt{mod\_scal.F:911--912}.  No-floc plastic should not directly read
+sediment concentration, so a case-\texttt{a} response to active sediment
+transport points toward shared-state contamination or another common scalar
+side effect rather than physical floc aggregation.
+
+\item \textbf{A sediment exchange mismatch can affect floc cases.} After
+sediment clipping, \texttt{mod\_sed.F:1099--1104} updates
+\texttt{sed(i)\%conc}; the following MPI exchange at
+\texttt{mod\_sed.F:1117--1122} exchanges \texttt{sed(i)\%cnew}, not the clipped
+\texttt{sed(i)\%conc}.  Floc-rate calculations later read
+\texttt{sed(ised)\%conc}.  This is less likely to explain the no-floc
+case-\texttt{a} effect by itself, but it is a strong candidate for b/c
+rank-boundary oscillations and should be corrected or instrumented.
 
 \item \textbf{The remaining case-\texttt{a}/case-\texttt{b} gap is still a
 split-path problem after sediment state is matched.} With
@@ -237,14 +283,36 @@ can reproduce combined \texttt{conc}.
 
 \section*{Focused Next Checks}
 \begin{enumerate}
-\item Use \texttt{v002} as the new baseline for future plots and memo updates.
-The old \texttt{v001} comparison should only be used to document the
-sediment-runtime effect.
+\item Use \texttt{v003} as the latest pre-inactive-\texttt{Advance\_Sed}
+archive for future plots and memo updates.  If the delayed-\texttt{Advance\_Sed}
+run finishes with the same \texttt{v001}-like behavior, archive that analysis as
+\texttt{v004} and record it as the decisive ``sediment initialized but runtime
+operator inactive'' comparison.
 
-\item Run a sediment-initialized but sediment-inactive case-\texttt{a}
-diagnostic by setting \texttt{SED\_START} to a value beyond the run length.
-This separates sediment setup/forcing/compile effects from the runtime
-\texttt{ADVANCE\_SED} operator.
+\item Bisect \texttt{Advance\_Sed} using temporary early returns.  First return
+after \texttt{calc\_active\_layer}; then after
+\texttt{calc\_deposition}/\texttt{calc\_erosion}/bed updates but before
+\texttt{adv\_scal\_backward}; then after
+\texttt{adv\_scal\_backward}/\texttt{fct\_sed}; then after
+\texttt{vdif\_scal}/MPI exchange but before OBC/source/clipping.  This should
+pinpoint which block first changes plastic-domain mass.
+
+\item Add a targeted shared-state checksum immediately before and after
+\texttt{Advance\_Sed}, before \texttt{Advance\_Plast}.  Track small summaries
+for \texttt{PFPXB}, \texttt{PFPYB}, \texttt{D}, \texttt{DT}, \texttt{DZ},
+\texttt{KH}, \texttt{U}, \texttt{V}, \texttt{UARD\_OBCN}, and the shear-stress
+array passed to plastic.  Any non-sediment state changed by
+\texttt{Advance\_Sed} becomes an immediate smoking gun.
+
+\item Run a narrow save/restore test around sediment \texttt{adv\_scal\_backward}
+for \texttt{PFPXB}/\texttt{PFPYB}.  If restoring these arrays removes the
+case-\texttt{a} sediment-runtime effect, the coupling mechanism is shared scalar
+gradient state.
+
+\item Test \texttt{SED\_ONED=T} as an intermediate isolation.  This skips the
+horizontal sediment advection/OBC/source path in \texttt{Advance\_Sed} while
+leaving more of the vertical/bed sediment machinery active.  A return toward
+\texttt{v001} would implicate the horizontal scalar transport block.
 
 \item Add a river-source budget log for MP1.  At each report interval, record
 instantaneous \(\sum_r Q_r C_{\mathrm{plast},r}\) and cumulative
@@ -261,6 +329,11 @@ nonnegative clamp, MPI exchange, and recombination.
 \item For the null-floc case, add a temporary switch or guard so
 \(\lambda_a=\lambda_d=0\) is assigned directly and the sediment-dependent floc
 rate routines are not called.
+
+\item For b/c, reconcile sediment post-clipping exchange: exchange
+\texttt{sed(i)\%conc} after clipping, or set \texttt{sed(i)\%cnew =
+sed(i)\%conc} before exchanging.  This should be treated as a diagnostic fix
+first, because it affects the sediment state read by the floc-rate routines.
 
 \item Explicitly accumulate mass removed by nonnegative clipping.  The hard cap
 should remain zero; any nonzero clipping loss would be immediately
