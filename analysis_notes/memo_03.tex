@@ -3,8 +3,9 @@
 \usepackage{booktabs}
 \usepackage{hyperref}
 \usepackage{amsmath}
+\usepackage{url}
 
-\title{Memo 03: MP1 Mass-Conservation Check and Updated Hypotheses}
+\title{Memo 03: MP1 Mass-Conservation Check and Updated Diagnosis}
 \author{FVCOM-MP Delaware Test Cases}
 \date{April 29, 2026}
 
@@ -13,184 +14,261 @@
 \maketitle
 
 \section*{Purpose}
-This memo records the latest 10-day comparison of cases \texttt{a},
-\texttt{b}, and \texttt{c}, and updates the diagnostic hypotheses after the
-recent improvement to the split-field \texttt{conc}/\texttt{cnew} update before
-processor exchange.  The main target is the null-floc comparison:
-\texttt{conc} in case \texttt{a} should match \texttt{conc\_d} in case
-\texttt{b} when the kinetic interaction terms and aggregation fractions are
-zero.
+This memo updates the MP1 mass-conservation diagnosis after rerunning case
+\texttt{a} with \texttt{SEDIMENT\_MODEL=T}.  The central comparison is now:
+case \texttt{a} as no-floc plastic with sediment runtime on, versus case
+\texttt{b} as floc-enabled but effectively null-kinetic/split-disaggregated
+plastic.
+
+\section*{Archived Analysis Outputs}
+Two mass-conservation snapshots are now preserved under
+\texttt{FVCOM\_MP\_test\_run/PYTHON/output/mass\_conservation/archive/}.
+
+\begin{table}[h]
+\centering
+\small
+\begin{tabular}{lp{0.34\linewidth}p{0.43\linewidth}}
+\toprule
+Version & Archive label & Meaning \\
+\midrule
+\texttt{v001} & \texttt{v001\_before\_case\_a\_sediment\_on} &
+old comparison with case \texttt{a} using \texttt{SEDIMENT\_MODEL=F} \\
+\texttt{v002} & \texttt{v002\_case\_a\_sediment\_on\_full10d} &
+new comparison with case \texttt{a} using \texttt{SEDIMENT\_MODEL=T} \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+The live analysis folder has also been regenerated from the \texttt{v002}
+state.  The archived files include \texttt{mass\_summary.csv},
+\texttt{mass\_timeseries\_long.csv}, and all current comparison plots.
 
 \section*{Current Evidence}
-All three extracted MAT files now cover the same model-day window,
-FVCOM day \(58485.0\)--\(58494.957031\), or comparison day
-\(0.00\)--\(9.96\).  The updated Python comparison uses this shared time
-origin.
+All three current MAT files cover the same FVCOM model-day window,
+\(58485.0\)--\(58494.957031\), or comparison day \(0.00\)--\(9.96\).
 
 \begin{table}[h]
 \centering
 \begin{tabular}{lrrrrr}
 \toprule
-Case & Records & Final water & Final bed & Final total & Retained vs. \texttt{a} \\
+Case & Sediment runtime & Final water & Final bed & Final total & Retained vs. \texttt{a} \\
  & & (kg) & (kg) & (kg) & (\%) \\
 \midrule
-\texttt{a} & 240 & 1001.25 & 0.00 & 1001.25 & 100.0 \\
-\texttt{b} & 240 & 371.85 & 0.00 & 371.85 & 37.1 \\
-\texttt{c} & 240 & 504.26 & 24.29 & 528.55 & 52.8 \\
+\texttt{a} & on & 582.41 & 0.00 & 582.41 & 100.0 \\
+\texttt{b} & on & 371.85 & 0.00 & 371.85 & 63.8 \\
+\texttt{c} & on & 504.26 & 24.29 & 528.55 & 90.8 \\
 \bottomrule
 \end{tabular}
 \end{table}
 
-The split-field exchange/recombination change recovered substantial mass in
-case \texttt{b} relative to the earlier comparison, but it did not close the
-budget.  Case \texttt{b} still ends \(629.40~\mathrm{kg}\) below case
-\texttt{a}; case \texttt{c} ends \(472.70~\mathrm{kg}\) below case
-\texttt{a}.  In case \texttt{b}, all retained mass is in
-\texttt{mp1\_dis}; \texttt{mp1\_agg} remains zero in the saved output, which
-is the expected null-kinetics behavior.
+The major new finding is that enabling sediment runtime in case \texttt{a}
+reduced the final domain MP1 mass from the old archived value
+\(1001.25~\mathrm{kg}\) to \(582.41~\mathrm{kg}\).  Therefore a large part of
+the old case-\texttt{a}/case-\texttt{b} gap was not caused by the split floc
+path alone; it came from comparing different sediment-runtime states.
 
-\section*{Cap and Split Checks}
-The hard cap is no longer a leading explanation for this 10-day test.  The
-largest extracted concentrations are far below the code cap of
+The remaining null-floc mismatch is still meaningful.  With sediment runtime
+matched, case \texttt{b} ends \(210.56~\mathrm{kg}\) below case \texttt{a},
+retaining \(63.8\%\) of the sediment-on no-floc baseline.  Case \texttt{c}
+ends \(53.85~\mathrm{kg}\) below case \texttt{a}, retaining \(90.8\%\), with
+\(24.29~\mathrm{kg}\) stored in the bed.
+
+\section*{New Negative Test: BBL-Off Case \texttt{a}}
+To test whether sediment affected plastic only through sediment-controlled
+bottom roughness, a case-\texttt{a} diagnostic sediment input was prepared:
+\texttt{generic\_sediment\_a\_no\_bbl.inp}.  This keeps
+\texttt{SEDIMENT\_MODEL=T} and suspended sediment transport enabled, but sets
+\texttt{MB\_BBL\_USE=F}, \texttt{SG\_BBL\_USE=F},
+\texttt{SSW\_BBL\_USE=F}, and \texttt{SSW\_CALC\_ZNOT=F}.
+
+The preliminary run showed almost no change relative to the sediment-on
+case-\texttt{a} run with the original BBL settings.  This is important
+negative evidence: the sediment/plastic interference is unlikely to be
+explained only by the Sherwood/Signell/Warner BBL roughness feedback.  It also
+means that either the HPC build did not actively use that BBL path, or another
+sediment-enabled code path dominates the plastic difference.
+
+\section*{Cap, Bed, and Split Checks}
+The hard concentration cap remains inactive in the present outputs.  The
+maximum extracted concentrations are far below the code cap of
 \(100~\mathrm{kg\,m^{-3}}\):
 \[
-\max C_a = 4.43\times 10^{-4}, \qquad
+\max C_a = 2.41\times 10^{-4}, \qquad
 \max C_b = 6.98\times 10^{-3}, \qquad
 \max C_c = 1.45\times 10^{-2}~\mathrm{kg\,m^{-3}}.
 \]
-The cap-threshold counters are zero for all split variables in cases
-\texttt{b} and \texttt{c}.  The cap code remains present in
-\texttt{mod\_plast.F:1242--1243}, but the present output indicates it is not
-active.
+The cap-threshold counters are zero for all cases with available counters.
+Thus \texttt{mod\_plast.F:1242--1243} is still a non-conservative code site,
+but it is not active in this 10-day test.
 
-The saved split fields are internally consistent:
+For the null-floc comparison, bed exchange is also not the leading cause.
+Cases \texttt{a} and \texttt{b} both end with zero sampled bed MP1 mass and
+zero sampled deposition/erosion exchange.  Case \texttt{c} does exchange with
+the bed, so it should be interpreted separately.
+
+The saved floc split fields are internally consistent:
 \[
 \texttt{mp1\_agg}+\texttt{mp1\_dis}\approx\texttt{mp1}.
 \]
 The maximum total split-minus-combined mismatch is zero for case \texttt{b}
-and \(1.83\times10^{-7}~\mathrm{kg}\) for case \texttt{c}.  Therefore the
-saved-output recombination is not the present sink.
+and \(1.83\times10^{-7}~\mathrm{kg}\) for case \texttt{c}.  Saved-output
+recombination is therefore not the present sink.
 
-\section*{Coding Symmetry Check}
-The static setup is mostly symmetric.  In \texttt{init\_plast.F:200--208},
-\texttt{INI\_CONC\_AG\_RATE=0} initializes
-\(\texttt{conc\_a}=0\), \(\texttt{conc\_d}=\texttt{conc}\), and matching
-\texttt{cnew\_a}/\texttt{cnew\_d}.  The generic plastic input files also match
-except for \texttt{PLAST\_FLOC}: source aggregation, initial aggregation, mass
-aggregation, and OBC aggregation are all zero.
+\section*{Sediment/Plastic Call Trace}
+The setup and timestep order make the sediment-runtime finding plausible.
 
-The main remaining code-path differences are:
 \begin{enumerate}
-\item \textbf{Runtime namelist asymmetry.} Case \texttt{a} uses
-\texttt{SEDIMENT\_MODEL=F}, while case \texttt{b} uses
-\texttt{SEDIMENT\_MODEL=T}.  This means the two cases are not only
-\texttt{PLAST\_FLOC=F} versus \texttt{PLAST\_FLOC=T}; they also enter
-different compiled/runtime sediment branches.
+\item \textbf{Setup order.} In \texttt{fvcom.F:643--651},
+\texttt{SETUP\_SED} is called before \texttt{SETUP\_PLAST}.  Thus the
+sediment module is initialized first when \texttt{SEDIMENT\_MODEL=T}.
 
-\item \textbf{Transport is one combined tracer versus two split tracers.}
-Case \texttt{a} calls \texttt{adv\_scal} once on \texttt{conc}
-(\texttt{mod\_plast.F:1261--1267}).  Case \texttt{b} calls \texttt{adv\_scal}
-first on \texttt{conc\_a} and then on \texttt{conc\_d}
-(\texttt{mod\_plast.F:1166--1183}).  With
-\texttt{SOURCE\_AG\_RATE=0}, the \texttt{conc\_d} source should equal the
-combined source, but the split path still performs an extra zero-tracer pass
-for \texttt{conc\_a}.
+\item \textbf{Timestep order.} In \texttt{internal\_step.F:1092--1137},
+\texttt{ADVANCE\_SED} is called before \texttt{ADVANCE\_PLAST}.  The earlier
+offline-style block in \texttt{internal\_step.F:213--235} has the same
+ordering.  Plastic therefore sees the post-sediment state each internal step.
 
-\item \textbf{Vertical diffusion is also split.} The floc path calls
-\texttt{vdif\_scal} on \texttt{cnew\_a} and \texttt{cnew\_d}
-(\texttt{mod\_plast.F:1202--1204}); the no-floc path calls it once on
-\texttt{cnew} (\texttt{mod\_plast.F:1276--1278}).  In exact arithmetic this
-should be equivalent when \texttt{cnew\_a}=0, but it is still a checkpoint
-for roundoff, wet/dry, and halo-state differences.
+\item \textbf{Sediment dynamics.} \texttt{mod\_sed.F:859--1156} advances
+active-layer thickness, settling/deposition, erosion, bed stratigraphy/bottom
+properties, horizontal advection, FCT limiting, vertical diffusion, OBC/source
+boundary conditions, nonnegative/upper clipping, and sediment exchange.
 
-\item \textbf{Open-boundary and point-source boundary conditions are split.}
-The floc path applies OBC and point-source boundary calls separately to
-\texttt{conc\_a}/\texttt{conc\_d}
-(\texttt{mod\_plast.F:1543--1554} and
-\texttt{mod\_plast.F:1600--1605}); the no-floc path applies them once to
-\texttt{conc} (\texttt{mod\_plast.F:1563--1568} and
-\texttt{mod\_plast.F:1612--1614}).  Because \texttt{OBC\_AG\_RATE=0} and
-\texttt{SOURCE\_AG\_RATE=0}, \texttt{conc\_d} should receive the full
-boundary/source value, but this remains a leading place to compare
-post-operator mass.
+\item \textbf{Plastic dynamics.} \texttt{mod\_plast.F:914--1851} computes
+ambient density and floc rate fields, updates plastic active-layer quantities,
+deposition/erosion/update-bottom, horizontal advection, vertical diffusion,
+kinetics, OBC/source boundary conditions, clipping, MPI exchange, and final
+recombination.
 
-\item \textbf{The first MPI exchange still exchanges combined \texttt{cnew}
-in the split branch.} Before OBC handling, the floc branch exchanges
-\texttt{cnew\_a}, \texttt{cnew\_d}, and \texttt{cnew}
-(\texttt{mod\_plast.F:1513--1516}).  At that point the meaningful updated
+\item \textbf{Floc coupling to sediment.} In
+\texttt{mod\_plast.F:4619--4815}, the aggregation rate calculation reads
+\texttt{sed(ised)\%conc}, \texttt{sed(ised)\%Sd50}, and
+\texttt{sed(ised)\%Wset}.  Thus active floc interaction is explicitly tied to
+sediment size and suspended sediment concentration.  In case \texttt{b}, the
+saved output still has \texttt{mp1\_agg}=0, so the current \texttt{b} run is
+effectively a split-disaggregated/null-floc test despite executing the floc
+branch.
+\end{enumerate}
+
+\section*{Diagnosis}
+\begin{enumerate}
+\item \textbf{Sediment runtime changed domain retention.} The drop from
+\(1001.25~\mathrm{kg}\) in \texttt{v001} to \(582.41~\mathrm{kg}\) in
+\texttt{v002} shows that turning on the sediment model changes the transport
+environment and/or open-boundary export enough to strongly affect domain MP1
+mass.  This is not necessarily a plastic mass sink by itself; the plotted
+domain mass does not include cumulative open-boundary export.
+
+\item \textbf{BBL roughness is now demoted.} The
+\texttt{generic\_sediment\_a\_no\_bbl.inp} test suggests that changing the
+sediment BBL switches is not enough to recover the old case-\texttt{a} mass.
+Bottom-stress feedback should remain documented, but it is no longer the
+leading explanation for the present discrepancy.
+
+\item \textbf{The no-floc plastic path itself changes when sediment is
+compiled/enabled.} In \texttt{mod\_plast.F}, the update enters a
+\texttt{\#if defined(SEDIMENT)} block before checking
+\texttt{floc\_intract}.  Even with \texttt{PLAST\_FLOC=F}, case \texttt{a}
+uses the sediment-build no-floc branch around
+\texttt{mod\_plast.F:1248--1278}.  Therefore an old case-\texttt{a} run built
+without \texttt{-DSEDIMENT} is not a strict code-path match to a sediment-build
+case-\texttt{a} run.
+
+\item \textbf{River forcing/source updating is a high-priority suspect.} The
+river update call changes at compile time.  With plastic only,
+\texttt{bcond\_gcn.F:645} calls \texttt{UPDATE\_RIVERS} with
+\texttt{PLAST=PLASTDIS}; with sediment and plastic,
+\texttt{bcond\_gcn.F:648} calls it with both \texttt{SED=SEDDIS} and
+\texttt{PLAST=PLASTDIS}.  The plastic variables are still read in
+\texttt{mod\_force.F:13096--13115}, but this optional-argument path should be
+verified directly by logging the instantaneous and cumulative river MP input,
+approximately \(\sum_r Q_r C_{\mathrm{plast},r}\Delta t\).
+
+\item \textbf{\texttt{ADVANCE\_SED} side effects remain possible.}
+\texttt{ADVANCE\_SED} is called before \texttt{ADVANCE\_PLAST} each internal
+step.  With \texttt{MORPHO\_MODEL=F}, bathymetry should not be updated, and
+with BBL disabled the roughness route is weakened.  The next isolation is to
+keep \texttt{SEDIMENT\_MODEL=T} but set \texttt{SED\_START} to a very large
+value so sediment is initialized but \texttt{ADVANCE\_SED} returns before
+doing transport.  If plastic mass still follows the sediment-on result, the
+cause is setup/forcing/compile-path; if it returns toward the old result, the
+cause is inside \texttt{ADVANCE\_SED} or its side effects.
+
+\item \textbf{The remaining case-\texttt{a}/case-\texttt{b} gap is still a
+split-path problem after sediment state is matched.} With
+\texttt{SEDIMENT\_MODEL=T} in both cases, the remaining
+\(210.56~\mathrm{kg}\) deficit in case \texttt{b} points back to differences
+between combined \texttt{conc} and split \texttt{conc\_d} operators.
+
+\item \textbf{The leading code-level suspects are water-column transport and
+boundary handling.} With cap counts zero and no sampled bed storage in
+case \texttt{b}, the likely divergence occurs during split
+\texttt{adv\_scal}, split \texttt{vdif\_scal}, split
+\texttt{bcond\_scal\_OBC}, split \texttt{bcond\_scal\_PTsource}, or
+nonnegative clipping before output.
+
+\item \textbf{The split branch still has one awkward exchange point.} Before
+OBC handling, the floc branch exchanges \texttt{cnew\_a},
+\texttt{cnew\_d}, and combined \texttt{cnew}
+(\texttt{mod\_plast.F:1513--1516}).  At that point the meaningful prognostic
 state is split; combined \texttt{cnew} is not rebuilt until
-\texttt{mod\_plast.F:1715--1716}.  This may be harmless if no code consumes
-combined \texttt{cnew} in between, but it is not strictly symmetric and should
-be cleaned or checkpointed.
+\texttt{mod\_plast.F:1715--1716}.  This may be harmless, but it is not
+strictly symmetric with the no-floc path.
 
-\item \textbf{Final exchange/recombination was improved but should remain an
-invariant check.} The split path now clips \texttt{cnew\_a}/\texttt{cnew\_d},
-exchanges those same arrays, then rebuilds
-\(\texttt{conc}=\texttt{cnew}=\texttt{conc\_a}+\texttt{conc\_d}\)
-(\texttt{mod\_plast.F:1657--1716}).  The mass recovery in case
-\texttt{b} supports this as a real previous asymmetry.
+\item \textbf{Final recombination improved the budget but did not solve it.}
+The patched final order now clips and exchanges \texttt{cnew\_a}/
+\texttt{cnew\_d}, then rebuilds
+\(\texttt{conc}=\texttt{cnew}=\texttt{conc\_a}+\texttt{conc\_d}\).  The mass
+recovery after that change confirms it addressed a real asymmetry, but the
+remaining deficit shows another divergence exists upstream.
 
-\item \textbf{Bed/surface update is algebraically different but inactive for
-case \texttt{b}.} The floc branch splits erosion and surface input by
-\texttt{ratio\_bottom}/\texttt{ratio\_surface} and applies a 10x growth limiter
-(\texttt{mod\_plast.F:2383--2440}); the no-floc branch adds directly to
-\texttt{conc} (\texttt{mod\_plast.F:2451--2461}).  However, the extracted
-case-\texttt{a}/\texttt{b} bed mass and sampled dep/ero integrals are zero, so
-this is not the leading explanation for the current \texttt{a}/\texttt{b}
-gap.
+\item \textbf{Direct floc-rate reads from sediment should be bypassed in a
+true null-kinetics test.} The aggregation/disaggregation routines read
+\texttt{sed(ised)\%conc}, \texttt{Sd50}, and \texttt{Wset}.  For a strict
+``kinetics off'' symmetry test, \(\lambda_a=\lambda_d=0\) should be imposed
+without calling sediment-dependent rate calculations at all.  That removes any
+possible sediment-size or sediment-concentration dependence from case
+\texttt{b}.
+
+\item \textbf{Case \texttt{c} is not a pure conservation comparator.} Case
+\texttt{c} retains much more total mass than case \texttt{b}, but it has active
+split components and bed storage.  It is useful for full floc behavior, while
+case \texttt{b} remains the sharper test for whether split \texttt{conc\_d}
+can reproduce combined \texttt{conc}.
 \end{enumerate}
 
-\section*{Updated Hypotheses}
+\section*{Focused Next Checks}
 \begin{enumerate}
-\item \textbf{Leading hypothesis: transport/OBC/source operator asymmetry.}
-Since the cap is inactive and bed exchange is zero for case \texttt{b}, the
-remaining mass deficit most likely appears between \texttt{adv\_scal},
-\texttt{vdif\_scal}, \texttt{bcond\_scal\_OBC}, \texttt{bcond\_scal\_PTsource},
-and the final nonnegative clamp/exchange.  A checkpoint budget after each of
-these operators should show the first divergence.
+\item Use \texttt{v002} as the new baseline for future plots and memo updates.
+The old \texttt{v001} comparison should only be used to document the
+sediment-runtime effect.
 
-\item \textbf{Configuration asymmetry must be isolated.} A true symmetry test
-should compare no-floc and null-floc runs with the same
-\texttt{SEDIMENT\_MODEL} setting.  The cleanest next pair is an
-\texttt{a\_sedT} case using \texttt{PLAST\_FLOC=F} and
-\texttt{SEDIMENT\_MODEL=T} versus the current null-floc case \texttt{b}.
+\item Run a sediment-initialized but sediment-inactive case-\texttt{a}
+diagnostic by setting \texttt{SED\_START} to a value beyond the run length.
+This separates sediment setup/forcing/compile effects from the runtime
+\texttt{ADVANCE\_SED} operator.
 
-\item \textbf{Hard cap is demoted for this run.} The cap remains a real
-non-conservative code site, but current maxima and threshold counts show it is
-not active in the present 10-day outputs.
+\item Add a river-source budget log for MP1.  At each report interval, record
+instantaneous \(\sum_r Q_r C_{\mathrm{plast},r}\) and cumulative
+\(\sum_t\sum_r Q_r C_{\mathrm{plast},r}\Delta t\).  This will determine
+whether the apparent domain-mass loss is actually lower source input or
+stronger export.
 
-\item \textbf{Nonnegative clipping remains possible.} The current extraction
-tracks cap counts and negative saved mass, but it does not measure mass
-removed internally by \texttt{max(...,0)} before output.  This is still a
-plausible silent sink if the split transport path produces transient negative
-undershoots that are clipped before the saved time slice.
-
-\item \textbf{Bed-exchange and erosion/surface limiters are secondary for the
-case-\texttt{a}/\texttt{b} mismatch.} They remain important for case
-\texttt{c} and full floc interaction, but the present null-floc case
-\texttt{b} has zero final bed mass and zero sampled dep/ero exchange.
-\end{enumerate}
-
-\section*{Focused Next Test}
-\begin{enumerate}
-\item Run a matched \texttt{SEDIMENT\_MODEL=T}, \texttt{PLAST\_FLOC=F}
-baseline.  If this aligns with case \texttt{b}, the current difference is
-mostly a sediment-runtime comparison issue.  If it aligns with case
-\texttt{a}, the split path remains the cause.
-
-\item Add a short internal checkpoint diagnostic for one small run.  Record
-domain-integrated mass for \texttt{conc}, \texttt{conc\_d}, and
-\(\texttt{conc\_a}+\texttt{conc\_d}\) after: start, deposition, erosion/surface
-update, \texttt{adv\_scal}, \texttt{vdif\_scal}, OBC, point-source BC,
+\item Add a short internal checkpoint diagnostic for one small matched run.
+Record domain-integrated mass for \texttt{conc}, \texttt{conc\_d}, and
+\(\texttt{conc\_a}+\texttt{conc\_d}\) after: start, deposition, erosion/update
+bottom, \texttt{adv\_scal}, \texttt{vdif\_scal}, OBC, point-source BC,
 nonnegative clamp, MPI exchange, and recombination.
 
-\item For the same diagnostic, explicitly accumulate mass removed by
-nonnegative clipping and the hard cap.  The cap should remain zero in this
-test; any nonzero clipping loss would be immediately informative.
+\item For the null-floc case, add a temporary switch or guard so
+\(\lambda_a=\lambda_d=0\) is assigned directly and the sediment-dependent floc
+rate routines are not called.
+
+\item Explicitly accumulate mass removed by nonnegative clipping.  The hard cap
+should remain zero; any nonzero clipping loss would be immediately
+informative.
 
 \item If serial and parallel runs differ, focus on the two exchange locations:
 \texttt{mod\_plast.F:1513--1516} before OBC and
-\texttt{mod\_plast.F:1677--1716} at the final split recombination.
+\texttt{mod\_plast.F:1677--1716} at final recombination.
 \end{enumerate}
 
 \end{document}
