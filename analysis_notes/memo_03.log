@@ -1,4 +1,4 @@
-This is pdfTeX, Version 3.141592653-2.6-1.40.24 (MiKTeX 22.11.25) (preloaded format=pdflatex 2026.4.12)  30 APR 2026 10:57
+This is pdfTeX, Version 3.141592653-2.6-1.40.24 (MiKTeX 22.11.25) (preloaded format=pdflatex 2026.4.12)  1 MAY 2026 03:55
 entering extended mode
  restricted \write18 enabled.
  %&-line parsing enabled.
@@ -355,135 +355,77 @@ Package hyperref Info: Link coloring OFF on input line 12.
 \openout3 = `memo_03.out'.
 
 
-Underfull \hbox (badness 2573) in paragraph at lines 17--22
-\OT1/cmr/m/n/10.95 This memo up-dates the MP1 mass-conservation di-ag-no-sis af
--ter re-run-ning case \OT1/cmtt/m/n/10.95 a \OT1/cmr/m/n/10.95 with
+Underfull \hbox (badness 10000) in paragraph at lines 26--28
+\OT1/cmr/m/n/10.95 Five mass-conservation snap-shots are now pre-served un-der
  []
 
 
-Underfull \hbox (badness 10000) in paragraph at lines 24--26
-\OT1/cmr/m/n/10.95 Three mass-conservation snap-shots are now pre-served un-der
-
- []
-
-
-Underfull \hbox (badness 10000) in paragraph at lines 35--36
+Underfull \hbox (badness 10000) in paragraph at lines 37--38
 []\OT1/cmr/m/n/10 old com-par-i-son with case \OT1/cmtt/m/n/10 a \OT1/cmr/m/n/1
 0 us-ing
  []
 
+LaTeX Font Info:    Font shape `OT1/cmtt/bx/n' in size <14.4> not available
+(Font)              Font shape `OT1/cmtt/m/n' tried instead on input line 58.
 
-Underfull \hbox (badness 10000) in paragraph at lines 37--39
-[]\OT1/cmr/m/n/10 comparison with case \OT1/cmtt/m/n/10 a \OT1/cmr/m/n/10 us-in
-g
- []
-
-
-Underfull \hbox (badness 4242) in paragraph at lines 37--39
-\OT1/cmtt/m/n/10 SEDIMENT[]MODEL=T \OT1/cmr/m/n/10 and the orig-i-nal sed-i-
- []
+LaTeX Warning: `h' float specifier changed to `ht'.
 
 [1
 
 {C:/Users/huan111/AppData/Local/MiKTeX/fonts/map/pdftex/pdftex.map}]
-LaTeX Font Info:    Font shape `OT1/cmtt/bx/n' in size <14.4> not available
-(Font)              Font shape `OT1/cmtt/m/n' tried instead on input line 84.
-
-Underfull \hbox (badness 1107) in paragraph at lines 103--111
-\OT1/cmr/m/n/10.95 A sharper test was then pre-pared us-ing \OT1/cmtt/m/n/10.95
- generic[]sediment[]a[]inactive.inp\OT1/cmr/m/n/10.95 . This keeps
- []
-
-
-Underfull \hbox (badness 5939) in paragraph at lines 127--131
-\OT1/cmr/m/n/10.95 The cap-threshold coun-ters are zero for all cases with avai
-l-able coun-ters. Thus
- []
-
-[2]
-Underfull \hbox (badness 1735) in paragraph at lines 153--157
+Underfull \hbox (badness 1735) in paragraph at lines 124--127
 []\OT1/cmr/bx/n/10.95 Timestep or-der. \OT1/cmr/m/n/10.95 In \OT1/cmtt/m/n/10.9
 5 internal[]step.F:1092--1137\OT1/cmr/m/n/10.95 , \OT1/cmtt/m/n/10.95 ADVANCE[]
 SED \OT1/cmr/m/n/10.95 is called be-fore
  []
 
 
-Underfull \hbox (badness 2512) in paragraph at lines 158--162
-[]\OT1/cmr/bx/n/10.95 Sediment dy-nam-ics. \OT1/cmtt/m/n/10.95 mod[]sed.F:859--
-1156 \OT1/cmr/m/n/10.95 ad-vances active-layer thick-ness, set-
+Underfull \hbox (badness 2221) in paragraph at lines 133--138
+[]\OT1/cmr/bx/n/10.95 Bypassed block in the cur-rent build. \OT1/cmr/m/n/10.95 
+In \OT1/cmtt/m/n/10.95 mod[]sed.F:1016--1033\OT1/cmr/m/n/10.95 , the sed-i-
+ []
+
+[2] [3]
+Underfull \hbox (badness 1281) in paragraph at lines 232--239
+[]\OT1/cmr/m/n/10.95 For b/c, rec-on-cile the sed-i-ment post-clipping ex-chang
+e path. Af-ter sed-i-ment clip-
  []
 
 
-Underfull \hbox (badness 1137) in paragraph at lines 195--202
-\OT1/cmr/m/n/10.95 In \OT1/cmtt/m/n/10.95 mod[]plast.F\OT1/cmr/m/n/10.95 , the 
-up-date en-ters a \OT1/cmtt/m/n/10.95 #if defined(SEDIMENT) \OT1/cmr/m/n/10.95 
-block be-fore check-ing
- []
-
-
-Underfull \hbox (badness 1275) in paragraph at lines 203--213
-[]\OT1/cmr/bx/n/10.95 River forc-ing/source up-dat-ing is now de-moted. \OT1/cm
-r/m/n/10.95 The river up-date call still
- []
-
-[3]
-LaTeX Font Info:    Font shape `OT1/cmtt/bx/n' in size <10.95> not available
-(Font)              Font shape `OT1/cmtt/m/n' tried instead on input line 215.
-
-Underfull \hbox (badness 2689) in paragraph at lines 223--231
-[]\OT1/cmr/bx/n/10.95 Shared scalar-transport state is a con-crete mech-a-nism 
-to test. \OT1/cmr/m/n/10.95 In-side
- []
-
-
-Underfull \hbox (badness 1107) in paragraph at lines 232--240
-[]\OT1/cmr/bx/n/10.95 A sed-i-ment ex-change mis-match can af-fect floc cases. 
-\OT1/cmr/m/n/10.95 Af-ter sed-i-ment clip-
- []
-
-
-Underfull \hbox (badness 1590) in paragraph at lines 232--240
+Underfull \hbox (badness 1590) in paragraph at lines 232--239
 \OT1/cmr/m/n/10.95 ping, \OT1/cmtt/m/n/10.95 mod[]sed.F:1099--1104 \OT1/cmr/m/n
 /10.95 up-dates \OT1/cmtt/m/n/10.95 sed(i)%conc\OT1/cmr/m/n/10.95 ; the fol-low
 -ing MPI ex-change at
  []
 
-[4] [5]
-Underfull \hbox (badness 10000) in paragraph at lines 342--345
-[]\OT1/cmr/m/n/10.95 If se-rial and par-al-lel runs dif-fer, fo-cus on the two 
-ex-change lo-ca-tions:
- []
-
-[6] (memo_03.aux)
+[4] (memo_03.aux)
 Package rerunfilecheck Info: File `memo_03.out' has not changed.
 (rerunfilecheck)             Checksum: D41D8CD98F00B204E9800998ECF8427E;0.
  ) 
 Here is how much of TeX's memory you used:
- 8612 strings out of 475284
- 137628 string characters out of 2773161
- 498159 words of memory out of 3000000
- 29974 multiletter control sequences out of 15000+600000
+ 8599 strings out of 475284
+ 137524 string characters out of 2773161
+ 500156 words of memory out of 3000000
+ 29973 multiletter control sequences out of 15000+600000
  476316 words of font info for 55 fonts, out of 8000000 for 9000
  1141 hyphenation exceptions out of 8191
- 72i,11n,77p,255b,527s stack positions out of 10000i,1000n,20000p,200000b,80000s
+ 72i,11n,77p,255b,533s stack positions out of 10000i,1000n,20000p,200000b,80000s
 <C:/Users/huan111/AppData/Local/Programs/MiKTeX/fonts/type1/public/amsfonts/c
 m/cmbx10.pfb><C:/Users/huan111/AppData/Local/Programs/MiKTeX/fonts/type1/public
 /amsfonts/cm/cmbx12.pfb><C:/Users/huan111/AppData/Local/Programs/MiKTeX/fonts/t
-ype1/public/amsfonts/cm/cmex10.pfb><C:/Users/huan111/AppData/Local/Programs/MiK
-TeX/fonts/type1/public/amsfonts/cm/cmmi10.pfb><C:/Users/huan111/AppData/Local/P
-rograms/MiKTeX/fonts/type1/public/amsfonts/cm/cmmi8.pfb><C:/Users/huan111/AppDa
-ta/Local/Programs/MiKTeX/fonts/type1/public/amsfonts/cm/cmr10.pfb><C:/Users/hua
-n111/AppData/Local/Programs/MiKTeX/fonts/type1/public/amsfonts/cm/cmr12.pfb><C:
-/Users/huan111/AppData/Local/Programs/MiKTeX/fonts/type1/public/amsfonts/cm/cmr
-17.pfb><C:/Users/huan111/AppData/Local/Programs/MiKTeX/fonts/type1/public/amsfo
-nts/cm/cmr8.pfb><C:/Users/huan111/AppData/Local/Programs/MiKTeX/fonts/type1/pub
-lic/amsfonts/cm/cmsy10.pfb><C:/Users/huan111/AppData/Local/Programs/MiKTeX/font
-s/type1/public/amsfonts/cm/cmsy8.pfb><C:/Users/huan111/AppData/Local/Programs/M
-iKTeX/fonts/type1/public/amsfonts/cm/cmtt10.pfb><C:/Users/huan111/AppData/Local
-/Programs/MiKTeX/fonts/type1/public/amsfonts/cm/cmtt12.pfb>
-Output written on memo_03.pdf (6 pages, 193423 bytes).
+ype1/public/amsfonts/cm/cmmi10.pfb><C:/Users/huan111/AppData/Local/Programs/MiK
+TeX/fonts/type1/public/amsfonts/cm/cmr10.pfb><C:/Users/huan111/AppData/Local/Pr
+ograms/MiKTeX/fonts/type1/public/amsfonts/cm/cmr12.pfb><C:/Users/huan111/AppDat
+a/Local/Programs/MiKTeX/fonts/type1/public/amsfonts/cm/cmr17.pfb><C:/Users/huan
+111/AppData/Local/Programs/MiKTeX/fonts/type1/public/amsfonts/cm/cmr8.pfb><C:/U
+sers/huan111/AppData/Local/Programs/MiKTeX/fonts/type1/public/amsfonts/cm/cmsy1
+0.pfb><C:/Users/huan111/AppData/Local/Programs/MiKTeX/fonts/type1/public/amsfon
+ts/cm/cmsy8.pfb><C:/Users/huan111/AppData/Local/Programs/MiKTeX/fonts/type1/pub
+lic/amsfonts/cm/cmtt10.pfb><C:/Users/huan111/AppData/Local/Programs/MiKTeX/font
+s/type1/public/amsfonts/cm/cmtt12.pfb>
+Output written on memo_03.pdf (4 pages, 158623 bytes).
 PDF statistics:
- 144 PDF objects out of 1000 (max. 8388607)
- 45 named destinations out of 1000 (max. 500000)
+ 112 PDF objects out of 1000 (max. 8388607)
+ 33 named destinations out of 1000 (max. 500000)
  1 words of extra memory for PDF output out of 10000 (max. 10000000)
 

@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-04-24T12:19:37",
+  "generated_at": "2026-05-01T03:55:19",
   "input_inventory": [
     {
       "name": "generic_plastic.inp",
@@ -27,9 +27,24 @@
       "modified": "2026-02-03T21:26:41"
     },
     {
+      "name": "generic_sediment_a_inactive.inp",
+      "size_bytes": 9974,
+      "modified": "2026-04-30T08:41:44"
+    },
+    {
+      "name": "generic_sediment_a_no_bbl.inp",
+      "size_bytes": 9815,
+      "modified": "2026-04-29T16:00:03"
+    },
+    {
       "name": "generic_sediment_c.inp",
       "size_bytes": 9717,
       "modified": "2026-02-05T16:10:32"
+    },
+    {
+      "name": "mp_sediment_a_no_adv.inp",
+      "size_bytes": 9896,
+      "modified": "2026-04-30T12:27:33"
     },
     {
       "name": "waterPACT_cor.dat",
@@ -113,13 +128,13 @@
         "startup_ts_type": "observed",
         "startup_t_vals": 20.0,
         "startup_s_vals": 30.0,
-        "restart_first_out": "days=58490.0",
-        "netcdf_first_out": "days=58490.0",
+        "restart_first_out": "days=58485.0",
+        "netcdf_first_out": "days=58485.0",
         "output_dir": "../OUTPUT_a",
-        "sediment_model": false,
+        "sediment_model": true,
         "plastic_model": true,
         "plastic_model_file": "generic_plastic_a.inp",
-        "sediment_model_file": "generic_sediment.inp"
+        "sediment_model_file": "mp_sediment_a_no_adv.inp"
       },
       "plastic": {
         "file": "generic_plastic_a.inp",
@@ -136,17 +151,19 @@
         "source_ag_rate": 0.0
       },
       "sediment": {
-        "file": null,
-        "sed_on": false,
-        "sed_name": null,
-        "sed_type": null,
-        "sed_sd50_mm": null,
-        "sed_wset_mms": null,
-        "sed_tau_e_nm2": null,
-        "sed_tau_d_nm2": null,
-        "sed_inf_bed": null
+        "file": "mp_sediment_a_no_adv.inp",
+        "sed_on": true,
+        "sed_name": "coarse_sand_1",
+        "sed_type": "non-cohesive",
+        "sed_sd50_mm": 0.1,
+        "sed_wset_mms": 3.0,
+        "sed_tau_e_nm2": 0.1,
+        "sed_tau_d_nm2": 0.1,
+        "sed_inf_bed": true
       },
-      "output_files": []
+      "output_files": [
+        "mp1_mass_budget_a.mat"
+      ]
     },
     "b": {
       "case_id": "b",
@@ -169,7 +186,7 @@
         "sediment_model": true,
         "plastic_model": true,
         "plastic_model_file": "generic_plastic_b.inp",
-        "sediment_model_file": "generic_sediment.inp"
+        "sediment_model_file": "mp_sediment_a_no_adv.inp"
       },
       "plastic": {
         "file": "generic_plastic_b.inp",
@@ -186,7 +203,7 @@
         "source_ag_rate": 0.0
       },
       "sediment": {
-        "file": "generic_sediment.inp",
+        "file": "mp_sediment_a_no_adv.inp",
         "sed_on": true,
         "sed_name": "coarse_sand_1",
         "sed_type": "non-cohesive",
@@ -196,7 +213,9 @@
         "sed_tau_d_nm2": 0.1,
         "sed_inf_bed": true
       },
-      "output_files": []
+      "output_files": [
+        "mp1_mass_budget_b.mat"
+      ]
     },
     "c": {
       "case_id": "c",
@@ -219,7 +238,7 @@
         "sediment_model": true,
         "plastic_model": true,
         "plastic_model_file": "generic_plastic_c.inp",
-        "sediment_model_file": "generic_sediment_c.inp"
+        "sediment_model_file": "mp_sediment_a_no_adv.inp"
       },
       "plastic": {
         "file": "generic_plastic_c.inp",
@@ -236,24 +255,24 @@
         "source_ag_rate": 0.0
       },
       "sediment": {
-        "file": "generic_sediment_c.inp",
+        "file": "mp_sediment_a_no_adv.inp",
         "sed_on": true,
         "sed_name": "coarse_sand_1",
         "sed_type": "non-cohesive",
-        "sed_sd50_mm": 1.0,
+        "sed_sd50_mm": 0.1,
         "sed_wset_mms": 3.0,
         "sed_tau_e_nm2": 0.1,
         "sed_tau_d_nm2": 0.1,
         "sed_inf_bed": true
       },
-      "output_files": []
+      "output_files": [
+        "mp1_mass_budget_c.mat"
+      ]
     }
   },
   "scenario_notes": [
     "Case a is the no-floc baseline, while case b turns PLAST_FLOC on.",
-    "Cases b and c use different plastic filenames, but the file contents are identical.",
-    "Case c changes only the sediment grain size from 0.1 mm to 1.0 mm relative to case b.",
-    "OUTPUT_a, OUTPUT_b, and OUTPUT_c are currently empty, so the original scenario intent must be inferred from inputs alone."
+    "Cases b and c use different plastic filenames, but the file contents are identical."
   ],
   "river_entries": [
     {

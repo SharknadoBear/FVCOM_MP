@@ -1013,19 +1013,24 @@ End Subroutine Setup_Sed
   
 
 !J. Ge for tracer advection
-      call adv_scal_backward(sed(i)%conc,sed0(i)%conc,sed2(i)%conc, &
-                      sed(i)%cnew, &
-                      d_cdis,      &
-                      sed(i)%cdis(1:numqbc), &
-                      d_cflx,      &
-                      sed(i)%cflx, &
-                      DTsed ,sed_source)
+!      call adv_scal_backward(sed(i)%conc,sed0(i)%conc,sed2(i)%conc, &
+!                      sed(i)%cnew, &
+!                      d_cdis,      &
+!                      sed(i)%cdis(1:numqbc), &
+!                      d_cflx,      &
+!                      sed(i)%cflx, &
+!                      DTsed ,sed_source)
 
 !J. Ge for tracer advection
 
 
+      ! Diagnostic test: bypass horizontal sediment advection and the FCT
+      ! limiter while keeping the rest of Advance_Sed active.
+      sed(i)%cnew = sed(i)%conc
+      sed(i)%cflx = 0.0_sp
+
       !Apply FCT limiter for stability - prevents overshoots/undershoots
-      call fct_sed(sed(i)%conc,sed(i)%cnew)
+!      call fct_sed(sed(i)%conc,sed(i)%cnew)
   
     end do
   else
