@@ -14,17 +14,17 @@
 \maketitle
 
 \section*{Purpose}
-This memo updates the MP1 mass-conservation diagnosis after the new case
-\texttt{a} test in which sediment runtime was active from the beginning of the
-run, but the sediment horizontal \texttt{adv\_scal\_backward} and
-\texttt{fct\_sed} block in \texttt{mod\_sed.F} was bypassed.  The new result is
-the strongest evidence so far: case \texttt{a} returns to the old
-\texttt{v001}/\texttt{v004}-like mass behavior when that sediment advection/FCT
-stage is closed.
+This memo updates the MP1 mass-conservation diagnosis after rerunning cases
+\texttt{b} and \texttt{c} with the same sediment input now used by case
+\texttt{a}.  The present build still bypasses the sediment horizontal
+\texttt{adv\_scal\_backward} and \texttt{fct\_sed} block in \texttt{mod\_sed.F}.
+The new result is a clean plastic split-path test: cases \texttt{b} and
+\texttt{c} now evolve almost identically, track case \texttt{a} for about three
+days, and then diverge together onto an oscillatory, lower-mass branch.
 
 \section*{Archived Analysis Outputs}
-Five mass-conservation snapshots are now preserved under
-\texttt{FVCOM\_MP\_test\_run/PYTHON/output/mass\_conservation/archive/}.
+Six mass-conservation snapshots are now preserved under
+\path{FVCOM_MP_test_run/PYTHON/output/mass_conservation/archive/}.
 
 \begin{table}[h]
 \centering
@@ -47,12 +47,15 @@ delayed beyond the run \\
 \texttt{v005} & \texttt{v005\_sed\_no\_adv\_fct} &
 case \texttt{a} with active sediment runtime, but sediment
 \texttt{adv\_scal\_backward}/\texttt{fct\_sed} bypassed \\
+\texttt{v006} & \texttt{v006\_b\_c\_mirrored\_sediment} &
+cases \texttt{b}/\texttt{c} rerun with the same sediment input as case
+\texttt{a}; all cases use \texttt{mp\_sediment\_a\_no\_adv.inp} \\
 \bottomrule
 \end{tabular}
 \end{table}
 
 The live mass-conservation output folder has also been regenerated from the
-\texttt{v005} state.  The archived files include \texttt{mass\_summary.csv},
+\texttt{v006} state.  The archived files include \texttt{mass\_summary.csv},
 \texttt{mass\_timeseries\_long.csv}, and all current comparison plots.
 
 \section*{Case-\texttt{a} Evidence Trail}
@@ -87,7 +90,7 @@ it keeps active sediment runtime and starts sediment immediately
 advection/FCT block.  Case \texttt{a} then recovers to \(994.20~\mathrm{kg}\),
 within \(7.05~\mathrm{kg}\) of the old \texttt{v001}/\texttt{v004} level.
 
-\section*{Current \texttt{v005} Output Summary}
+\section*{Current \texttt{v006} Output Summary}
 \begin{table}[h]
 \centering
 \small
@@ -98,23 +101,57 @@ Final total (kg) \\
 \midrule
 \texttt{a} & rerun with sediment advection/FCT bypassed & 994.20 & 0.00 &
 994.20 \\
-\texttt{b} & previous output; not yet rerun with mirrored sediment input &
-371.85 & 0.00 & 371.85 \\
-\texttt{c} & previous output; not yet rerun with mirrored sediment input &
-504.26 & 24.29 & 528.55 \\
+\texttt{b} & mirrored sediment input, \texttt{PLAST\_FLOC=T} & 347.56 & 0.00 &
+347.56 \\
+\texttt{c} & mirrored sediment input, \texttt{PLAST\_FLOC=T} & 348.52 & 0.00 &
+348.52 \\
 \bottomrule
 \end{tabular}
 \end{table}
 
 The hard concentration cap remains inactive.  The largest saved MP1
-concentration in the \texttt{v005} live analysis is
+concentration in the \texttt{v006} live analysis is
 \(4.37\times10^{-4}~\mathrm{kg\,m^{-3}}\) for case \texttt{a},
-\(6.98\times10^{-3}~\mathrm{kg\,m^{-3}}\) for case \texttt{b}, and
-\(1.45\times10^{-2}~\mathrm{kg\,m^{-3}}\) for case \texttt{c}; all cap counters
-are zero.  The saved split fields are also internally consistent:
-\(\texttt{mp1\_agg}+\texttt{mp1\_dis}\approx\texttt{mp1}\), with maximum total
-split-minus-combined mismatch of zero for case \texttt{b} and
-\(1.83\times10^{-7}~\mathrm{kg}\) for case \texttt{c}.
+\(2.38\times10^{-4}~\mathrm{kg\,m^{-3}}\) for case \texttt{b}, and
+\(2.38\times10^{-4}~\mathrm{kg\,m^{-3}}\) for case \texttt{c}; all cap counters
+are zero.  The saved split fields are exactly internally consistent in the new
+outputs: \(\texttt{mp1\_agg}+\texttt{mp1\_dis}=\texttt{mp1}\) to the saved
+precision for both \texttt{b} and \texttt{c}.  The aggregated component remains
+zero throughout both runs; all water-column mass is in the disaggregated
+\texttt{mp1\_dis} component.
+
+\section*{\texttt{v006} Divergence Timing}
+Cases \texttt{b} and \texttt{c} are now effectively the same experiment.  Their
+maximum total-mass separation over the full run is only \(1.68~\mathrm{kg}\),
+and their final totals differ by \(0.96~\mathrm{kg}\).  This confirms that the
+old \texttt{b}/\texttt{c} separation was driven by the different sediment files,
+not by a separate plastic behavior.
+
+\begin{table}[h]
+\centering
+\small
+\begin{tabular}{rrrrr}
+\toprule
+Comparison day & Case \texttt{a} (kg) & Case \texttt{b} (kg) &
+Case \texttt{c} (kg) & \texttt{a}-\texttt{b} (kg) \\
+\midrule
+1.00 & 20.13 & 20.13 & 20.13 & 0.00 \\
+2.00 & 73.25 & 73.25 & 73.25 & 0.00 \\
+3.00 & 147.34 & 141.87 & 141.87 & 5.48 \\
+4.00 & 237.41 & 181.30 & 181.32 & 56.11 \\
+5.00 & 371.85 & 222.70 & 223.07 & 149.15 \\
+9.96 & 994.20 & 347.56 & 348.52 & 646.64 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+The first nontrivial \texttt{a}/\texttt{b} split occurs just before day 3:
+\(|a-b|>1~\mathrm{kg}\) at day \(2.957031\), \(|a-b|>5~\mathrm{kg}\) at day
+\(3.000000\), and \(|a-b|>50~\mathrm{kg}\) at day \(4.000000\).  After day 3,
+case \texttt{a} has no sign changes in its step-to-step total-mass tendency,
+while cases \texttt{b} and \texttt{c} each have 28 sign changes.  Thus the new
+failure mode is not a smooth offset; it is an oscillatory split-branch response
+that starts once the plume has evolved for about three days.
 
 \section*{Relevant Call Trace}
 \begin{enumerate}
@@ -143,6 +180,28 @@ while \texttt{sed(i)\%cnew = sed(i)\%conc} and
 although the current test only proves that the sediment
 \texttt{adv\_scal\_backward}/\texttt{fct\_sed} stage is implicated, not which
 line inside the stage is responsible.
+
+\item \textbf{Split plastic branch.} In the \texttt{PLAST\_FLOC=T} path,
+\texttt{mod\_plast.F:1166--1186} transports \texttt{conc\_a} and
+\texttt{conc\_d} with separate \texttt{adv\_scal} calls.  It then applies
+vertical diffusion separately at \texttt{mod\_plast.F:1203--1204}, applies
+split OBC/source handling at \texttt{mod\_plast.F:1543--1605}, clamps
+\texttt{cnew\_a}/\texttt{cnew\_d} at \texttt{mod\_plast.F:1657--1660}, and
+finally recombines at \texttt{mod\_plast.F:1709--1716}.  In the new
+\texttt{v006} runs, \texttt{SOURCE\_AG\_RATE=0} and
+\texttt{OBC\_AG\_RATE=0}, so this branch should reduce to a disaggregated-only
+version of the no-floc case.
+
+\item \textbf{Symmetry check.} At the direct call-signature level,
+\texttt{conc\_d} is close to the no-floc \texttt{conc} path:
+\texttt{adv\_scal(conc\_d,cnew\_d,\ldots)} uses
+\(\texttt{cdis}\times(1-\texttt{Arate\_s0})\), which equals
+\texttt{cdis} when \texttt{SOURCE\_AG\_RATE=0}; the matching no-floc call is
+\texttt{adv\_scal(conc,cnew,\ldots)} at \texttt{mod\_plast.F:1261--1267}.
+However, the full operator path is not directly symmetric because the split
+branch still executes floc-rate setup, split deposition/erosion code, separate
+zero-field aggregate transport, split OBC/source calls, split clamping, split
+MPI exchanges, and a later recombination step.
 \end{enumerate}
 
 \section*{Diagnosis}
@@ -163,79 +222,97 @@ sediment immediately, and keeps the non-advection parts of
 \texttt{v001}/\texttt{v004}-like case-\texttt{a} result.  That makes this block
 the leading source of the unwanted sediment/plastic interaction.
 
-\item \textbf{The effect is probably not intended floc physics.} Case
-\texttt{a} has \texttt{PLAST\_FLOC=F}; no-floc plastic should not depend on
-sediment concentration, sediment size, or sediment settling velocity through the
-floc-rate routines.  A no-floc response to sediment horizontal transport points
-toward shared scalar-transport state, altered boundary/source handling, or
-another side effect left behind before \texttt{Advance\_Plast} runs.
+\item \textbf{\texttt{v006} moves the active problem to the plastic split
+path.} With the sediment input now mirrored, cases \texttt{b} and \texttt{c}
+are nearly identical.  The old \texttt{b}/\texttt{c} difference was therefore a
+sediment-input difference, not a separate plastic mechanism.  The remaining
+large \texttt{a} versus \texttt{b}/\texttt{c} split is now controlled by
+\texttt{PLAST\_FLOC}: case \texttt{a} uses the combined no-floc concentration,
+while cases \texttt{b}/\texttt{c} use split \texttt{conc\_a}/\texttt{conc\_d}
+fields.
+
+\item \textbf{The effect is not active aggregation, bed exchange, or clipping.}
+In \texttt{v006}, the aggregated component is zero throughout cases
+\texttt{b}/\texttt{c}, the bed mass is zero, deposition/erosion exchange is
+zero, split-minus-combined mismatch is zero, and cap counters are zero.  The
+oscillatory mass loss therefore occurs while the floc branch is effectively a
+disaggregated-only split transport problem.
+
+\item \textbf{\texttt{conc\_d} is not numerically identical to \texttt{conc}.}
+The physics expectation is correct: with \texttt{conc\_a=0} and no kinetic
+transfer, \texttt{conc\_d} should behave like the no-floc combined
+\texttt{conc}.  The implementation does not enforce that equivalence.  In
+case \texttt{b}, \texttt{conc\_d} passes through the split-only path, including
+floc-rate calculations at \texttt{mod\_plast.F:1021--1044}, split settling at
+\texttt{mod\_plast.F:2729--2820}, split erosion/surface-flux updates at
+\texttt{mod\_plast.F:2383--2440}, split OBC/source calls at
+\texttt{mod\_plast.F:1543--1605}, and split clamp/exchange/recombine logic at
+\texttt{mod\_plast.F:1657--1716}.  Case \texttt{a} uses the combined branches
+for the same conceptual operators.  Therefore the \texttt{v006} difference can
+arise from numerical/operator asymmetry even when aggregate physics is inactive.
+
+\item \textbf{The day-3 timing points toward a transport or boundary trigger.}
+Cases \texttt{a}, \texttt{b}, and \texttt{c} are indistinguishable through the
+first two days and begin separating just before day 3.  After that, the no-floc
+case increases smoothly, while the split cases alternate positive and negative
+mass tendencies.  The most likely interpretation is that the split branch begins
+interacting differently with a transport feature, open-boundary condition,
+wet/dry edge, or strong-gradient region once the plastic plume reaches it.
 
 \item \textbf{BBL roughness stays demoted.} The \texttt{v003} BBL-off run was
 only \(9.13~\mathrm{kg}\) lower than the \texttt{v002} BBL-on run, while both
 were more than \(410~\mathrm{kg}\) lower than \texttt{v005}.  BBL roughness is
 not the leading explanation for the present case-\texttt{a} mass shift.
 
-\item \textbf{The present-stage model should keep this sediment block closed.}
-For the next plastic tests, the safest controlled configuration is the current
-compiled source with the sediment \texttt{adv\_scal\_backward}/
-\texttt{fct\_sed} block disabled in \texttt{mod\_sed.F}, while using identical
-sediment input for cases \texttt{a}, \texttt{b}, and \texttt{c}.  Then the
-remaining differences should be driven by the plastic configuration rather than
-by different sediment input settings.
-
-\item \textbf{The b/c outputs must be regenerated before interpreting the
-remaining case differences.} The current \texttt{v005} live folder contains a
-new case-\texttt{a} result, but cases \texttt{b} and \texttt{c} are still the
-previous outputs.  They should be rerun with the same disabled sediment
-advection/FCT build and the same sediment input now used by case \texttt{a}.
+\item \textbf{Primary hypothetical cause.} The strongest current hypothesis is
+that the \texttt{PLAST\_FLOC=T} split path is not algebraically equivalent to
+the no-floc combined path when \texttt{SOURCE\_AG\_RATE=0},
+\texttt{OBC\_AG\_RATE=0}, and aggregation remains zero.  The problem may be in
+one of five nearby places: floc-rate setup before the normal update, split
+deposition/erosion handling, the extra zero-field \texttt{adv\_scal}/
+\texttt{vdif\_scal} calls for \texttt{conc\_a}, split OBC/source handling, or
+the final clamp/exchange/recombine order.  The oscillation makes the OBC/source
+or halo-exchange stages especially plausible, but this still needs an
+operator-by-operator mass checkpoint.
 \end{enumerate}
 
-\section*{Next Test Setup}
-For the next run series, cases \texttt{b} and \texttt{c} should mirror the
-case-\texttt{a} sediment setup exactly:
+\section*{Suggested Next Move}
+Keep \texttt{v006} as the clean comparison baseline and do one short,
+high-instrumentation rerun around the divergence window.  The goal is to find
+the first operator where \texttt{b} departs from \texttt{a}.
+
 \begin{enumerate}
-\item Keep the current \texttt{mod\_sed.F} build in which the sediment
-\texttt{adv\_scal\_backward}/\texttt{fct\_sed} block is bypassed.
-\item Use \texttt{SEDIMENT\_MODEL=T} for all three cases.
-\item Point cases \texttt{a}, \texttt{b}, and \texttt{c} to the same sediment
-input file, \texttt{mp\_sediment\_a\_no\_adv.inp}.  This file starts sediment
-at \texttt{SED\_START = 1}, keeps suspended sediment active, and keeps BBL
-roughness closures off.
-\item Leave the plastic input files case-specific:
-\texttt{generic\_plastic\_a.inp}, \texttt{generic\_plastic\_b.inp}, and
-\texttt{generic\_plastic\_c.inp}.  This preserves the plastic behavior being
-tested while removing sediment-input differences.
-\end{enumerate}
+\item \textbf{Add stage mass checkpoints for case \texttt{a} and case
+\texttt{b}.} For days \(2.75\)--\(3.25\), write domain-integrated MP1 mass after
+each plastic operator: start of \texttt{Advance\_Plast}, after deposition,
+after erosion/update-bottom, after horizontal advection, after vertical
+diffusion, after OBC, after point-source BC, after nonnegative clamp, after MPI
+exchange, and after recombination.  For \texttt{b}, log \texttt{conc\_a},
+\texttt{conc\_d}, and \(\texttt{conc\_a}+\texttt{conc\_d}\) separately.
 
-\section*{Focused Follow-Up Checks}
-\begin{enumerate}
-\item Rerun cases \texttt{b} and \texttt{c} with the mirrored sediment input and
-the present disabled sediment advection/FCT build.  Archive those outputs as the
-next version before changing code again.
+\item \textbf{Run a null-split equivalence test.} Add a temporary diagnostic
+switch so \texttt{PLAST\_FLOC=T} allocates and outputs split fields, but skips
+all aggregate work and transports only \texttt{conc\_d} through the exact
+combined no-floc operator.  This means no floc-rate setup, no zero
+\texttt{conc\_a} transport, no split OBC/source calls, no split cap, and no
+split exchange/recombine order.  If this matches case \texttt{a}, the remaining
+problem is inside the split operator sequence rather than setup or output.
 
-\item If a narrower code diagnosis is needed, split the current bypass into two
-tests: re-enable \texttt{adv\_scal\_backward} with \texttt{fct\_sed} still
-disabled, then test \texttt{fct\_sed} separately.  This separates transport
-side effects from limiter side effects.
+\item \textbf{Bisect the split operator sequence.} Starting from the current
+\texttt{b} setup, test these small changes one at a time: skip the zero
+\texttt{conc\_a} \texttt{adv\_scal}/\texttt{vdif\_scal} calls when aggregate
+rates are zero; apply OBC/source only to \texttt{conc\_d}; then force the
+floc-branch final clamp/exchange/recombine order to mimic the no-floc branch as
+closely as possible.
 
-\item Add a targeted shared-state checksum immediately before and after
-\texttt{Advance\_Sed}, before \texttt{Advance\_Plast}.  Track
-\texttt{PFPXB}, \texttt{PFPYB}, \texttt{D}, \texttt{DT}, \texttt{DZ},
-\texttt{KH}, \texttt{U}, \texttt{V}, boundary/source flux summaries, and the
-shear-stress array passed to plastic.
+\item \textbf{Add an open-boundary/source budget.} Accumulate MP1 source input
+and open-boundary export for the combined field in case \texttt{a} and for
+\(\texttt{conc\_a}+\texttt{conc\_d}\) in case \texttt{b}.  If the day-3 split
+coincides with a jump in export, the OBC path becomes the leading target.
 
-\item Run a save/restore test around sediment \texttt{adv\_scal\_backward} for
-candidate shared arrays.  If restoring one array recovers the
-\texttt{v001}/\texttt{v004}/\texttt{v005}-like mass curve, the coupling
-mechanism is identified directly.
-
-\item For b/c, reconcile the sediment post-clipping exchange path.  After
-sediment clipping, \texttt{mod\_sed.F:1099--1104} updates
-\texttt{sed(i)\%conc}; the following MPI exchange at
-\texttt{mod\_sed.F:1117--1122} exchanges \texttt{sed(i)\%cnew}, not the clipped
-\texttt{sed(i)\%conc}.  That mismatch is a plausible source of rank-boundary
-noise in floc cases because floc-rate calculations read
-\texttt{sed(ised)\%conc}.
+\item \textbf{Check serial versus parallel behavior.} If the oscillation changes
+with processor count, focus immediately on the split exchange calls around
+\texttt{mod\_plast.F:1512--1516} and \texttt{mod\_plast.F:1679--1716}.
 \end{enumerate}
 
 \end{document}

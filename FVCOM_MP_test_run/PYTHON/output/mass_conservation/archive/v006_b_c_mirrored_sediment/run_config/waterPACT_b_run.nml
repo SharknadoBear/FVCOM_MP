@@ -1,0 +1,400 @@
+ !================================================================!
+   _______  _     _  _______  _______  _______  ______     _____  
+  (_______)(_)   (_)(_______)(_______)(_______)(_____ \   (_____) 
+   _____    _     _  _        _     _  _  _  _  _____) )  _  __ _ 
+  |  ___)  | |   | || |      | |   | || ||_|| |(_____ (  | |/ /| |
+  | |       \ \ / / | |_____ | |___| || |   | | _____) )_|   /_| |
+  |_|        \___/   \______) \_____/ |_|   |_|(______/(_)\_____/ 
+  -- Beta Release
+ !================================================================!
+ !                                                                !
+ !========DOMAIN DECOMPOSITION USING: METIS 4.0.1 ================!
+ !======Copyright 1998, Regents of University of Minnesota========!
+ !                                                                !
+
+
+ &NML_CASE
+ CASE_TITLE      = 'waterPACT'
+ TIMEZONE        = 'none',
+ DATE_FORMAT     = 'YMD'
+ START_DATE      = 'days=58485.0'
+ END_DATE        = 'days=58848.0'
+ /
+
+ &NML_STARTUP
+ STARTUP_TYPE      = 'coldstart'
+ STARTUP_FILE      = 'waterPACT_DRE_its.nc'
+ STARTUP_UV_TYPE   = 'default'
+ STARTUP_TURB_TYPE = 'default'
+ STARTUP_TS_TYPE   = 'observed'
+ STARTUP_T_VALS    = 20.0
+ STARTUP_S_VALS    = 30.0
+ STARTUP_U_VALS    = 0.0
+ STARTUP_V_VALS    = 0.0  
+ STARTUP_DMAX      = -2000.0
+ /
+
+ &NML_IO
+ INPUT_DIR       =  '../INPUT'
+ OUTPUT_DIR      =  '../OUTPUT_b'
+ IREPORT         =  7200,
+ VISIT_ALL_VARS  = F,
+ WAIT_FOR_VISIT  = F,
+ USE_MPI_IO_MODE = F
+ /
+
+ &NML_INTEGRATION
+ EXTSTEP_SECONDS =  0.4
+ ISPLIT          =  5
+ IRAMP           =  216000
+ MIN_DEPTH       =  0.05
+ STATIC_SSH_ADJ  =  0.0
+ /
+
+ &NML_RESTART
+ RST_ON  = T,
+ RST_FIRST_OUT      = 'days=58485.0'
+ RST_OUT_INTERVAL   = 'days=10.0'
+ RST_OUTPUT_STACK   =  0
+ /
+
+ &NML_NETCDF
+ NC_ON   = T,
+ NC_FIRST_OUT    = 'days=58485.0',
+ NC_OUT_INTERVAL = 'seconds=3600.0',
+ NC_OUTPUT_STACK = 240,
+ NC_GRID_METRICS = T,
+ NC_FILE_DATE    = F,
+ NC_VELOCITY     = T,
+ NC_SALT_TEMP    = T,
+ NC_TURBULENCE   = T,
+ NC_AVERAGE_VEL  = F,
+ NC_VERTICAL_VEL = F,
+ NC_WIND_VEL     = F,
+ NC_WIND_STRESS  = F,
+ NC_EVAP_PRECIP  = F,
+ NC_SURFACE_HEAT = F,
+ NC_GROUNDWATER  = F,
+ NC_BIO = F,
+ NC_WQM = F,
+ NC_VORTICITY = F
+ /
+
+ &NML_NETCDF_SURFACE
+ NCSF_ON = F,
+ NCSF_FIRST_OUT  = 'days=0'  ,
+ NCSF_OUT_INTERVAL       = 'days= 10',
+ NCSF_OUTPUT_STACK       =   0,
+ NCSF_SUBDOMAIN_FILES    = FVCOM,
+ NCSF_GRID_METRICS       = F,
+ NCSF_FILE_DATE  = F,
+ NCSF_VELOCITY   = F,
+ NCSF_SALT_TEMP  = F,
+ NCSF_TURBULENCE = F,
+ NCSF_WIND_VEL   = F,
+ NCSF_WIND_STRESS  = F,
+ NCSF_EVAP_PRECIP   = F,
+ NCSF_SURFACE_HEAT  = F
+ /
+
+
+ &NML_NETCDF_AV
+ NCAV_ON = F,
+ NCAV_FIRST_OUT  = 'days=0'
+ NCAV_OUT_INTERVAL       =  'days=100',
+ NCAV_OUTPUT_STACK       =           0,
+ NCAV_SUBDOMAIN_FILES    = FVCOM,
+ NCAV_GRID_METRICS       = F,
+ NCAV_FILE_DATE  = F,
+ NCAV_VELOCITY   = F,
+ NCAV_SALT_TEMP  = F,
+ NCAV_TURBULENCE = F,
+ NCAV_AVERAGE_VEL        = F,
+ NCAV_VERTICAL_VEL       = F,
+ NCAV_WIND_VEL   = F,
+ NCAV_WIND_STRESS        = F,
+ NCAV_EVAP_PRECIP        = F,
+ NCAV_SURFACE_HEAT       = F,
+ NCAV_GROUNDWATER        = F,
+ NCAV_BIO        = F,
+ NCAV_WQM        = F,
+ NCAV_VORTICITY  = F
+ /
+
+ &NML_SURFACE_FORCING
+ WIND_ON = T,
+ WIND_TYPE       = 'speed'                                                           ,
+ WIND_FILE       = 'waterPACT_DRE_wind_2019.nc' ,
+ WIND_KIND       = 'variable'                        ,
+ WIND_X  =  0.0000000E+00,
+ WIND_Y  =  0.0000000E+00,
+ HEATING_ON      = F ,
+ HEATING_TYPE    = 'flux'                                                                ,
+ HEATING_KIND    = 'variable'                  ,
+ HEATING_FILE    = 'dummy_cfsr.nc'                                                                      ,
+ HEATING_LONGWAVE_LENGTHSCALE    =   1.40000000000000     ,
+ HEATING_LONGWAVE_PERCTAGE       =  0.780000000000000     ,
+ HEATING_SHORTWAVE_LENGTHSCALE   =   6.30000000000000     ,
+ HEATING_RADIATION       =  0.00000000000000,
+ HEATING_NETFLUX =  0.0000000000000,
+ PRECIPITATION_ON        = F,
+ PRECIPITATION_KIND      = 'variable'            ,
+ PRECIPITATION_FILE      = 'dummy_cfsr.nc'                                                                      ,
+ PRECIPITATION_PRC       =  0.000000000E+000,
+ PRECIPITATION_EVP       =  0.000000000E+000,
+ AIRPRESSURE_ON  = T,
+ AIRPRESSURE_KIND        = 'variable',
+ AIRPRESSURE_FILE        = 'waterPACT_DRE_pres_2019.nc' ,
+ AIRPRESSURE_VALUE       =  0.0 ,
+ WAVE_ON = F,
+ WAVE_FILE = 'wave.nc',
+ WAVE_KIND = 'variable',
+ WAVE_HEIGHT     = 0.00000,
+ WAVE_LENGTH     = 0.00000,
+ WAVE_DIRECTION  = 0.00000,
+ WAVE_PERIOD     = 0.00000,
+ WAVE_PER_BOT    = 0.00000,
+ WAVE_UB_BOT     = 0.00000
+ /
+ 
+ &NML_HEATING_CALCULATED
+ HEATING_CALCULATE_ON   = F,
+ HEATING_CALCULATE_TYPE = 'flux',
+ HEATING_CALCULATE_FILE = 'none',
+ HEATING_CALCULATE_KIND = 'constant',
+ ZUU                    = 10,
+ ZTT                    = 2,
+ ZQQ                    = 2,
+ AIR_TEMPERATURE        = 10.0,
+ RELATIVE_HUMIDITY      = 0.0,
+ SURFACE_PRESSURE       = 1000.0,                    
+ LONGWAVE_RADIATION     = 10.0,                  
+ SHORTWAVE_RADIATION    = 100.0,
+ HEATING_LONGWAVE_PERCTAGE_IN_HEATFLUX = 0.78,
+ HEATING_LONGWAVE_LENGTHSCALE_IN_HEATFLUX = 1.4,
+ HEATING_SHORTWAVE_LENGTHSCALE_IN_HEATFLUX= 6.3
+ /
+
+ &NML_PHYSICS
+ HORIZONTAL_MIXING_TYPE          = 'closure'
+ HORIZONTAL_MIXING_KIND          = 'constant'
+ HORIZONTAL_MIXING_COEFFICIENT   = 0.0
+ HORIZONTAL_PRANDTL_NUMBER       = 1.0
+ VERTICAL_MIXING_TYPE            = 'closure'
+ VERTICAL_MIXING_COEFFICIENT     = 1.0E-5,
+ VERTICAL_PRANDTL_NUMBER         = 0.5
+ BOTTOM_ROUGHNESS_MINIMUM        =  0.0025
+ BOTTOM_ROUGHNESS_LENGTHSCALE    =  0.005
+ FLUME_BOTTOM                    = F
+ FLUME_DRAG_COEF                 = 0.12
+ BOTTOM_ROUGHNESS_KIND           = 'constant'
+ BOTTOM_ROUGHNESS_TYPE           = 'orig'
+ CONVECTIVE_OVERTURNING          = T,
+ SCALAR_POSITIVITY_CONTROL       = T,
+ BAROTROPIC                      = F,
+ BAROCLINIC_PRESSURE_GRADIENT    = 'sigma levels'
+ SEA_WATER_DENSITY_FUNCTION      = 'dens2'
+ RECALCULATE_RHO_MEAN            = F
+ INTERVAL_RHO_MEAN               = 'seconds=21600.0' 
+ TEMPERATURE_ACTIVE              = F,
+ SALINITY_ACTIVE                 = T,
+ SURFACE_WAVE_MIXING             = F,
+ BACKWARD_ADVECTION      = F,
+ BACKWARD_STEP   =          -1,
+ ADCOR_ON        = T,
+ EQUATOR_BETA_PLANE      = F,
+ NOFLUX_BOT_CONDITION    = T,
+ WETTING_DRYING_ON               = T
+ /
+
+ &NML_RIVER_TYPE
+ RIVER_NUMBER    =           9,
+ RIVER_TS_SETTING        = 'calculated',
+ RIVER_INFLOW_LOCATION   = 'node',  !!'edge'
+ RIVER_INFO_FILE   = 'waterPACT_riv_floc_MP.nml'
+ RIVER_KIND        = 'variable',
+ /
+
+
+ &NML_OPEN_BOUNDARY_CONTROL
+ OBC_ON                      = T,
+ OBC_NODE_LIST_FILE          = 'waterPACT_obc.dat'
+ OBC_ELEVATION_FORCING_ON    = T,
+ OBC_ELEVATION_FILE          = 'waterPACT_obc_2019.nc'
+ OBC_TS_TYPE                 = 3
+ OBC_TEMP_NUDGING            = F,
+ OBC_TEMP_FILE               = 'waterPACT_tsobc_2019.nc'
+ OBC_TEMP_NUDGING_TIMESCALE  =  0.0000000E+00,
+ OBC_SALT_NUDGING            = T,
+ OBC_SALT_FILE               = 'waterPACT_tsobc_2019.nc'
+ OBC_SALT_NUDGING_TIMESCALE  =  0.5,
+ OBC_MEANFLOW                = F,
+ OBC_MEANFLOW_FILE           = 'waterPACT_obc.nc',
+ OBC_TIDEOUT_INITIAL     =           0,
+ OBC_TIDEOUT_INTERVAL    =           0,
+ OBC_LONGSHORE_FLOW_ON   = F,
+ OBC_LONGSHORE_FLOW_FILE = blank2_run.nml_lsf.dat                                                          ,
+ OBC_DEPTH_CONTROL_ON    = T
+/
+
+ &NML_GRID_COORDINATES
+ GRID_FILE       = 'waterPACT_grd.dat'
+ GRID_FILE_UNITS = 'degrees'
+ PROJECTION_REFERENCE  = 'none'
+ SIGMA_LEVELS_FILE     = 'waterPACT_sig.dat'
+ DEPTH_FILE      = 'waterPACT_dep.dat'
+ CORIOLIS_FILE   = 'waterPACT_cor.dat'
+ SPONGE_FILE     = 'waterPACT_spg.dat'
+ /
+
+ &NML_GROUNDWATER
+ GROUNDWATER_ON             = F,
+ GROUNDWATER_FLOW  = 0.0,
+ GROUNDWATER_FILE           = 'none'
+ /
+
+ &NML_LAG
+ LAG_PARTICLES_ON        = F,
+ LAG_START_FILE   = 'none'
+ LAG_OUT_FILE     = 'none'
+ LAG_RESTART_FILE = 'none'
+ LAG_OUT_INTERVAL =  0.000000000000000E+000,
+ LAG_SCAL_CHOICE  = 'none'
+ /
+
+ &NML_ADDITIONAL_MODELS
+ DATA_ASSIMILATION       = F,
+ BIOLOGICAL_MODEL        = F,
+ STARTUP_BIO_TYPE        = 'observed'    ,
+ BIOLOGICAL_MODEL_FILE   = 'none',
+ STARTUP_BIO_TYPE        = 'observed'                        ,
+ SEDIMENT_MODEL          = T,
+ SEDIMENT_MODEL_FILE     = 'mp_sediment_a_no_adv.inp',
+ SEDIMENT_PARAMETER_TYPE = 'uniform',
+ SEDIMENT_PARAMETER_FILE = 'none',
+ BEDFLAG_TYPE = 'constant',
+ BEDFLAG_FILE = 'none',
+ PLASTIC_MODEL			 = T,
+ PLASTIC_MODEL_FILE		 = 'generic_plastic_b.inp'
+ AMBIENT_DENSITY_TYPE    = 'variable',
+ AMBIENT_DENSITY_FILE    = 'none',
+ BOTTOM_FEATURES_TYPE	 = 'constant',
+ BOTTOM_FEATURES_FILE	 = 'none',
+ INIT_PLAST_MASS_TYPE	 = 'constant',
+ INIT_PLAST_MASS_FILE 	 = 'none',
+ INIT_PLAST_CONC_TYPE    = 'constant',
+ INIT_PLAST_CONC_FILE    = 'none',
+ INIT_TOXIN_MASS_TYPE    = 'constant',
+ INIT_TOXIN_MASS_FILE    = 'none',
+ INIT_TOXIN_CONC_TYPE    = 'constant',
+ INIT_TOXIN_CONC_FILE    = 'none',
+ ICE_MODEL       = F,
+ ICE_FORCING_FILE        = 'ICO_wind_wrf_cfsr.nc'     ,
+ ICE_FORCING_KIND        = 'variable'          ,
+ ICE_SEA_LEVEL_PRESSURE  =  0.000E+000,
+ ICE_AIR_TEMP    =  0.000000E+000,
+ ICE_SPEC_HUMIDITY       =  0.0000E+000,
+ ICE_SHORTWAVE   =  0.0000E+000,
+ ICE_CLOUD_COVER =  0.0000E+000,
+ ICE_LONGWAVE_TYPE = 'PW'
+ ICING_MODEL     = F,
+ ICING_FORCING_FILE      = 'none'         ,
+ ICING_FORCING_KIND      = 'variable'      ,
+ ICING_AIR_TEMP  =  0.000000E+000,
+ ICING_WSPD      =  0.000000E+000,
+! MHK_MODEL   = F
+ /
+
+ &NML_ICE
+ KSTRENGTH       =           1,
+ KRDG_PARTIC     =           1,
+ KRDG_REDIST     =           1,
+ ALBICEV =  0.7800000    ,
+ ALBICEI =  0.3600000    ,
+ ALBSNOWV        =  0.9800000    ,
+ ALBSNOWI        =  0.7000000    ,
+ KITD    =           1,
+ KCATBOUND       =           1,
+ I0VIS   =  0.7000000    ,
+ FLOEDIAM        =   300.0000
+ /
+
+
+
+ &NML_PROBES
+ PROBES_ON = F,
+ PROBES_NUMBER   =           0,
+ PROBES_FILE     = 'none'
+ /
+
+ &NML_STATION_TIMESERIES
+ OUT_STATION_TIMESERIES_ON       = F,
+ STATION_FILE    = 'none'                   ,
+ LOCATION_TYPE   = 'node',
+ OUT_ELEVATION   = F,
+ OUT_VELOCITY_3D = F,
+ OUT_VELOCITY_2D = F,
+ OUT_WIND_VELOCITY       = F,
+ OUT_SALT_TEMP   = F,
+ OUT_INTERVAL    = 'days= 0.0'        
+ /
+
+ &NML_NCNEST
+ NCNEST_ON = F
+ NCNEST_BLOCKSIZE= 120
+ NCNEST_NODE_FILES= 'test_ICO.dat'
+ /
+ 
+ &NML_NCNEST_WAVE
+ NCNEST_ON_WAVE  = F,
+ NCNEST_TYPE_WAVE     = 'spectral density'
+ NCNEST_BLOCKSIZE_WAVE   =          60,
+ NCNEST_NODE_FILES_WAVE  = 'PNW_nesting_node.dat'                                                           
+ NCNEST_OUT_INTERVAL_WAVE = 'cycle=60'
+ /
+
+ &NML_BOUNDSCHK
+ BOUNDSCHK_ON    = F,
+ CHK_INTERVAL    = 0,
+ VELOC_MAG_MAX   =  0.0000000E+00,
+ ZETA_MAG_MAX    =  0.0000000E+00,
+ TEMP_MAX        =  0.0000000E+00,
+ TEMP_MIN        =  0.0000000E+00,
+ SALT_MAX        =  0.0000000E+00,
+ SALT_MIN        =  0.0000000E+00
+ /
+
+ &NML_SEMI
+ IFCETA  =  0.5500000    ,
+ BEDF    =   1.000000    ,
+ KSTAGE_UV       =           1,
+ KSTAGE_TE       =           1,
+ KSTAGE_TS       =           1,
+ MSTG    = slow 
+ /
+
+ &NML_NESTING
+ NESTING_ON      = F,
+ NESTING_TYPE    = '1'
+ NESTING_BLOCKSIZE       =          10,
+ NESTING_FILE_NAME       = ICO_nesting.nc                                                                
+ /
+
+ &NML_NESTING_WAVE
+ NESTING_ON_WAVE = F,
+ NESTING_TYPE_WAVE       = 'wave parameters'                                         ,
+ NESTING_BLOCKSIZE_WAVE  =          10,
+ NESTING_FILE_NAME_WAVE  = waterPACT_obc.nc     
+ /
+
+ &NML_WAVE_SPARSE_TIMESERIES
+ OUT_WAVE_SPARSE_TIMESERIES_ON   = F,
+ SPARSE_DISTANCE =   1000.000    ,
+ OUT_WIND_VELOCITY_SPARSE        = F,
+ OUT_SIG_WAVE_HEIGHT_SPARSE      = F,
+ OUT_REL_PEAK_PERIOD_SPARSE      = F,
+ OUT_WAVE_DIRECTION_SPARSE       = F,
+ OUT_ENERGY_SPECTRUM_SPARSE      = F,
+ OUT_WAVE_PARTITION_SPARSE       = F,
+ OUT_INTERVAL_SPARSE    = 'days=10'
+ /
