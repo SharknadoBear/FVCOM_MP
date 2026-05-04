@@ -405,6 +405,8 @@ Module Mod_Plast
 #if defined (SEDIMENT)
 	logical  :: floc_intract = .false.
 #endif
+	logical  :: PLAST_mass_check = .false.   ! enable in-run mass-conservation CSV output
+	integer, parameter :: mass_check_unit = 77  ! Fortran I/O unit for mass-check CSV
 	integer  :: nplast
 	integer  :: n_report
 	integer  :: Nobc
@@ -600,6 +602,21 @@ Subroutine Setup_PLAST(fname,Nin,Nin_gl,N_plast,N_plast_Max,Plast_Names, &
 		call report_PLAST_setup
 
 	!----------------------------------------------------------------
+	! open mass-conservation checkpoint CSV (master process only)
+	!----------------------------------------------------------------
+	if(PLAST_mass_check .and. msr)then
+		open(unit=mass_check_unit, &
+		     file=trim(input_dir)//"/"//trim(casename)//"_mp_mass_check.csv", &
+		     status='replace', action='write')
+		write(mass_check_unit,'(A)') &
+		  'iint,T_days,checkpoint,iplast,' // &
+		  'wc_a_kg,wc_d_kg,wc_tot_kg,' // &
+		  'bed_a_kg,bed_d_kg,bed_tot_kg,grand_total_kg'
+		if(msr) write(*,*) 'PLAST_MASS_CHECK: CSV opened -> ' // &
+		    trim(input_dir)//"/"//trim(casename)//"_mp_mass_check.csv"
+	end if
+
+	!----------------------------------------------------------------
 	! convert parameters to MKS unit system 
 	!----------------------------------------------------------------
 		call convert_PLAST_params 
@@ -697,6 +714,9 @@ Subroutine Read_PLAST_Params
   !read floc-interactive control switch
   Call Get_Val(floc_intract,plastfile,'PLAST_FLOC',line=linenum,echo=.false.)
 # endif
+
+  !read in-run mass-conservation checkpoint switch
+  Call Get_Val(PLAST_mass_check,plastfile,'PLAST_MASS_CHECK',line=linenum,echo=.false.)
 
   !read lab leaching control switch
   Call Get_Val(plast_lab_leaching,plastfile,'PLAST_LAB_LEACHING',line=linenum,echo=.false.)
@@ -1085,16 +1105,43 @@ Subroutine Advance_plast(DTin,Tin,taub_in,s_in,t_in)
 # endif
     
   !calculated depositional flux from settling (settle flux function is called here)
-  
+
+# if defined (SEDIMENT)
+  if(floc_intract) then
+    do iplast=1,nplast
+      call Write_Mass_Checkpoint('CP0_start',iplast, &
+           plast(iplast)%conc_a,plast(iplast)%conc_d, &
+           plast(iplast)%mass_a,plast(iplast)%mass_d)
+    end do
+  end if
+# endif
   call calc_deposition
   
   ! (Removed CONC_TRACK after deposition logging)
 
+# if defined (SEDIMENT)
+  if(floc_intract) then
+    do iplast=1,nplast
+      call Write_Mass_Checkpoint('CP1_after_deposition',iplast, &
+           plast(iplast)%conc_a,plast(iplast)%conc_d, &
+           plast(iplast)%mass_a,plast(iplast)%mass_d)
+    end do
+  end if
+# endif
   !calculate erosive flux (resuspension function is called here)
   call calc_erosion
   
   ! (Removed CONC_TRACK after erosion logging)
 
+# if defined (SEDIMENT)
+  if(floc_intract) then
+    do iplast=1,nplast
+      call Write_Mass_Checkpoint('CP2_after_erosion',iplast, &
+           plast(iplast)%conc_a,plast(iplast)%conc_d, &
+           plast(iplast)%mass_a,plast(iplast)%mass_d)
+    end do
+  end if
+# endif
   !calculate infiltration and blockage
   if (PLAST_infil) then
 
@@ -1143,7 +1190,15 @@ Subroutine Advance_plast(DTin,Tin,taub_in,s_in,t_in)
   call update_bottom
 
 # if defined (SEDIMENT)
-  
+
+  if(floc_intract) then
+    do iplast=1,nplast
+      call Write_Mass_Checkpoint('CP3_after_update_bottom',iplast, &
+           plast(iplast)%conc_a,plast(iplast)%conc_d, &
+           plast(iplast)%mass_a,plast(iplast)%mass_d)
+    end do
+  end if
+
   !------------------------------------------------------
   !3D Advection of Plastic Concentration
   !------------------------------------------------------
@@ -1196,12 +1251,24 @@ if (floc_intract) then
 
   endif 
 
+  do iplast=1,nplast
+    call Write_Mass_Checkpoint('CP4_after_advection',iplast, &
+         plast(iplast)%cnew_a,plast(iplast)%cnew_d, &
+         plast(iplast)%mass_a,plast(iplast)%mass_d)
+  end do
+
   !------------------------------------------------------
   ! Vertical Diffusion of Plastic Concentrations
   !------------------------------------------------------
   do iplast=1,nplast
     call vdif_scal(plast(iplast)%cnew_a,DTplast)
 	call vdif_scal(plast(iplast)%cnew_d,DTplast) 
+  end do
+
+  do iplast=1,nplast
+    call Write_Mass_Checkpoint('CP5_after_vdif',iplast, &
+         plast(iplast)%cnew_a,plast(iplast)%cnew_d, &
+         plast(iplast)%mass_a,plast(iplast)%mass_d)
   end do
 
   !------------------------------------------------------
@@ -1235,12 +1302,24 @@ if (floc_intract) then
 
   end do
 
+  do iplast=1,nplast
+    call Write_Mass_Checkpoint('CP6_after_kinetics',iplast, &
+         plast(iplast)%cnew_a,plast(iplast)%cnew_d, &
+         plast(iplast)%mass_a,plast(iplast)%mass_d)
+  end do
+
   !------------------------------------------------------
   ! Upper bound limiter for stability (similar to sediment module)
   !------------------------------------------------------
   do iplast=1,nplast
 		where (plast(iplast)%cnew_a > 100.0) plast(iplast)%cnew_a = 100.0
 		where (plast(iplast)%cnew_d > 100.0) plast(iplast)%cnew_d = 100.0
+  end do
+
+  do iplast=1,nplast
+    call Write_Mass_Checkpoint('CP7_after_upper_clamp',iplast, &
+         plast(iplast)%cnew_a,plast(iplast)%cnew_d, &
+         plast(iplast)%mass_a,plast(iplast)%mass_d)
   end do
 
 else
@@ -1554,6 +1633,12 @@ endif
                            temp) 
 	   enddo
 
+	   do iplast=1,nplast
+	     call Write_Mass_Checkpoint('CP8_after_OBC',iplast, &
+	          plast(iplast)%cnew_a,plast(iplast)%cnew_d, &
+	          plast(iplast)%mass_a,plast(iplast)%mass_d)
+	   end do
+
 	else
 
 	   if(PLAST_ramp == 0) PLAST_ramp = 1
@@ -1603,6 +1688,12 @@ endif
 			call bcond_scal_PTsource(plast(iplast)%conc_d, &
                                plast(iplast)%cnew_d, &
                                plast(iplast)%cdis*(1.0-Arate_s0))
+		end do
+
+		do iplast=1,nplast
+		  call Write_Mass_Checkpoint('CP9_after_PTsource',iplast, &
+		       plast(iplast)%cnew_a,plast(iplast)%cnew_d, &
+		       plast(iplast)%mass_a,plast(iplast)%mass_d)
 		end do
 	
 	else
@@ -1659,6 +1750,11 @@ endif
 		plast(iplast)%cnew_a = max(plast(iplast)%cnew_a,0.0_sp)
 		plast(iplast)%cnew_d = max(plast(iplast)%cnew_d,0.0_sp)
 	end do
+	do iplast=1,nplast
+	  call Write_Mass_Checkpoint('CP10_after_neg_clamp',iplast, &
+	       plast(iplast)%cnew_a,plast(iplast)%cnew_d, &
+	       plast(iplast)%mass_a,plast(iplast)%mass_d)
+	end do
   else
 	do iplast=1,nplast
 		plast(iplast)%conc = max(plast(iplast)%cnew,0.0)
@@ -1703,6 +1799,16 @@ endif
   end if
 # endif
 
+# if defined (SEDIMENT)
+  if(floc_intract) then
+    do iplast=1,nplast
+      call Write_Mass_Checkpoint('CP11_after_MPI',iplast, &
+           plast(iplast)%cnew_a,plast(iplast)%cnew_d, &
+           plast(iplast)%mass_a,plast(iplast)%mass_d)
+    end do
+  end if
+# endif
+
   !------------------------------------------------------
   ! Computation of combined concentration
   !------------------------------------------------------
@@ -1714,6 +1820,11 @@ endif
 		                     max(plast(iplast)%mass_d,0.0_sp)
 		plast(iplast)%conc = plast(iplast)%conc_a + plast(iplast)%conc_d
 		plast(iplast)%cnew = plast(iplast)%conc
+	end do
+	do iplast=1,nplast
+	  call Write_Mass_Checkpoint('CP12_end',iplast, &
+	       plast(iplast)%conc_a,plast(iplast)%conc_d, &
+	       plast(iplast)%mass_a,plast(iplast)%mass_d)
 	end do
   end if
 
@@ -5062,5 +5173,99 @@ Subroutine Vdif_Scal_Sed(f,deltat,diff_rate)
 End Subroutine Vdif_Scal_Sed
 
 # endif
-   
+
+!==========================================================================
+! Write_Mass_Checkpoint
+!
+! Compute domain-integrated mass at a labeled stage in Advance_Plast and
+! write one CSV row per plastic class to the mass-check file.
+!
+! Formula matches the MATLAB offline budget in extract_mp1_mass_budget_a.m:
+!   water mass = sum_{i=1..m, k=1..kbm1} conc(i,k) * ART1(i) * D(i) * DZ(i,k)
+!   bed   mass = sum_{i=1..m}            mass(i)   * ART1(i)   (all nodes)
+!
+! Call pattern inside Advance_Plast:
+!   do iplast=1,nplast
+!     call Write_Mass_Checkpoint('CP0_start', iplast,
+!                                plast(iplast)%conc_a, plast(iplast)%conc_d,
+!                                plast(iplast)%mass_a, plast(iplast)%mass_d)
+!   end do
+!
+! Only fires when PLAST_mass_check=T AND mod(PLAST_its, n_report)==0.
+! All CSV I/O is done by the master process (msr) after MPI_REDUCE.
+!==========================================================================
+Subroutine Write_Mass_Checkpoint(label, iplast_idx, c_a, c_d, m_a, m_d)
+
+  Use All_Vars, only : ART1, D, DZ
+  Use Control,  only : msr, par, iint, mpi_fvcom_group
+  Use Lims,     only : m, mt, kbm1, kb, msrid
+
+# if defined (MULTIPROCESSOR)
+  Use Mod_Par
+# endif
+
+  Implicit None
+
+  character(len=*),  intent(in) :: label
+  integer,           intent(in) :: iplast_idx
+  real(sp), intent(in) :: c_a(0:mt, kb)   ! aggregated concentration (or zeros when inactive)
+  real(sp), intent(in) :: c_d(0:mt, kb)   ! disaggregated concentration
+  real(sp), intent(in) :: m_a(0:mt)       ! aggregated bed mass [kg m^-2]
+  real(sp), intent(in) :: m_d(0:mt)       ! disaggregated bed mass [kg m^-2]
+
+  integer  :: i, k, ierr
+  real(dp) :: wc_a, wc_d, bed_a, bed_d
+  real(dp) :: wc_a_g, wc_d_g, bed_a_g, bed_d_g
+  real(dp) :: grand
+
+  ! Guard: skip if checkpoint output disabled or not a reporting step
+  if(.not. PLAST_mass_check) return
+  if(mod(PLAST_its, n_report) /= 0) return
+
+  ! ---- Compute local partial sums ----
+  wc_a = 0.0_dp
+  wc_d = 0.0_dp
+  do k = 1, kbm1
+    do i = 1, m
+      wc_a = wc_a + dble(c_a(i,k)) * dble(ART1(i)) * dble(D(i)) * dble(DZ(i,k))
+      wc_d = wc_d + dble(c_d(i,k)) * dble(ART1(i)) * dble(D(i)) * dble(DZ(i,k))
+    end do
+  end do
+
+  bed_a = 0.0_dp
+  bed_d = 0.0_dp
+  do i = 1, m
+    bed_a = bed_a + dble(m_a(i)) * dble(ART1(i))
+    bed_d = bed_d + dble(m_d(i)) * dble(ART1(i))
+  end do
+
+  ! ---- MPI reduction to master ----
+  wc_a_g  = wc_a
+  wc_d_g  = wc_d
+  bed_a_g = bed_a
+  bed_d_g = bed_d
+
+# if defined (MULTIPROCESSOR)
+  if(par) then
+    call MPI_REDUCE(wc_a,  wc_a_g,  1, MPI_DP, MPI_SUM, MSRID-1, MPI_FVCOM_GROUP, ierr)
+    call MPI_REDUCE(wc_d,  wc_d_g,  1, MPI_DP, MPI_SUM, MSRID-1, MPI_FVCOM_GROUP, ierr)
+    call MPI_REDUCE(bed_a, bed_a_g, 1, MPI_DP, MPI_SUM, MSRID-1, MPI_FVCOM_GROUP, ierr)
+    call MPI_REDUCE(bed_d, bed_d_g, 1, MPI_DP, MPI_SUM, MSRID-1, MPI_FVCOM_GROUP, ierr)
+  end if
+# endif
+
+  if(.not. msr) return
+
+  grand = (wc_a_g + wc_d_g) + (bed_a_g + bed_d_g)
+
+  write(mass_check_unit, 200) &
+    iint, T_model, trim(adjustl(label)), iplast_idx, &
+    wc_a_g, wc_d_g, wc_a_g+wc_d_g, &
+    bed_a_g, bed_d_g, bed_a_g+bed_d_g, grand
+
+  200 format(I10, ',', F14.6, ',', A, ',', I4, &
+             6(',', ES20.10), ',', ES20.10)
+
+End Subroutine Write_Mass_Checkpoint
+
 End Module Mod_Plast

@@ -1,0 +1,14 @@
+checkpoint,n_rows,nan_wc_tot,nan_bed_tot,nan_grand_total,frac_nan_grand
+CP0_start,5061,0,0,0,0.0
+CP1_after_deposition,5061,0,0,0,0.0
+CP2_after_erosion,5061,35,0,35,0.006915629322268326
+CP3_after_update_bottom,5061,35,0,35,0.006915629322268326
+CP4_after_advection,5061,35,0,35,0.006915629322268326
+CP5_after_vdif,5061,35,0,35,0.006915629322268326
+CP6_after_kinetics,5061,35,0,35,0.006915629322268326
+CP7_after_upper_clamp,5061,35,0,35,0.006915629322268326
+CP8_after_OBC,5061,35,0,35,0.006915629322268326
+CP9_after_PTsource,5061,35,0,35,0.006915629322268326
+CP10_after_neg_clamp,5061,0,0,0,0.0
+CP11_after_MPI,5061,0,0,0,0.0
+CP12_end,5061,0,0,0,0.0

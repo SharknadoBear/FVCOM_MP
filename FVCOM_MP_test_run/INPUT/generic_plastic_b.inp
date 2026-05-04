@@ -25,6 +25,9 @@
 !               compiled with sediment transport module; for the present version
 !               the toxin and infiltration part is not compatible with the 
 !               flocculation module.
+!   PLAST_MASS_CHECK: (T/F) write in-run mass-conservation checkpoints to
+!               <casename>_mp_mass_check.csv at every N_REPORT step.
+!               Only active for the PLAST_FLOC=T path. Zero cost when F.
 !   PLAST_ALPHA: plastic nudging relaxation factor
 !	PLAST_RAMP: number of iterations over which to ramp plastic nudging
 !	PLAST_START: start interval for plastic model
@@ -56,6 +59,7 @@ PLAST_ONED = F
 PLAST_NUDGE = F
 PLAST_INFIL = F
 PLAST_FLOC = T
+PLAST_MASS_CHECK = T      ! enable CP0-CP12 mass-conservation CSV output
 PLAST_ALPHA = 0.5
 PLAST_RAMP  = 1
 PLAST_START = 1

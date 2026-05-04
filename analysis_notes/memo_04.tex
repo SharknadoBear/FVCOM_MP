@@ -1,0 +1,300 @@
+\documentclass[11pt]{article}
+\usepackage[margin=1in]{geometry}
+\usepackage{booktabs}
+\usepackage{hyperref}
+\usepackage{amsmath}
+\usepackage{url}
+\usepackage{graphicx}
+\usepackage{xcolor}
+
+\title{Memo 04: In-Run Mass-Conservation Checkpoints\\
+       for the \texttt{PLAST\_FLOC} Split Path}
+\author{FVCOM-MP Delaware Test Cases}
+\date{May 4, 2026}
+
+\begin{document}
+\sloppy
+\maketitle
+
+\section*{Purpose}
+
+Memo~03 (v006) established that the \(\sim\!650~\mathrm{kg}\) mass gap between
+case~\texttt{a} and cases~\texttt{b}/\texttt{c} over ten days is driven entirely
+by the \texttt{PLAST\_FLOC=T} split path: with \texttt{SOURCE\_AG\_RATE=0} and
+zero bed mass throughout, the aggregated component remains zero and all water-column
+plastic is in \texttt{conc\_d}, yet the domain total oscillates with 28~sign changes
+after day~3 while the no-floc case~\texttt{a} grows monotonically.
+
+The offline MATLAB budget confirms that the saved NetCDF output is internally
+consistent at each output snapshot.  Therefore the mass leakage occurs somewhere
+inside \texttt{Advance\_Plast} between two consecutive output records, and is not
+visible in the NetCDF files.
+
+This memo documents the strategy for inserting \emph{in-run mass checkpoints}
+directly into \texttt{mod\_plast.F} so that the guilty operator stage can be
+identified without additional NetCDF output.
+
+\section*{Strategy: Dedicated CSV File}
+
+Writing diagnostic totals to \texttt{write(*,\ldots)} is impractical because
+the FVCOM screen log intermingles output from every module on every timestep.
+Instead, a dedicated file is opened once during \texttt{Setup\_PLAST} and written
+exclusively by the master process (\texttt{msr}).  The file is named
+\[
+  \texttt{<casename>\_mp\_mass\_check.csv}
+\]
+and is placed in the run input directory alongside the existing plastic input files.
+The overhead is gated behind a single namelist key:
+\begin{center}
+  \texttt{PLAST\_MASS\_CHECK = T}
+\end{center}
+When this key is absent or \texttt{F}, the new code has zero runtime cost: all
+checkpoint calls return immediately after the first guard test.
+
+Checkpoint rows are written at the same cadence as the existing \texttt{PLAST\_Report}
+screen statistics (every \texttt{n\_report} internal steps), keeping file sizes
+manageable while still providing sub-output-interval resolution.
+
+\section*{Formula Verification Against MATLAB Offline Budget}
+
+The MATLAB script \texttt{extract\_mp1\_mass\_budget\_a.m} computes:
+\begin{align*}
+  V_{i,k} &= \texttt{art1}(i)\;\max\!\bigl(h_i + \zeta_i,\,0\bigr)\;\Delta\sigma_{i,k}\\
+  M_\text{water} &= \sum_{i,k} \texttt{mp1}(i,k)\cdot V_{i,k}
+                  \qquad \text{(wet nodes only)}\\
+  M_\text{bed}   &= \sum_{i} \texttt{bot\_mass\_mp1}(i)\cdot\texttt{art1}(i)
+                  \qquad \text{(all nodes)}\\
+  M_\text{total} &= M_\text{water} + M_\text{bed}
+\end{align*}
+where \texttt{art1} is the node-based control-volume area, \(\Delta\sigma_{i,k}\)
+is the sigma-layer thickness fraction (\texttt{dzfrac} in MATLAB), and
+\(h_i+\zeta_i\) is the total water depth.
+
+The Fortran in-run equivalent uses identically named arrays:
+\begin{align*}
+  M_\text{water} &= \sum_{i=1}^{m}\sum_{k=1}^{kbm1}
+        c(i,k)\cdot\texttt{ART1}(i)\cdot D(i)\cdot\texttt{DZ}(i,k)\\
+  M_\text{bed}   &= \sum_{i=1}^{m} \textit{mass}(i)\cdot\texttt{ART1}(i)
+\end{align*}
+where \texttt{D}$(i) = H(i)+\texttt{EL}(i)$ is the FVCOM total depth and
+\texttt{DZ}$(i,k)$ is the sigma-layer fraction --- exactly matching
+$\Delta\sigma_{i,k}$ from MATLAB.  The bed sum uses \emph{all nodes} to match
+MATLAB's \texttt{total\_mass\_all\_bed\_kg} conservation companion.
+
+The formulas are equivalent.  The only future guard required is a
+\texttt{\#if WET\_DRY} wet-node mask for domains with drying cells; the v006
+Delaware domain has no dry nodes, so the Fortran loop over \texttt{i=1..m} is
+identical to the MATLAB wet-node filter.
+
+For the split path, the subroutine computes separate sums for \texttt{conc\_a}
+and \texttt{conc\_d} (and \texttt{mass\_a}, \texttt{mass\_d}), writing all
+components plus combined totals in each CSV row so that per-component budgets can
+be tracked alongside the grand total.
+
+\section*{Checkpoint Table}
+
+Thirteen checkpoints are inserted into the \texttt{floc\_intract=T} path of
+\texttt{Advance\_Plast}.  Checkpoints CP0--CP3 are guarded by
+\texttt{\#if defined (SEDIMENT)} and \texttt{if(floc\_intract)} at the call site;
+CP4--CP12 are already inside the relevant conditional blocks.
+
+\begin{table}[h]
+\centering
+\small
+\begin{tabular}{clp{0.26\linewidth}p{0.31\linewidth}}
+\toprule
+CP\# & Label & Arrays passed & Expected conservation \\
+\midrule
+0  & \texttt{CP0\_start}             & \texttt{conc\_a,conc\_d,mass\_a,mass\_d}  & Reference state at timestep entry \\
+1  & \texttt{CP1\_after\_deposition} & same                                      & Water $\downarrow$ + bed $\uparrow$ = const \\
+2  & \texttt{CP2\_after\_erosion}    & same                                      & Water $\uparrow$ + bed $\downarrow$ = const \\
+3  & \texttt{CP3\_after\_update\_bottom} & same                                  & Bed bookkeeping; grand total = const \\
+4  & \texttt{CP4\_after\_advection}  & \texttt{cnew\_a,cnew\_d,mass\_a,mass\_d} & \textbf{Zero water-column change} \\
+5  & \texttt{CP5\_after\_vdif}       & same                                      & \textbf{Zero change} \\
+6  & \texttt{CP6\_after\_kinetics}   & same                                      & \texttt{cnew\_a+cnew\_d} conserved \\
+7  & \texttt{CP7\_after\_upper\_clamp} & same                                    & Loss only if \texttt{>100} cap fires \\
+8  & \texttt{CP8\_after\_OBC}        & same                                      & Change = OBC flux (open domain) \\
+9  & \texttt{CP9\_after\_PTsource}   & same                                      & Change = river source \\
+10 & \texttt{CP10\_after\_neg\_clamp} & same                                     & Loss only if negatives exist \\
+11 & \texttt{CP11\_after\_MPI}       & same                                      & \textbf{Zero change} \\
+12 & \texttt{CP12\_end}              & \texttt{conc\_a,conc\_d,mass\_a,mass\_d}  & Must equal CP11 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+The CSV row format is:
+\begin{center}
+\texttt{iint, T\_days, checkpoint, iplast, wc\_a\_kg, wc\_d\_kg, wc\_tot\_kg, bed\_a\_kg, bed\_d\_kg, bed\_tot\_kg, grand\_total\_kg}
+\end{center}
+
+\section*{Code Reconstruction in \texttt{mod\_plast.F}}
+
+Four modification phases were implemented in
+\texttt{FVCOM\_source\_repo\_github/mod\_plast.F}.
+
+\begin{enumerate}
+
+\item \textbf{Module-level variables} (near line~490, after the \texttt{floc\_intract}
+flag):
+\begin{verbatim}
+  logical  :: PLAST_mass_check = .false.
+  integer, parameter :: mass_check_unit = 77
+\end{verbatim}
+
+\item \textbf{Namelist read} (\texttt{Read\_PLAST\_Params}, immediately after the
+\texttt{PLAST\_FLOC} read):
+\begin{verbatim}
+  Call Get_Val(PLAST_mass_check, plastfile,
+               'PLAST_MASS_CHECK', line=linenum, echo=.false.)
+\end{verbatim}
+
+\item \textbf{CSV file open and header} (\texttt{Setup\_PLAST}, after
+\texttt{call report\_PLAST\_setup}):
+Opens unit~77 to \texttt{<input\_dir>/<casename>\_mp\_mass\_check.csv} and
+writes the column header on the master process only.
+
+\item \textbf{Subroutine \texttt{Write\_Mass\_Checkpoint}} (new subroutine added at
+the end of the module, before \texttt{End Module Mod\_Plast}):
+Accepts one plastic class at a time via arguments
+\texttt{(label, iplast\_idx, c\_a, c\_d, m\_a, m\_d)}, computes local sums using
+the $\texttt{ART1}\cdot D\cdot\texttt{DZ}$ formula, reduces via
+\texttt{MPI\_REDUCE(MPI\_SUM)}, and writes one CSV row per class if
+\texttt{msr=.true.}  The routine returns immediately if
+\texttt{PLAST\_mass\_check=F} or if the current iteration is not a reporting
+step.
+
+\item \textbf{Thirteen call sites} in \texttt{Advance\_Plast}: CP0--CP3 wrapped in
+\texttt{\#if defined (SEDIMENT) / if(floc\_intract)} guards; CP4--CP12 placed
+inside the existing \texttt{floc\_intract} or per-stage conditional blocks.
+
+\end{enumerate}
+
+\section*{Findings: Root Causes and Fixing Suggestions}
+
+The checkpoint infrastructure was compiled and the model was run for $\sim\!4$
+days with \texttt{PLAST\_MASS\_CHECK~=~T} for cases~\texttt{b} and~\texttt{c}.
+The analysis script \texttt{analyze\_mp\_mass\_checkpoints.py} produced the
+stage-mass-change heatmap shown in Figure~\ref{fig:heatmap}, together with the
+NaN diagnostic tables.
+
+\begin{figure}[htbp]
+  \centering
+  \includegraphics[width=\linewidth]{%
+    ../FVCOM_MP_test_run/PYTHON/output/mass_conservation/checkpoints/cp_stage_heatmap.png}
+  \caption{Stage mass-change heatmap for cases~\texttt{b} (left) and~\texttt{c}
+    (right).  Each row is one operator stage; each column is one reporting
+    timestep.  Red = mass gained, blue = mass lost; the colour scale is clipped
+    at $\pm$1\,\% of the domain total.  Dashed horizontal lines mark the five
+    stages that must be exactly mass-conservative
+    (\texttt{adv*}, \texttt{vdif*}, \texttt{kin*}, \texttt{MPI*},
+    \texttt{recomb*}).  The \texttt{adv*} row is the only conservative stage
+    showing non-zero values, identifying advection as the primary guilty
+    operator.}
+  \label{fig:heatmap}
+\end{figure}
+
+\subsection*{Root Cause~1 --- Advection stage non-conservation (primary bug)}
+
+The \texttt{adv*} stage (CP3$\to$CP4) is the \emph{only} conservative stage
+that shows non-zero mass change in the heatmap.  The magnitude oscillates at
+$\pm$0.02~kg per reporting step with a tidal period and grows proportionally
+with domain mass; all other theoretically conservative stages
+(\texttt{vdif*}, \texttt{kin*}, \texttt{MPI*}, \texttt{recomb*}) are flat at
+zero.
+
+\textbf{Mechanism.}\ The \texttt{PLAST\_FLOC} path calls \texttt{adv\_scal}
+twice in sequence --- once for \texttt{cnew\_a} and once for \texttt{cnew\_d}
+--- sharing the internal gradient arrays \texttt{PFPXB}/\texttt{PFPYB}.
+The FCT flux limiter inside \texttt{adv\_scal} overwrites these arrays on
+the first call (\texttt{cnew\_a}).  The second call (\texttt{cnew\_d})
+therefore uses \emph{contaminated} gradient state that was computed for the
+aggregated field, not the disaggregated field.  The combined flux applied to
+$\texttt{cnew\_a}+\texttt{cnew\_d}$ after both calls is not the same as the
+flux that would have been applied to \texttt{conc} in the single-field
+(case~\texttt{a}) path, breaking mass conservation.
+
+\textbf{Proposed Fix~A.}\  Replace the two separate \texttt{adv\_scal} calls
+with a single call on the combined field
+\(
+  \texttt{cnew\_tot}_{i,k} = \texttt{cnew\_a}_{i,k} + \texttt{cnew\_d}_{i,k}
+\),
+then redistribute post-advection using the aggregated fraction
+\(
+  f_a = \texttt{conc\_a}\,/\,(\texttt{conc\_a}+\texttt{conc\_d})
+\)
+from the beginning of the timestep:
+\[
+  \texttt{cnew\_a} \leftarrow f_a \cdot \texttt{cnew\_tot},
+  \qquad
+  \texttt{cnew\_d} \leftarrow (1-f_a) \cdot \texttt{cnew\_tot}.
+\]
+This guarantees that the advection operator conserves
+$\texttt{cnew\_a}+\texttt{cnew\_d}$ identically to the case~\texttt{a}
+single-field path, while preserving the split for downstream kinetics.
+
+\subsection*{Root Cause~2 --- \texttt{NaN} from \texttt{calc\_erosion} causing
+epiosodic mass spikes}
+
+The NaN diagnostic shows that 59/4{,}489 steps (case~\texttt{b}) and
+35/5{,}061 steps (case~\texttt{c}) have \texttt{NaN} in the water-column
+sums at checkpoints CP2--CP9.  At CP10 the neg-clamp
+\texttt{max(cnew\_a, 0)} silently zeroes the NaN cells, producing
+discontinuous downward mass spikes visible in the CP12 grand-total
+timeseries.
+
+\textbf{Mechanism.}\ \texttt{calc\_erosion} modifies
+\texttt{conc\_a(i,kbm1)} and \texttt{conc\_d(i,kbm1)} in-place at the
+bottom sigma layer before any MPI halo exchange has refreshed the ghost
+nodes.  At nodes where the local bed mass is zero (or where the erosion
+rate involves a 0/0 division), \texttt{NaN} is written into the interior
+array and propagates forward through advection, vertical diffusion, and
+kinetics until it is silently nullified by \texttt{max(\ldots, 0)}.
+
+\textbf{Proposed Fix~B.}\ Guard the erosion-flux computation with an
+explicit positivity check before any division:
+\begin{verbatim}
+  if (mass_a(i) + mass_d(i) > 0.0_sp) then
+    ! compute erosion flux
+  end if
+\end{verbatim}
+Also add an \texttt{isnan} safety sentinel immediately after the
+erosion update to catch any remaining NaN before it enters the advection
+operator.
+
+\section*{Adjustment Plan and Further Testing}
+
+\begin{enumerate}
+
+\item Set \texttt{PLAST\_MASS\_CHECK = T} in the case~\texttt{b} plastic input
+file.  Recompile and run for one day.  Confirm that
+\texttt{<casename>\_mp\_mass\_check.csv} is created with 13 rows per reporting
+interval and that \texttt{grand\_total\_kg} at \texttt{CP0} matches the domain
+total from the last NetCDF output record.
+
+\item Identify the internal timestep \texttt{iint} corresponding to comparison
+day~2.957 (where $|a-b|$ first exceeds \(1~\mathrm{kg}\) per Memo~03).  In the
+CSV, look at the step-to-step change in \texttt{grand\_total\_kg} across each CP
+label.  The first CP where the change is non-zero for a stage that should conserve
+mass (CP4, CP5, CP11) identifies the guilty operator.
+
+\item Run case~\texttt{a} with the same flag and add bookend checkpoints (CP0 and
+CP12 only) to the no-floc \texttt{conc} path so that the CSV files for cases
+\texttt{a} and~\texttt{b} can be compared directly in the same Python analysis.
+
+\item Implement Fix~A (combined advection then redistribute) in
+\texttt{mod\_plast.F} and recompile.  Re-run cases~\texttt{b} and~\texttt{c}
+for ten days (matching the Memo~03 reference run) with checkpoints enabled;
+confirm the \texttt{adv*} heatmap row is identically zero.
+
+\item After Fix~A is verified, implement Fix~B (erosion positivity guard)
+and confirm that the NaN fraction in the checkpoint diagnostic drops to zero
+for cases~\texttt{b} and~\texttt{c}.
+
+\item Run case~\texttt{a} with the same ten-day window and compare the
+CP0/CP12 grand-total timeseries directly against cases~\texttt{b}/\texttt{c}.
+The $\sim\!650$~kg gap identified in Memo~03 should be eliminated once both
+fixes are applied.
+
+\end{enumerate}
+
+\end{document}
