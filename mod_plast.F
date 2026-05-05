@@ -1113,6 +1113,11 @@ Subroutine Advance_plast(DTin,Tin,taub_in,s_in,t_in)
            plast(iplast)%conc_a,plast(iplast)%conc_d, &
            plast(iplast)%mass_a,plast(iplast)%mass_d)
     end do
+  else if(PLAST_mass_check) then
+    do iplast=1,nplast
+      call Write_MC_1Field('CP0_start',iplast, &
+           plast(iplast)%conc,plast(iplast)%mass)
+    end do
   end if
 # endif
   call calc_deposition
@@ -1125,6 +1130,11 @@ Subroutine Advance_plast(DTin,Tin,taub_in,s_in,t_in)
       call Write_Mass_Checkpoint('CP1_after_deposition',iplast, &
            plast(iplast)%conc_a,plast(iplast)%conc_d, &
            plast(iplast)%mass_a,plast(iplast)%mass_d)
+    end do
+  else if(PLAST_mass_check) then
+    do iplast=1,nplast
+      call Write_MC_1Field('CP1_after_deposition',iplast, &
+           plast(iplast)%conc,plast(iplast)%mass)
     end do
   end if
 # endif
@@ -1139,6 +1149,11 @@ Subroutine Advance_plast(DTin,Tin,taub_in,s_in,t_in)
       call Write_Mass_Checkpoint('CP2_after_erosion',iplast, &
            plast(iplast)%conc_a,plast(iplast)%conc_d, &
            plast(iplast)%mass_a,plast(iplast)%mass_d)
+    end do
+  else if(PLAST_mass_check) then
+    do iplast=1,nplast
+      call Write_MC_1Field('CP2_after_erosion',iplast, &
+           plast(iplast)%conc,plast(iplast)%mass)
     end do
   end if
 # endif
@@ -1196,6 +1211,11 @@ Subroutine Advance_plast(DTin,Tin,taub_in,s_in,t_in)
       call Write_Mass_Checkpoint('CP3_after_update_bottom',iplast, &
            plast(iplast)%conc_a,plast(iplast)%conc_d, &
            plast(iplast)%mass_a,plast(iplast)%mass_d)
+    end do
+  else if(PLAST_mass_check) then
+    do iplast=1,nplast
+      call Write_MC_1Field('CP3_after_update_bottom',iplast, &
+           plast(iplast)%conc,plast(iplast)%mass)
     end do
   end if
 
@@ -1383,6 +1403,23 @@ else
   do iplast=1,nplast
     call vdif_scal(plast(iplast)%cnew,DTplast)
   end do
+
+  ! Non-floc path: all stages CP3p5-CP7 correspond to the same model state
+  ! (no split advection, no kinetics, no upper clamp on combined conc).
+  if(PLAST_mass_check) then
+    do iplast=1,nplast
+      call Write_MC_1Field('CP3p5_after_adv_a',iplast, &
+           plast(iplast)%cnew,plast(iplast)%mass)
+      call Write_MC_1Field('CP4_after_advection',iplast, &
+           plast(iplast)%cnew,plast(iplast)%mass)
+      call Write_MC_1Field('CP5_after_vdif',iplast, &
+           plast(iplast)%cnew,plast(iplast)%mass)
+      call Write_MC_1Field('CP6_after_kinetics',iplast, &
+           plast(iplast)%cnew,plast(iplast)%mass)
+      call Write_MC_1Field('CP7_after_upper_clamp',iplast, &
+           plast(iplast)%cnew,plast(iplast)%mass)
+    end do
+  end if
 
 endif 
 
@@ -1697,6 +1734,12 @@ endif
                               temp)
 	      enddo
 	   endif
+	  if(PLAST_mass_check) then
+	    do iplast=1,nplast
+	      call Write_MC_1Field('CP8_after_OBC',iplast, &
+	           plast(iplast)%cnew,plast(iplast)%mass)
+	    end do
+	  end if
 
 	endif
 
@@ -1743,6 +1786,12 @@ endif
                                plast(i)%tcdis_f)
 			end do
 		end if
+	  if(PLAST_mass_check) then
+	    do iplast=1,nplast
+	      call Write_MC_1Field('CP9_after_PTsource',iplast, &
+	           plast(iplast)%cnew,plast(iplast)%mass)
+	    end do
+	  end if
 	
 	end if
 
@@ -1787,6 +1836,12 @@ endif
 	do iplast=1,nplast
 		plast(iplast)%conc = max(plast(iplast)%cnew,0.0)
 	end do
+	if(PLAST_mass_check) then
+	  do iplast=1,nplast
+	    call Write_MC_1Field('CP10_after_neg_clamp',iplast, &
+	         plast(iplast)%conc,plast(iplast)%mass)
+	  end do
+	end if
 	if (tox_vector) then
 		do i=1,nplast
 			plast(i)%tconc_b = max(plast(i)%tcnew_b,0.0)
@@ -1834,6 +1889,11 @@ endif
            plast(iplast)%cnew_a,plast(iplast)%cnew_d, &
            plast(iplast)%mass_a,plast(iplast)%mass_d)
     end do
+  else if(PLAST_mass_check) then
+    do iplast=1,nplast
+      call Write_MC_1Field('CP11_after_MPI',iplast, &
+           plast(iplast)%conc,plast(iplast)%mass)
+    end do
   end if
 # endif
 
@@ -1854,6 +1914,11 @@ endif
 	       plast(iplast)%conc_a,plast(iplast)%conc_d, &
 	       plast(iplast)%mass_a,plast(iplast)%mass_d)
 	end do
+  else if(PLAST_mass_check) then
+    do iplast=1,nplast
+      call Write_MC_1Field('CP12_end',iplast, &
+           plast(iplast)%conc,plast(iplast)%mass)
+    end do
   end if
 
 !=========================================================
@@ -5307,5 +5372,70 @@ Subroutine Write_Mass_Checkpoint(label, iplast_idx, c_a, c_d, m_a, m_d)
              6(',', ES20.10), ',', ES20.10)
 
 End Subroutine Write_Mass_Checkpoint
+
+! ---------------------------------------------------------------------------
+! Write_MC_1Field
+! ---------------------------------------------------------------------------
+! Thin wrapper for the non-floc (PLAST_FLOC=F) path.  The single combined
+! concentration 'c' is treated as c_d; the a-component is reported as zero.
+! All format and MPI logic mirrors Write_Mass_Checkpoint exactly.
+Subroutine Write_MC_1Field(label, iplast_idx, c, m_in)
+
+  Use All_Vars, only : ART1, D, DZ
+  Use Control,  only : msr, par, iint, mpi_fvcom_group
+  Use Lims,     only : m, mt, kbm1, kb, msrid
+
+# if defined (MULTIPROCESSOR)
+  Use Mod_Par
+# endif
+
+  Implicit None
+
+  character(len=*),  intent(in) :: label
+  integer,           intent(in) :: iplast_idx
+  real(sp), intent(in) :: c(0:mt, kb)    ! combined conc field (reported as c_d)
+  real(sp), intent(in) :: m_in(0:mt)     ! combined bed mass [kg m^-2] (as m_d)
+
+  integer  :: i, k, ierr
+  real(dp) :: wc_d, bed_d, wc_d_g, bed_d_g, grand
+
+  if(.not. PLAST_mass_check) return
+  if(mod(PLAST_its, n_report) /= 0) return
+
+  wc_d = 0.0_dp
+  do k = 1, kbm1
+    do i = 1, m
+      wc_d = wc_d + dble(c(i,k)) * dble(ART1(i)) * dble(D(i)) * dble(DZ(i,k))
+    end do
+  end do
+
+  bed_d = 0.0_dp
+  do i = 1, m
+    bed_d = bed_d + dble(m_in(i)) * dble(ART1(i))
+  end do
+
+  wc_d_g  = wc_d
+  bed_d_g = bed_d
+
+# if defined (MULTIPROCESSOR)
+  if(par) then
+    call MPI_REDUCE(wc_d,  wc_d_g,  1, MPI_DP, MPI_SUM, MSRID-1, MPI_FVCOM_GROUP, ierr)
+    call MPI_REDUCE(bed_d, bed_d_g, 1, MPI_DP, MPI_SUM, MSRID-1, MPI_FVCOM_GROUP, ierr)
+  end if
+# endif
+
+  if(.not. msr) return
+
+  grand = wc_d_g + bed_d_g
+
+  write(mass_check_unit, 200) &
+    iint, T_model, trim(adjustl(label)), iplast_idx, &
+    0.0_dp, wc_d_g, wc_d_g, &
+    0.0_dp, bed_d_g, bed_d_g, grand
+
+  200 format(I10, ',', F14.6, ',', A, ',', I4, &
+             6(',', ES20.10), ',', ES20.10)
+
+End Subroutine Write_MC_1Field
 
 End Module Mod_Plast

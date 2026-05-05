@@ -107,7 +107,27 @@ SHORT_DELTA = [
     "recomb*",   # CP11→CP12 recombination ← must be zero
 ]
 
-CASE_COLORS = {"b": "#1f77b4", "c": "#ff7f0e"}
+# For PLAST_FLOC=F (case a): CP3→CP3p5 captures the full horizontal advection
+# AND vertical diffusion in one checkpoint window (adv_scal then vdif_scal before
+# the next Write_MC_1Field call).  CP3p5→CP11 are reported from the same 'cnew'
+# array, so they are identically zero and labelled accordingly.
+SHORT_DELTA_A = [
+    "dep",
+    "ero",
+    "bot",
+    "transport*",      # CP3→CP3p5: adv_scal + vdif_scal combined
+    "adv_d*\n(=0,NF)", # non-floc: same state as CP3p5
+    "vdif*\n(=0,NF)",
+    "kin*\n(=0,NF)",
+    "clamp\n(=0,NF)",
+    "OBC",
+    "src",
+    "neg",
+    "MPI*",
+    "recomb*\n(=0,NF)", # non-floc: same state as CP11
+]
+
+CASE_COLORS = {"a": "#2ca02c", "b": "#1f77b4", "c": "#ff7f0e"}
 
 
 def _taxis(df: pd.DataFrame) -> tuple[pd.Series, str]:
@@ -372,6 +392,7 @@ def plot_stage_delta_heatmap(
     deltas_dict: dict[str, pd.DataFrame],
     output_dir: Path,
     day_zoom: tuple[float, float] | None = None,
+    per_case_short_labels: dict[str, list[str]] | None = None,
 ) -> None:
     """
     2-panel heatmap (one per case): rows=timesteps, cols=CP stage deltas.
@@ -428,7 +449,8 @@ def plot_stage_delta_heatmap(
             extent=[t[0], t[-1], -0.5, mat.shape[1] - 0.5],
         )
         ax.set_yticks(range(len(short_cols)))
-        ax.set_yticklabels(short_cols, fontsize=_fs)
+        _ylabels = (per_case_short_labels or {}).get(case, short_cols)
+        ax.set_yticklabels(_ylabels, fontsize=_fs)
         ax.tick_params(axis="x", labelsize=_fs)
         ax.set_xlabel(xlabel, fontsize=_fs)
         ax.set_title(f"Case {case}: stage mass change [kg]", fontsize=_fs_title)
@@ -573,6 +595,10 @@ def parse_args(argv: Sequence[str] | None = None) -> argparse.Namespace:
         "--onset-day", type=float, default=2.957,
         help="Model day of first observed a-b divergence (default: 2.957 from memo_03).",
     )
+    parser.add_argument(
+        "--max-days", type=float, default=None, metavar="DAYS",
+        help="Clip all cases to this many comparison days before plotting (e.g. 10.0).",
+    )
     return parser.parse_args(argv)
 
 
@@ -647,13 +673,26 @@ def main(argv: Sequence[str] | None = None) -> int:
         print("\nNo data loaded. Check --csv-dir path and case labels.")
         return 1
 
+    # ---- Clip to max_days if requested ----
+    if args.max_days is not None:
+        for case in list(wide_dict.keys()):
+            mask = wide_dict[case]["comparison_day"] <= args.max_days
+            wide_dict[case] = wide_dict[case][mask]
+            deltas_dict[case] = deltas_dict[case][mask]
+        print(f"  (Data clipped to first {args.max_days} comparison days)")
+
     # ---- Plots ----
     print("\nGenerating plots ...")
     day_zoom = tuple(args.day_zoom) if args.day_zoom else None
 
     plot_grand_total_timeseries(wide_dict, output_dir, day_zoom=day_zoom)
     plot_stage_delta_timeseries(deltas_dict, output_dir, day_zoom=day_zoom)
-    plot_stage_delta_heatmap(deltas_dict, output_dir, day_zoom=day_zoom)
+    # Build per-case y-label overrides: case a uses non-floc labels
+    _pcsl = {}
+    if "a" in deltas_dict:
+        _pcsl["a"] = SHORT_DELTA_A
+    plot_stage_delta_heatmap(deltas_dict, output_dir, day_zoom=day_zoom,
+                             per_case_short_labels=_pcsl if _pcsl else None)
     plot_day3_zoom(wide_dict, deltas_dict, output_dir, onset_day=args.onset_day)
 
     print(f"\nDone. All outputs in:\n  {output_dir}\n")

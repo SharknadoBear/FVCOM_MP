@@ -1,0 +1,183 @@
+% report_01.tex  —  FVCOM-MP Mass Conservation: Progress Summary
+% May 2026 | WaterPACT Delaware River Test Cases
+
+\PassOptionsToPackage{table,dvipsnames}{xcolor}
+\documentclass[aspectratio=169,10pt]{beamer}
+\usetheme{Madrid}
+\usecolortheme{beaver}
+\setbeamertemplate{navigation symbols}{}
+\setbeamerfont{title}{size=\large}
+
+\usepackage{booktabs}
+\usepackage{graphicx}
+\usepackage{amsmath}
+\setlength{\tabcolsep}{4pt}
+
+% ─── colour shorthands ────────────────────────────────────────────────────────
+\newcommand{\ca}{\textcolor{OliveGreen}{\textbf{a}}}
+\newcommand{\cb}{\textcolor{NavyBlue}{\textbf{b}}}
+\newcommand{\cc}{\textcolor{BurntOrange}{\textbf{c}}}
+
+\title{FVCOM-MP: Mass Conservation Bug Diagnosis}
+\subtitle{Delaware River Estuary Test Cases}
+\author{WaterPACT FVCOM-MP Development}
+\date{May 2026}
+
+% ─────────────────────────────────────────────────────────────────────────────
+\begin{document}
+
+\begin{frame}
+  \titlepage
+\end{frame}
+
+% ═══════════════════════════════════════════════════════════════════════════════
+%  SLIDE 1 — Case Definitions
+% ═══════════════════════════════════════════════════════════════════════════════
+\begin{frame}{Delaware River Test Cases}
+  \centering
+  \vspace{0.5em}
+  \footnotesize
+  \begin{tabular}{lccc}
+    \toprule
+    & Case \ca & Case \cb & Case \cc \\
+    \midrule
+    \texttt{PLAST\_FLOC}   & F & T & T \\
+    \texttt{SEDIMENT\_MODEL} & F$^{\dagger}$ & T & T \\
+    \texttt{SED\_SD50}     & --- & 0.1\,mm & 1.0\,mm \\
+    MP fields     & \texttt{conc} &
+                             \multicolumn{2}{c}{\texttt{conc\_a}$+$\texttt{conc\_d}} \\
+    Agg.\ gate $d_{MP}^{max}$ & --- &
+                             $34\,\mu$m (excl.) &
+                             $162\,\mu$m (act.) \\
+    \bottomrule
+  \end{tabular}
+
+  \vspace{0.6em}
+  {$^{\dagger}$sediment initialized; \texttt{adv\_scal}/FCT bypassed
+  $\quad\bullet\quad$
+  \texttt{SOURCE\_AG\_RATE\,=\,0} $\Rightarrow$ \texttt{conc\_a}\,$\equiv$\,0
+  $\quad\bullet\quad$ $\rho_p=950\,\text{kg\,m}^{-3}$,\; $d_p=100\,\mu$m}
+\end{frame}
+
+% ═══════════════════════════════════════════════════════════════════════════════
+%  SLIDE 2 — Mass Conservation Progress: v001→v006→v007→v008
+% ═══════════════════════════════════════════════════════════════════════════════
+\begin{frame}{Mass Conservation Progress: Two Bugs, Two Fixes}
+
+  % ─── 2 × 2 figure grid ───────────────────────────────────────────────────
+  \begin{columns}[T]
+
+    \begin{column}{0.49\textwidth}
+      \centering
+      {\small\textbf{v001} — original (full sediment active)}\\[-2pt]
+      \includegraphics[width=\textwidth,height=0.27\textheight,keepaspectratio]{%
+        ../FVCOM_MP_test_run/PYTHON/output/mass_conservation/%
+        archive/v001_before_case_a_sediment_on/total_mass_by_case.png}
+
+      \vspace{0.05em}
+      {\small\textbf{v007} — Fix\,B+ on b/c only}\\[-2pt]
+      {\footnotesize a\,=\,994\,kg;\;b/c\,=\,1001\,kg [7\,kg gap in case\,a]}\\[-2pt]
+      \includegraphics[width=\textwidth,height=0.27\textheight,keepaspectratio]{%
+        ../FVCOM_MP_test_run/PYTHON/output/mass_conservation/%
+        archive/v007_fixbplus_10d_abc_verified/total_mass_by_case.png}
+    \end{column}
+
+    \begin{column}{0.49\textwidth}
+      \centering
+      {\small\textbf{v006} — sed adv/FCT bypassed; NaN bug isolated}\\[-2pt]
+      {\footnotesize a\,=\,994\,kg;\;b/c\,=\,348\,kg [650\,kg gap]}\\[-2pt]
+      \includegraphics[width=\textwidth,height=0.27\textheight,keepaspectratio]{%
+        ../FVCOM_MP_test_run/PYTHON/output/mass_conservation/%
+        archive/v006_b_c_mirrored_sediment/total_mass_by_case.png}
+
+      \vspace{0.05em}
+      {\small\textbf{v008} — Fix\,B+ on all three
+        $\;\checkmark\;$\textbf{SOLVED}}\\[-2pt]
+      {\footnotesize a\,=\,b\,=\,c\,=\,1001\,kg [three overlapping lines]}\\[-2pt]
+      \includegraphics[width=\textwidth,height=0.27\textheight,keepaspectratio]{%
+        ../FVCOM_MP_test_run/PYTHON/output/mass_conservation/%
+        archive/v008_fixbplus_10d_abc_all3_match/total_mass_by_case.png}
+    \end{column}
+
+  \end{columns}
+
+  \vspace{0.1em}
+  \begin{columns}[T]
+    \begin{column}{0.49\textwidth}
+      \centering
+      \colorbox{red!15}{\parbox{0.95\textwidth}{\centering\footnotesize
+        \textbf{Bug\,1:} sed \texttt{adv\_scal}/FCT corrupts shared scalar arrays
+        $\Rightarrow$ bypass sed horizontal adv/FCT
+      }}
+    \end{column}
+    \begin{column}{0.49\textwidth}
+      \centering
+      \colorbox{red!15}{\parbox{0.95\textwidth}{\centering\footnotesize
+        \textbf{Bug\,2:} \texttt{rho\_water}\,=\,NaN $\to$ \texttt{eflx}\,=\,NaN
+        $\to$ neg-clamp destroys mass
+        $\Rightarrow$ \texttt{isnan} sentinel on \texttt{eflx}/\texttt{pflx}
+      }}
+    \end{column}
+  \end{columns}
+
+\end{frame}
+
+% ═══════════════════════════════════════════════════════════════════════════════
+%  SLIDE 4 — Checkpoint Methodology
+% ═══════════════════════════════════════════════════════════════════════════════
+\begin{frame}{In-Run Mass Checkpoint Framework}
+  \centering
+  \vspace{0.3em}
+  \footnotesize
+  \begin{tabular}{clc}
+    \toprule
+    CP & Stage & $\Delta M$ expected \\
+    \midrule
+    0      & start of timestep           & \emph{reference} \\
+    1--3   & dep / ero / bed update      & $\Delta$(water$+$bed)\,=\,0 \\
+    \rowcolor{NavyBlue!15}
+    3p5    & adv(\texttt{conc\_a}) only  & \textbf{0}$^*$ (\texttt{conc\_a}\,=\,0 now) \\
+    \rowcolor{NavyBlue!15}
+    4      & adv(\texttt{conc\_d})       & OBC tidal exchange \\
+    \rowcolor{NavyBlue!15}
+    5      & vdif                        & \textbf{0}$^*$ \\
+    \rowcolor{NavyBlue!15}
+    6      & kinetics                    & \textbf{0}$^*$ (\texttt{conc\_a}\,=\,0 now) \\
+    7      & upper clamp                 & 0 \\
+    8      & OBC                         & 0 (absorbed in adv) \\
+    9      & PTsource (river)            & river import \\
+    10     & neg-clamp                   & 0 (loss only) \\
+    11     & MPI halo sync               & \textbf{0}$^*$ \\
+    12     & end of timestep             & verify $\approx$ CP0 \\
+    \bottomrule
+  \end{tabular}
+
+  \vspace{0.3em}
+  {\scriptsize $^*$dashed row in heatmap — must be exactly zero}
+\end{frame}
+
+% ═══════════════════════════════════════════════════════════════════════════════
+%  SLIDE 5 — Heatmap Result
+% ═══════════════════════════════════════════════════════════════════════════════
+\begin{frame}{Stage-Delta Heatmap: Fix\,B+ Active, All Cases, 10-day Run}
+  \centering
+  \includegraphics[width=\textwidth,height=0.82\textheight,keepaspectratio]{%
+    ../FVCOM_MP_test_run/PYTHON/output/mass_conservation/%
+    checkpoints/cp_stage_heatmap.png}
+\end{frame}
+
+% ═══════════════════════════════════════════════════════════════════════════════
+%  SLIDE 6 — Grand Total Timeseries
+% ═══════════════════════════════════════════════════════════════════════════════
+\begin{frame}{Grand-Total Mass Timeseries: CP0 vs.~CP12 per Step}
+  \centering
+  \includegraphics[width=0.82\textwidth,height=0.82\textheight,keepaspectratio]{%
+    ../FVCOM_MP_test_run/PYTHON/output/mass_conservation/%
+    checkpoints/cp_grand_total_timeseries.png}
+\end{frame}
+
+% ═══════════════════════════════════════════════════════════════════════════════
+%  (mass formula slide moved to SLIDE 2 above)
+% ═══════════════════════════════════════════════════════════════════════════════
+
+\end{document}

@@ -1,4 +1,4 @@
-This is pdfTeX, Version 3.141592653-2.6-1.40.24 (MiKTeX 22.11.25) (preloaded format=pdflatex 2026.4.12)  5 MAY 2026 06:00
+This is pdfTeX, Version 3.141592653-2.6-1.40.24 (MiKTeX 22.11.25) (preloaded format=pdflatex 2026.4.12)  5 MAY 2026 11:02
 entering extended mode
  restricted \write18 enabled.
  %&-line parsing enabled.
@@ -481,14 +481,14 @@ l was run for $\OMS/cmsy/m/n/10.95 ^^X  \OT1/cmr/m/n/10.95 4$ days with
  []
 
 <../FVCOM_MP_test_run/PYTHON/output/mass_conservation/checkpoints/cp_stage_heat
-map.png, id=32, 1072.005pt x 805.5696pt>
+map.png, id=32, 1577.4132pt x 805.5696pt>
 File: ../FVCOM_MP_test_run/PYTHON/output/mass_conservation/checkpoints/cp_stage
 _heatmap.png Graphic file (type png)
 <use ../FVCOM_MP_test_run/PYTHON/output/mass_conservation/checkpoints/cp_stage_
 heatmap.png>
 Package pdftex.def Info: ../FVCOM_MP_test_run/PYTHON/output/mass_conservation/c
 heckpoints/cp_stage_heatmap.png  used on input line 184.
-(pdftex.def)             Requested size: 469.75502pt x 353.00127pt.
+(pdftex.def)             Requested size: 469.75502pt x 239.8904pt.
 
 Package hyperref Warning: Suppressing empty link on input line 194.
 
@@ -524,18 +524,46 @@ LaTeX Font Warning: Font shape `OT1/cmr/bx/sc' undefined
 (Font)              using `OT1/cmr/bx/n' instead on input line 404.
 
 [7]
+Underfull \hbox (badness 10000) in paragraph at lines 417--421
+[]\OT1/cmr/bx/sc/10.95 Ten-day three-case check-point com-par-i-son --- com-ple
+te.
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 417--421
+[]\OT1/cmtt/m/n/10.95 analyze[]mp[]mass[]checkpoints.py --cases a b c --max-day
+s 10 \OT1/cmr/m/n/10.95 was run against
+ []
+
 File: ../FVCOM_MP_test_run/PYTHON/output/mass_conservation/checkpoints/cp_stage
 _heatmap.png Graphic file (type png)
 <use ../FVCOM_MP_test_run/PYTHON/output/mass_conservation/checkpoints/cp_stage_
 heatmap.png>
 Package pdftex.def Info: ../FVCOM_MP_test_run/PYTHON/output/mass_conservation/c
-heckpoints/cp_stage_heatmap.png  used on input line 481.
-(pdftex.def)             Requested size: 469.75502pt x 353.00127pt.
-
+heckpoints/cp_stage_heatmap.png  used on input line 445.
+(pdftex.def)             Requested size: 469.75502pt x 239.8904pt.
 
 LaTeX Warning: `h' float specifier changed to `ht'.
 
-[8] [9] (memo_04.aux)
+[8]
+
+LaTeX Warning: `h' float specifier changed to `ht'.
+
+<../FVCOM_MP_test_run/PYTHON/output/mass_conservation/archive/v008_fixbplus_10d
+_abc_all3_match/total_mass_by_case.png, id=87, 642.546pt x 352.809pt>
+File: ../FVCOM_MP_test_run/PYTHON/output/mass_conservation/archive/v008_fixbplu
+s_10d_abc_all3_match/total_mass_by_case.png Graphic file (type png)
+<use ../FVCOM_MP_test_run/PYTHON/output/mass_conservation/archive/v008_fixbplus
+_10d_abc_all3_match/total_mass_by_case.png>
+Package pdftex.def Info: ../FVCOM_MP_test_run/PYTHON/output/mass_conservation/a
+rchive/v008_fixbplus_10d_abc_all3_match/total_mass_by_case.png  used on input l
+ine 530.
+(pdftex.def)             Requested size: 469.75502pt x 257.93604pt.
+
+LaTeX Warning: `h' float specifier changed to `ht'.
+
+[9] [10 <../FVCOM_MP_test_run/PYTHON/output/mass_conservation/archive/v008_fixb
+plus_10d_abc_all3_match/total_mass_by_case.png>] (memo_04.aux)
 
 LaTeX Font Warning: Some font shapes were not available, defaults substituted.
 
@@ -546,13 +574,13 @@ Package rerunfilecheck Info: File `memo_04.out' has not changed.
 (rerunfilecheck)             Checksum: D41D8CD98F00B204E9800998ECF8427E;0.
  ) 
 Here is how much of TeX's memory you used:
- 10472 strings out of 475284
- 164107 string characters out of 2773161
- 523453 words of memory out of 3000000
- 31775 multiletter control sequences out of 15000+600000
+ 10488 strings out of 475284
+ 165029 string characters out of 2773161
+ 524370 words of memory out of 3000000
+ 31784 multiletter control sequences out of 15000+600000
  481545 words of font info for 77 fonts, out of 8000000 for 9000
  1141 hyphenation exceptions out of 8191
- 72i,12n,77p,891b,676s stack positions out of 10000i,1000n,20000p,200000b,80000s
+ 72i,12n,77p,1094b,676s stack positions out of 10000i,1000n,20000p,200000b,80000s
  <C:\Users\huan111\AppData\Local\MiKTeX\fonts/pk/ljfour/jknappen/ec/dpi600\tc
 rm1095.pk><C:/Users/huan111/AppData/Local/Programs/MiKTeX/fonts/type1/public/am
 sfonts/cm/cmbx10.pfb><C:/Users/huan111/AppData/Local/Programs/MiKTeX/fonts/type
@@ -564,19 +592,16 @@ rams/MiKTeX/fonts/type1/public/amsfonts/cm/cmmi10.pfb><C:/Users/huan111/AppData
 sers/huan111/AppData/Local/Programs/MiKTeX/fonts/type1/public/amsfonts/cm/cmr12
 .pfb><C:/Users/huan111/AppData/Local/Programs/MiKTeX/fonts/type1/public/amsfont
 s/cm/cmr17.pfb><C:/Users/huan111/AppData/Local/Programs/MiKTeX/fonts/type1/publ
-ic/amsfonts/cm/cmr7.pfb><C:/Users/huan111/AppData/Local/Programs/MiKTeX/fonts/t
-ype1/public/amsfonts/cm/cmr8.pfb><C:/Users/huan111/AppData/Local/Programs/MiKTe
-X/fonts/type1/public/amsfonts/cm/cmsy10.pfb><C:/Users/huan111/AppData/Local/Pro
-grams/MiKTeX/fonts/type1/public/amsfonts/cm/cmsy7.pfb><C:/Users/huan111/AppData
-/Local/Programs/MiKTeX/fonts/type1/public/amsfonts/cm/cmsy8.pfb><C:/Users/huan1
-11/AppData/Local/Programs/MiKTeX/fonts/type1/public/amsfonts/cm/cmti10.pfb><C:/
-Users/huan111/AppData/Local/Programs/MiKTeX/fonts/type1/public/amsfonts/cm/cmtt
-10.pfb><C:/Users/huan111/AppData/Local/Programs/MiKTeX/fonts/type1/public/amsfo
-nts/cm/cmtt12.pfb><C:/Users/huan111/AppData/Local/Programs/MiKTeX/fonts/type1/p
-ublic/amsfonts/symbols/msam10.pfb>
-Output written on memo_04.pdf (9 pages, 586919 bytes).
+ic/amsfonts/cm/cmr8.pfb><C:/Users/huan111/AppData/Local/Programs/MiKTeX/fonts/t
+ype1/public/amsfonts/cm/cmsy10.pfb><C:/Users/huan111/AppData/Local/Programs/MiK
+TeX/fonts/type1/public/amsfonts/cm/cmti10.pfb><C:/Users/huan111/AppData/Local/P
+rograms/MiKTeX/fonts/type1/public/amsfonts/cm/cmtt10.pfb><C:/Users/huan111/AppD
+ata/Local/Programs/MiKTeX/fonts/type1/public/amsfonts/cm/cmtt12.pfb><C:/Users/h
+uan111/AppData/Local/Programs/MiKTeX/fonts/type1/public/amsfonts/symbols/msam10
+.pfb>
+Output written on memo_04.pdf (10 pages, 819102 bytes).
 PDF statistics:
- 179 PDF objects out of 1000 (max. 8388607)
- 39 named destinations out of 1000 (max. 500000)
- 6 words of extra memory for PDF output out of 10000 (max. 10000000)
+ 175 PDF objects out of 1000 (max. 8388607)
+ 44 named destinations out of 1000 (max. 500000)
+ 11 words of extra memory for PDF output out of 10000 (max. 10000000)
 
