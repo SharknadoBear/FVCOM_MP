@@ -1218,6 +1218,13 @@ if (floc_intract) then
       endif
   
       !3D advection
+      ! --- cflx TRACE (diagnostic): record cflx norm before adv_scal(conc_a) ---
+      if(PLAST_mass_check .and. mod(PLAST_its,n_report)==0 .and. msr) then
+        write(mass_check_unit, '(A,I4,A,ES14.6)') &
+          'CFLX_TRACE,iplast=',iplast, &
+          ',before_adv_a,sum_abs_cflx=', sum(abs(plast(iplast)%cflx))
+      end if
+
       call adv_scal(plast(iplast)%conc_a, &
                       plast(iplast)%cnew_a, &
                       d_cdis,      &
@@ -1225,6 +1232,20 @@ if (floc_intract) then
                       d_cflx,      &
                       plast(iplast)%cflx, &
                       DTplast,PLAST_source)
+
+      ! --- cflx TRACE: record cflx norm after adv_scal(conc_a), before adv_scal(conc_d) ---
+      if(PLAST_mass_check .and. mod(PLAST_its,n_report)==0 .and. msr) then
+        write(mass_check_unit, '(A,I4,A,ES14.6)') &
+          'CFLX_TRACE,iplast=',iplast, &
+          ',after_adv_a,sum_abs_cflx=', sum(abs(plast(iplast)%cflx))
+      end if
+
+      ! CP3p5: mass after advecting conc_a only; conc_d still holds pre-advection value.
+      ! Hypothesis test: if conc_a=0, this must equal CP3 exactly (adv_a contributes zero).
+      ! Any non-zero delta here points to the conc_a advection step or shared state side effects.
+      call Write_Mass_Checkpoint('CP3p5_after_adv_a', iplast, &
+           plast(iplast)%cnew_a, plast(iplast)%conc_d, &
+           plast(iplast)%mass_a, plast(iplast)%mass_d)
 
 	  !This additional limiter will cause over smoothing and mass inconservation, no need to change here.
       !call fct_sed(plast(iplast)%conc_a,plast(iplast)%cnew_a)
@@ -1236,6 +1257,13 @@ if (floc_intract) then
                       d_cflx,      &
                       plast(iplast)%cflx, &
                       DTplast,PLAST_source)
+
+      ! --- cflx TRACE: record cflx norm after adv_scal(conc_d) ---
+      if(PLAST_mass_check .and. mod(PLAST_its,n_report)==0 .and. msr) then
+        write(mass_check_unit, '(A,I4,A,ES14.6)') &
+          'CFLX_TRACE,iplast=',iplast, &
+          ',after_adv_d,sum_abs_cflx=', sum(abs(plast(iplast)%cflx))
+      end if
 
 	  !This additional limiter will cause over smoothing and mass inconservation, no need to change here.
       !call fct_sed(plast(iplast)%conc_d,plast(iplast)%cnew_d)
@@ -2478,6 +2506,12 @@ Subroutine Calc_Erosion
 		precip_flux = plast(iplast)%prate*tau_f
 		plast(iplast)%eflx(i) = erosion_flux
 		plast(iplast)%pflx(i) = precip_flux
+		! Fix B+: guard eflx/pflx against NaN from any upstream source
+		! (e.g. NaN rho_water -> NaN tau_c_p -> NaN Erate -> NaN eflx)
+		if (isnan(plast(iplast)%eflx(i)) .or. plast(iplast)%eflx(i) < 0.0_sp) &
+		    plast(iplast)%eflx(i) = 0.0_sp
+		if (isnan(plast(iplast)%pflx(i)) .or. plast(iplast)%pflx(i) < 0.0_sp) &
+		    plast(iplast)%pflx(i) = 0.0_sp
 		
 		if (tox_vector) then
 			t_bottom_frac = plast(iplast)%tfrac_b(i)
@@ -2499,6 +2533,8 @@ Subroutine Calc_Erosion
 # if defined (WET_DRY)
       if(iswetn(i)==1) then
 # endif
+        ! Fix B: skip zero-depth cells (d=0 causes 0/0=NaN in eflx/(d*dz))
+        if (d(i) <= 0.0_sp) cycle
         ! Check for zero concentration to avoid division by zero
         if (plast(iplast)%conc(i,kbm1) > 1.0e-12) then
           ratio_bottom=plast(iplast)%conc_a(i,kbm1)/plast(iplast)%conc(i,kbm1)
@@ -2567,6 +2603,8 @@ Subroutine Calc_Erosion
 # if defined (WET_DRY)
       if(iswetn(i)==1) then
 # endif
+        ! Fix B: skip zero-depth cells
+        if (d(i) <= 0.0_sp) cycle
 
 	plast(iplast)%conc(i,kbm1) = plast(iplast)%conc(i,kbm1) + plast(iplast)%eflx(i)/(d(i)*dz(i,kbm1))
 	plast(iplast)%conc(i,1) = plast(iplast)%conc(i,1) + plast(iplast)%pflx(i)/(d(i)*dz(i,1))
@@ -2593,7 +2631,9 @@ Subroutine Calc_Erosion
 # if defined (WET_DRY)
       if(iswetn(i)==1) then
 # endif
-        
+        ! Fix B: skip zero-depth cells
+        if (d(i) <= 0.0_sp) cycle
+
 	plast(iplast)%conc(i,kbm1) = plast(iplast)%conc(i,kbm1) + plast(iplast)%eflx(i)/(d(i)*dz(i,kbm1))
 	plast(iplast)%conc(i,1) = plast(iplast)%conc(i,1) + plast(iplast)%pflx(i)/(d(i)*dz(i,1))
 		

@@ -62,6 +62,7 @@ CP_ORDER = [
     "CP1_after_deposition",
     "CP2_after_erosion",
     "CP3_after_update_bottom",
+    "CP3p5_after_adv_a",        # NEW: after adv_scal(conc_a), before adv_scal(conc_d)
     "CP4_after_advection",
     "CP5_after_vdif",
     "CP6_after_kinetics",
@@ -81,11 +82,12 @@ DELTA_LABELS = [f"d{CP_ORDER[i+1].split('_',1)[1]}_from_{CP_ORDER[i].split('_',1
 # Stages where grand total MUST be exactly conserved (no source/sink expected).
 # Any nonzero delta here is a mass-conservation bug.
 CONSERVATIVE_STAGES = {
-    "CP3→CP4",   # advection
-    "CP4→CP5",   # vertical diffusion
-    "CP5→CP6",   # kinetic exchange (conc_a+conc_d must be constant)
-    "CP10→CP11", # MPI halo exchange
-    "CP11→CP12", # recombination
+    "CP3→CP3p5",  # adv_a only: must be zero when conc_a=0
+    "CP3p5→CP4",  # adv_d only: expected OBC flux only (same as case a)
+    "CP4→CP5",    # vertical diffusion
+    "CP5→CP6",    # kinetic exchange (conc_a+conc_d must be constant)
+    "CP10→CP11",  # MPI halo exchange
+    "CP11→CP12",  # recombination
 }
 
 # Short labels for the stage-delta axis (space-saving)
@@ -93,7 +95,8 @@ SHORT_DELTA = [
     "dep",       # CP0→CP1  deposition: water↓ bed↑
     "ero",       # CP1→CP2  erosion:    water↑ bed↓
     "bot",       # CP2→CP3  bed bookkeeping
-    "adv*",      # CP3→CP4  advection      ← must be zero
+    "adv_a*",    # CP3→CP3p5 advection of conc_a only ← must be zero if conc_a=0
+    "adv_d*",    # CP3p5→CP4 advection of conc_d     ← must equal OBC flux only
     "vdif*",     # CP4→CP5  vertical diff  ← must be zero
     "kin*",      # CP5→CP6  kinetics       ← must be zero (a+d conserved)
     "clamp",     # CP6→CP7  upper clamp
@@ -138,10 +141,22 @@ def find_csv(csv_dir: Path, case: str) -> Path:
 
 
 def load_csv(path: Path) -> pd.DataFrame:
-    """Read a mass-check CSV, strip whitespace from column names and checkpoint strings."""
+    """Read a mass-check CSV, strip whitespace from column names and checkpoint strings.
+    CFLX_TRACE diagnostic lines written by the Fortran cflx-trace prints are
+    excluded automatically (they don't match the 11-column CSV header)."""
     df = pd.read_csv(path, skipinitialspace=True)
     df.columns = [c.strip() for c in df.columns]
+    # Drop any rows that don't have numeric iint (CFLX_TRACE lines land here)
+    df = df[pd.to_numeric(df["iint"], errors="coerce").notna()].copy()
+    df["iint"] = df["iint"].astype(int)
     df["checkpoint"] = df["checkpoint"].str.strip()
+    # iplast is written with leading spaces by Fortran; cast to int after stripping
+    df["iplast"] = pd.to_numeric(df["iplast"], errors="coerce").astype("Int64")
+    # All numeric columns may be space-padded strings — coerce them all
+    for col in ["T_days", "wc_a_kg", "wc_d_kg", "wc_tot_kg",
+                "bed_a_kg", "bed_d_kg", "bed_tot_kg", "grand_total_kg"]:
+        if col in df.columns:
+            df[col] = pd.to_numeric(df[col], errors="coerce")
     return df
 
 
