@@ -7,6 +7,7 @@
 \usepackage{url}
 \usepackage{graphicx}
 \usepackage{xcolor}
+\usepackage{enumerate}
 
 \title{Memo 04: In-Run Mass-Conservation Checkpoints\\
        for the \texttt{PLAST\_FLOC} Split Path}
@@ -485,6 +486,23 @@ Key observations:
         \texttt{adv\_d*} row of cases~b/c, confirming that the OBC boundary
         condition drives the same net import regardless of the split flag.
 
+  \item \textbf{Possible physical origin of the tidal OBC signal.}
+        The Delaware Estuary domain has an open boundary near the connection
+        between the Delaware Bay and the Chesapeake--Delaware Canal corridor.
+        The tidal prism at this node can be large, exchanging a significant
+        water volume --- and whatever MP it carries --- on each half-cycle.
+        Schuylkill River MP sources (SR\_1--SR\_3, near Philadelphia) discharge
+        well upstream of this boundary; over $\sim$10~days, the river plume
+        disperses enough to interact with the OBC tidal exchange, which could
+        amplify the per-step mass oscillation as plastic reaches the bay mouth.
+        However, the oscillation amplitude appears roughly constant from the
+        first reporting step (before the plume could realistically arrive at the
+        boundary), suggesting that the signal is primarily driven by the tidal
+        exchange of the background concentration field rather than by
+        Schuylkill-sourced MP.  This can be confirmed by inspecting the spatial
+        concentration field near the OBC nodes at days~3--5 when the plume
+        would be expected to approach.
+
   \item \textbf{dep, ero, bot identically zero.}
         The CP0$\to$CP3 stages show no net mass change at this reporting
         cadence, consistent with \texttt{concrete\_bottom} bed behaviour
@@ -505,22 +523,24 @@ Results are summarised in Table~\ref{tab:netcdf}.
 
 \begin{table}[h]
 \centering
-\caption{10-day domain total mass from NetCDF output (MATLAB offline budget).
-         \textbf{v007}: case~a ran without Fix~B+ (old run);
-         \textbf{v008}: all three cases ran with Fix~B+ active.}
+\caption{10-day domain total mass from NetCDF output (offline budget).
+         \textbf{v007}: case~a without Fix~B+;
+         \textbf{v008}: Fix~B+ only (sed adv/FCT bypassed);
+         \textbf{v009}: Fix~B+ with \texttt{adv\_scal} active (no backward, no FCT).}
 \label{tab:netcdf}
 \small
-\begin{tabular}{lrrrr}
+\begin{tabular}{lrrrrr}
 \toprule
- & \multicolumn{2}{c}{Case~a} & Case~b & Case~c \\
+ & \multicolumn{2}{c}{Case~a} & Case~b & Case~c & \\
 \cmidrule(lr){2-3}
- & v007 (no Fix~B+) & v008 (Fix~B+) & v008 & v008 \\
+ & v007 & v008 & v008 & v008 & v009 (a/b/c) \\
 \midrule
-Run duration (days) & 9.96 & 9.96 & 9.96 & 9.96 \\
-Final total mass (kg) & 994.2 & \textbf{1001.3} & 1001.3 & 1001.3 \\
-Gap vs.\ b (kg) & $-7.1$ & \textbf{0.0} & --- & 0.0 \\
-Gap vs.\ b (\%) & $-0.71\%$ & \textbf{$<0.001\%$} & --- & $<0.001\%$ \\
-\texttt{split\_sum $-$ mp1} (max abs, kg) & N/A & N/A & 0 & 0 \\
+Sed.\ \texttt{adv\_scal} & off & off & off & off & \textbf{on} \\
+Fix~B+ & off & on & on & on & on \\
+Run duration (days) & 9.96 & 9.96 & 9.96 & 9.96 & 9.96 \\
+Final total mass (kg) & 994.2 & 1001.3 & 1001.3 & 1001.3 & \textbf{1001.3} \\
+Gap a$-$b (kg) & $-7.1$ & 0.0 & --- & 0.0 & \textbf{0.0} \\
+\texttt{split\_sum$-$mp1} (max, kg) & N/A & N/A & 0 & 0 & \textbf{0} \\
 \bottomrule
 \end{tabular}
 \end{table}
@@ -529,26 +549,41 @@ Gap vs.\ b (\%) & $-0.71\%$ & \textbf{$<0.001\%$} & --- & $<0.001\%$ \\
 \centering
 \includegraphics[width=\textwidth]{../FVCOM_MP_test_run/PYTHON/output/mass_conservation/archive/v008_fixbplus_10d_abc_all3_match/total_mass_by_case.png}
 \caption{Domain-integrated mp1 total mass (water + bed) for all three cases
-         over the 10-day Fix~B+ run (v008).  All three lines are
-         \emph{indistinguishable} --- the three curves overlap to sub-pixel
-         precision across the full 10-day window.}
+         over the 10-day Fix~B+ run (v008, sed adv/FCT bypassed).
+         All three lines are \emph{indistinguishable}.}
 \label{fig:v008_total}
 \end{figure}
 
-\paragraph{Verdict: the Memo~03 problem is \textbf{fully solved}.}
+\begin{figure}[h]
+\centering
+\includegraphics[width=\textwidth]{../FVCOM_MP_test_run/PYTHON/output/mass_conservation/archive/v009_adv_scal_no_fct_abc_all3_match/total_mass_by_case.png}
+\caption{Domain-integrated mp1 total mass for v009: Fix~B+ plus
+         \texttt{adv\_scal} active for sediment (\texttt{adv\_scal\_backward}
+         and \texttt{fct\_sed} still disabled).  All three cases remain
+         indistinguishable at 1001.3~kg, confirming that \texttt{adv\_scal}
+         does \emph{not} corrupt the plastic scalar arrays.}
+\label{fig:v009_total}
+\end{figure}
+
+\paragraph{Verdict: the Memo~03 problem is \textbf{fully solved};\break
+sediment \texttt{adv\_scal} is safe.}
 
 \begin{itemize}
   \item With Fix~B+ active in all three cases (v008), case~a reaches
         exactly the same final mass as cases~b and~c (1001.3~kg at day~10),
         confirming that the $\sim\!650$~kg gap was caused entirely by the
-        NaN$\to$neg-clamp mass-destruction pathway, and that this pathway
-        is identical between the floc and non-floc code branches.
+        NaN$\to$neg-clamp mass-destruction pathway.
+  \item v009 adds \texttt{adv\_scal} back for sediment while keeping
+        \texttt{adv\_scal\_backward} and \texttt{fct\_sed} disabled.
+        All three cases still reach 1001.3~kg with zero case-to-case gap,
+        proving that \texttt{adv\_scal} does not interfere with MP transport.
+  \item The guilty operator was therefore \textbf{\texttt{adv\_scal\_backward}}
+        (the Ge backward-difference scheme) and/or \texttt{fct\_sed}, both of
+        which write to shared scalar-gradient arrays (\texttt{PFPXB}/\texttt{PFPYB})
+        in a way that corrupts subsequent MP advection calls.
   \item The \texttt{split\_sum $-$ mp1} diagnostic is identically zero for
-        both cases~b and~c at every output record, confirming that the
+        both cases~b and~c in v008 and v009, confirming that the
         \texttt{PLAST\_FLOC} split path conserves mass internally.
-  \item Fix~B+ (sentinel guard on \texttt{eflx}/\texttt{pflx} in
-        \texttt{Calc\_Erosion}) is the single code change responsible for
-        this improvement.  No algorithmic restructuring was required.
 \end{itemize}
 
 \item \textbf{Future: Fix~D} (multi-species flux limiting) when
@@ -557,6 +592,60 @@ inspect the \texttt{adv\_a*} heatmap row of cases~b/c (or \texttt{transport*}
 for case~a).  If a non-zero signal appears in \texttt{adv\_a*} for the floc
 path (indicating the flux limiter applies asymmetric caps to the two species),
 implement the combined-mass limiter with proportional partitioning.
+
+\item \textbf{\texttt{fct\_sed} will not be re-enabled.}
+Earlier experience (independent of the v001--v009 tests) has shown that the
+flux-corrected-transport limiter for sediment (\texttt{fct\_sed}) itself
+causes mass loss under typical FVCOM tidal conditions.  Because
+\texttt{adv\_scal} (without FCT) already produces satisfactory and
+mass-conserving sediment transport, \texttt{fct\_sed} is permanently
+disabled in the production configuration.  The current model state is
+therefore: \texttt{adv\_scal} active, \texttt{adv\_scal\_backward} and
+\texttt{fct\_sed} disabled.
+
+\item \textbf{Next phase: extended run and spatial distribution analysis.}
+The mass-conservation work through v009 used 10-day simulations, which is
+sufficient for identifying global mass errors but too short to characterise
+the long-range dispersion and spatial structure of the tracer fields.  The
+following steps are planned.
+
+\begin{enumerate}[(a)]
+
+  \item \textbf{Extended simulation ($\geq$30 days).}
+        Extend the model run to at least 30 simulation days (requiring more
+        than $\sim$12~wall-clock hours on the test system) using the
+        production configuration (Fix~B+, \texttt{adv\_scal} active, no
+        \texttt{adv\_scal\_backward}/\texttt{fct\_sed}).  All three cases
+        (a, b, c) will be run.
+
+  \item \textbf{Open-boundary oscillation hypothesis.}
+        The 10-day domain-integrated mass time series shows a low-amplitude
+        oscillation that is roughly constant from the first output step.
+        Two explanations are under consideration:
+        \begin{itemize}
+          \item \emph{Tidal OBC exchange} --- the dominant tidal node at the
+                Delaware Bay / Chesapeake--Delaware Canal boundary exchanges
+                water volume (and whatever MP concentration the boundary
+                carries) on each tidal half-cycle.  If the OBC imposes a
+                non-zero MP concentration at the boundary, the domain total
+                will oscillate with the tidal prism.
+          \item \emph{Internal numerical artefact} --- a remaining advection
+                or flux-reconstruction issue that requires a targeted code fix.
+        \end{itemize}
+        The 30-day run will allow inspection of the oscillation at longer
+        times to distinguish these hypotheses: a true OBC tidal signal should
+        be phase-locked to the tide throughout, while a growing numerical
+        error would diverge from a constant amplitude.
+
+  \item \textbf{Spatial distribution maps.}
+        For each tracer (mp1 water-column concentration, mp1 bed mass,
+        sediment concentration) produce horizontal plan-view maps at selected
+        output times (e.g.\ days~5, 15, 30) to verify that the spatial
+        patterns are physically reasonable and that there are no localised
+        accumulation artefacts near OBC nodes, source nodes, or shallow
+        tidal-flat cells.
+
+\end{enumerate}
 
 \end{enumerate}
 

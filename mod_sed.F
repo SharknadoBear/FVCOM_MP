@@ -1003,16 +1003,16 @@ End Subroutine Setup_Sed
   
       !3D advection
 
-!      call adv_scal(sed(i)%conc, &
-!                      sed(i)%cnew, &
-!                      d_cdis,      &
-!                      sed(i)%cdis(1:numqbc), &
-!                      d_cflx,      &
-!                      sed(i)%cflx, &
-!                      DTsed ,sed_source)
+      call adv_scal(sed(i)%conc, &
+                      sed(i)%cnew, &
+                      d_cdis,      &
+                      sed(i)%cdis(1:numqbc), &
+                      d_cflx,      &
+                      sed(i)%cflx, &
+                      DTsed ,sed_source)
   
 
-!J. Ge for tracer advection
+!J. Ge for tracer advection (backward scheme + FCT — disabled, corrupts MP scalar arrays)
 !      call adv_scal_backward(sed(i)%conc,sed0(i)%conc,sed2(i)%conc, &
 !                      sed(i)%cnew, &
 !                      d_cdis,      &
@@ -1021,15 +1021,12 @@ End Subroutine Setup_Sed
 !                      sed(i)%cflx, &
 !                      DTsed ,sed_source)
 
-!J. Ge for tracer advection
+!      ! Diagnostic test: bypass horizontal sediment advection and the FCT
+!      ! limiter while keeping the rest of Advance_Sed active (v005/v006).
+!      sed(i)%cnew = sed(i)%conc
+!      sed(i)%cflx = 0.0_sp
 
-
-      ! Diagnostic test: bypass horizontal sediment advection and the FCT
-      ! limiter while keeping the rest of Advance_Sed active.
-      sed(i)%cnew = sed(i)%conc
-      sed(i)%cflx = 0.0_sp
-
-      !Apply FCT limiter for stability - prevents overshoots/undershoots
+      !Apply FCT limiter for stability - disabled: test adv_scal without FCT
 !      call fct_sed(sed(i)%conc,sed(i)%cnew)
   
     end do

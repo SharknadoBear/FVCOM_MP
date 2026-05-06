@@ -1,4 +1,4 @@
-This is pdfTeX, Version 3.141592653-2.6-1.40.24 (MiKTeX 22.11.25) (preloaded format=pdflatex 2026.4.12)  5 MAY 2026 11:48
+This is pdfTeX, Version 3.141592653-2.6-1.40.24 (MiKTeX 22.11.25) (preloaded format=pdflatex 2026.4.12)  6 MAY 2026 07:33
 entering extended mode
  restricted \write18 enabled.
  %&-line parsing enabled.
@@ -1013,20 +1013,20 @@ Dictionary: translator-theorem-dictionary, Language: English
 ) (report_01.nav) [1
 
 {C:/Users/huan111/AppData/Local/MiKTeX/fonts/map/pdftex/pdftex.map}]
-LaTeX Font Info:    Trying to load font information for U+msa on input line 60.
+LaTeX Font Info:    Trying to load font information for U+msa on input line 66.
 
 
 (C:\Users\huan111\AppData\Local\Programs\MiKTeX\tex/latex/amsfonts\umsa.fd
 File: umsa.fd 2013/01/14 v3.01 AMS symbols A
 )
-LaTeX Font Info:    Trying to load font information for U+msb on input line 60.
+LaTeX Font Info:    Trying to load font information for U+msb on input line 66.
 
 
 (C:\Users\huan111\AppData\Local\Programs\MiKTeX\tex/latex/amsfonts\umsb.fd
 File: umsb.fd 2013/01/14 v3.01 AMS symbols B
 )
 LaTeX Font Info:    Trying to load font information for OT1+mathkerncmss on inp
-ut line 60.
+ut line 66.
 
 (C:\Users\huan111\AppData\Local\Programs\MiKTeX\tex/latex/sansmathaccent\ot1mat
 hkerncmss.fd
@@ -1036,76 +1036,81 @@ thkerncmss.
 
 ]
 <../FVCOM_MP_test_run/PYTHON/output/mass_conservation/archive/v001_before_case_
-a_sediment_on/total_mass_by_case.png, id=51, 642.546pt x 352.809pt>
+a_sediment_on/total_mass_by_case.png, id=54, 642.546pt x 352.809pt>
 File: ../FVCOM_MP_test_run/PYTHON/output/mass_conservation/archive/v001_before_
 case_a_sediment_on/total_mass_by_case.png Graphic file (type png)
 <use ../FVCOM_MP_test_run/PYTHON/output/mass_conservation/archive/v001_before_c
 ase_a_sediment_on/total_mass_by_case.png>
 Package pdftex.def Info: ../FVCOM_MP_test_run/PYTHON/output/mass_conservation/a
 rchive/v001_before_case_a_sediment_on/total_mass_by_case.png  used on input lin
-e 123.
-(pdftex.def)             Requested size: 120.39864pt x 66.10844pt.
-<../FVCOM_MP_test_run/PYTHON/output/mass_conservation/archive/v007_fixbplus_10d
-_abc_verified/total_mass_by_case.png, id=53, 642.546pt x 352.809pt>
-File: ../FVCOM_MP_test_run/PYTHON/output/mass_conservation/archive/v007_fixbplu
-s_10d_abc_verified/total_mass_by_case.png Graphic file (type png)
-<use ../FVCOM_MP_test_run/PYTHON/output/mass_conservation/archive/v007_fixbplus
-_10d_abc_verified/total_mass_by_case.png>
-Package pdftex.def Info: ../FVCOM_MP_test_run/PYTHON/output/mass_conservation/a
-rchive/v007_fixbplus_10d_abc_verified/total_mass_by_case.png  used on input lin
-e 123.
-(pdftex.def)             Requested size: 120.39864pt x 66.10844pt.
-<../FVCOM_MP_test_run/PYTHON/output/mass_conservation/archive/v006_b_c_mirrored
-_sediment/total_mass_by_case.png, id=54, 642.546pt x 352.809pt>
-File: ../FVCOM_MP_test_run/PYTHON/output/mass_conservation/archive/v006_b_c_mir
-rored_sediment/total_mass_by_case.png Graphic file (type png)
-<use ../FVCOM_MP_test_run/PYTHON/output/mass_conservation/archive/v006_b_c_mirr
-ored_sediment/total_mass_by_case.png>
-Package pdftex.def Info: ../FVCOM_MP_test_run/PYTHON/output/mass_conservation/a
-rchive/v006_b_c_mirrored_sediment/total_mass_by_case.png  used on input line 12
-3.
+e 127.
 (pdftex.def)             Requested size: 120.39864pt x 66.10844pt.
 <../FVCOM_MP_test_run/PYTHON/output/mass_conservation/archive/v008_fixbplus_10d
-_abc_all3_match/total_mass_by_case.png, id=55, 642.546pt x 352.809pt>
+_abc_all3_match/total_mass_by_case.png, id=56, 642.546pt x 352.809pt>
 File: ../FVCOM_MP_test_run/PYTHON/output/mass_conservation/archive/v008_fixbplu
 s_10d_abc_all3_match/total_mass_by_case.png Graphic file (type png)
 <use ../FVCOM_MP_test_run/PYTHON/output/mass_conservation/archive/v008_fixbplus
 _10d_abc_all3_match/total_mass_by_case.png>
 Package pdftex.def Info: ../FVCOM_MP_test_run/PYTHON/output/mass_conservation/a
 rchive/v008_fixbplus_10d_abc_all3_match/total_mass_by_case.png  used on input l
-ine 123.
+ine 127.
 (pdftex.def)             Requested size: 120.39864pt x 66.10844pt.
- [3
+<../FVCOM_MP_test_run/PYTHON/output/mass_conservation/archive/v006_b_c_mirrored
+_sediment/total_mass_by_case.png, id=57, 642.546pt x 352.809pt>
+File: ../FVCOM_MP_test_run/PYTHON/output/mass_conservation/archive/v006_b_c_mir
+rored_sediment/total_mass_by_case.png Graphic file (type png)
+<use ../FVCOM_MP_test_run/PYTHON/output/mass_conservation/archive/v006_b_c_mirr
+ored_sediment/total_mass_by_case.png>
+Package pdftex.def Info: ../FVCOM_MP_test_run/PYTHON/output/mass_conservation/a
+rchive/v006_b_c_mirrored_sediment/total_mass_by_case.png  used on input line 12
+7.
+(pdftex.def)             Requested size: 120.39864pt x 66.10844pt.
+<../FVCOM_MP_test_run/PYTHON/output/mass_conservation/archive/v009_adv_scal_no_
+fct_abc_all3_match/total_mass_by_case.png, id=58, 642.546pt x 352.809pt>
+File: ../FVCOM_MP_test_run/PYTHON/output/mass_conservation/archive/v009_adv_sca
+l_no_fct_abc_all3_match/total_mass_by_case.png Graphic file (type png)
+<use ../FVCOM_MP_test_run/PYTHON/output/mass_conservation/archive/v009_adv_scal
+_no_fct_abc_all3_match/total_mass_by_case.png>
+Package pdftex.def Info: ../FVCOM_MP_test_run/PYTHON/output/mass_conservation/a
+rchive/v009_adv_scal_no_fct_abc_all3_match/total_mass_by_case.png  used on inpu
+t line 127.
+(pdftex.def)             Requested size: 120.39864pt x 66.10844pt.
+
+Overfull \vbox (10.2585pt too high) detected at line 127
+ []
+
+[3
 
  <../FVCOM_MP_test_run/PYTHON/output/mass_conservation/archive/v001_before_case
 _a_sediment_on/total_mass_by_case.png> <../FVCOM_MP_test_run/PYTHON/output/mass
-_conservation/archive/v007_fixbplus_10d_abc_verified/total_mass_by_case.png> <.
-./FVCOM_MP_test_run/PYTHON/output/mass_conservation/archive/v006_b_c_mirrored_s
-ediment/total_mass_by_case.png> <../FVCOM_MP_test_run/PYTHON/output/mass_conser
-vation/archive/v008_fixbplus_10d_abc_all3_match/total_mass_by_case.png>] [4
+_conservation/archive/v008_fixbplus_10d_abc_all3_match/total_mass_by_case.png> 
+<../FVCOM_MP_test_run/PYTHON/output/mass_conservation/archive/v006_b_c_mirrored
+_sediment/total_mass_by_case.png> <../FVCOM_MP_test_run/PYTHON/output/mass_cons
+ervation/archive/v009_adv_scal_no_fct_abc_all3_match/total_mass_by_case.png>] [
+4
 
 ]
 <../FVCOM_MP_test_run/PYTHON/output/mass_conservation/checkpoints/cp_stage_heat
-map.png, id=78, 1577.4132pt x 805.5696pt>
+map.png, id=82, 1577.4132pt x 805.5696pt>
 File: ../FVCOM_MP_test_run/PYTHON/output/mass_conservation/checkpoints/cp_stage
 _heatmap.png Graphic file (type png)
 <use ../FVCOM_MP_test_run/PYTHON/output/mass_conservation/checkpoints/cp_stage_
 heatmap.png>
 Package pdftex.def Info: ../FVCOM_MP_test_run/PYTHON/output/mass_conservation/c
-heckpoints/cp_stage_heatmap.png  used on input line 167.
+heckpoints/cp_stage_heatmap.png  used on input line 171.
 (pdftex.def)             Requested size: 393.14886pt x 200.7773pt.
  [5
 
  <../FVCOM_MP_test_run/PYTHON/output/mass_conservation/checkpoints/cp_stage_hea
 tmap.png>]
 <../FVCOM_MP_test_run/PYTHON/output/mass_conservation/checkpoints/cp_grand_tota
-l_timeseries.png, id=87, 787.2612pt x 496.7358pt>
+l_timeseries.png, id=91, 787.2612pt x 496.7358pt>
 File: ../FVCOM_MP_test_run/PYTHON/output/mass_conservation/checkpoints/cp_grand
 _total_timeseries.png Graphic file (type png)
 <use ../FVCOM_MP_test_run/PYTHON/output/mass_conservation/checkpoints/cp_grand_
 total_timeseries.png>
 Package pdftex.def Info: ../FVCOM_MP_test_run/PYTHON/output/mass_conservation/c
-heckpoints/cp_grand_total_timeseries.png  used on input line 177.
+heckpoints/cp_grand_total_timeseries.png  used on input line 181.
 (pdftex.def)             Requested size: 318.20238pt x 200.77518pt.
  [6
 
@@ -1125,30 +1130,35 @@ Package rerunfilecheck Info: File `report_01.out' has not changed.
 (rerunfilecheck)             Checksum: D41D8CD98F00B204E9800998ECF8427E;0.
  ) 
 Here is how much of TeX's memory you used:
- 22250 strings out of 475284
- 448275 string characters out of 2773161
- 745550 words of memory out of 3000000
- 43220 multiletter control sequences out of 15000+600000
- 480917 words of font info for 70 fonts, out of 8000000 for 9000
+ 22256 strings out of 475284
+ 448394 string characters out of 2773161
+ 745549 words of memory out of 3000000
+ 43224 multiletter control sequences out of 15000+600000
+ 481985 words of font info for 74 fonts, out of 8000000 for 9000
  1141 hyphenation exceptions out of 8191
  128i,15n,122p,432b,507s stack positions out of 10000i,1000n,20000p,200000b,80000s
 <C:/Users/huan111/AppData/Local/Programs/MiKTeX/fonts/type1/public/amsfonts/c
 m/cmmi8.pfb><C:/Users/huan111/AppData/Local/Programs/MiKTeX/fonts/type1/public/
-amsfonts/cm/cmss10.pfb><C:/Users/huan111/AppData/Local/Programs/MiKTeX/fonts/ty
-pe1/public/amsfonts/cm/cmss12.pfb><C:/Users/huan111/AppData/Local/Programs/MiKT
-eX/fonts/type1/public/amsfonts/cm/cmss8.pfb><C:/Users/huan111/AppData/Local/Pro
-grams/MiKTeX/fonts/type1/public/amsfonts/cm/cmss9.pfb><C:/Users/huan111/AppData
-/Local/Programs/MiKTeX/fonts/type1/public/amsfonts/cm/cmssbx10.pfb><C:/Users/hu
-an111/AppData/Local/Programs/MiKTeX/fonts/type1/public/amsfonts/cm/cmssi8.pfb><
-C:/Users/huan111/AppData/Local/Programs/MiKTeX/fonts/type1/public/amsfonts/cm/c
-msy5.pfb><C:/Users/huan111/AppData/Local/Programs/MiKTeX/fonts/type1/public/ams
-fonts/cm/cmsy6.pfb><C:/Users/huan111/AppData/Local/Programs/MiKTeX/fonts/type1/
-public/amsfonts/cm/cmsy8.pfb><C:/Users/huan111/AppData/Local/Programs/MiKTeX/fo
-nts/type1/public/amsfonts/cm/cmtt8.pfb><C:/Users/huan111/AppData/Local/Programs
-/MiKTeX/fonts/type1/public/amsfonts/symbols/msam10.pfb>
-Output written on report_01.pdf (6 pages, 1152552 bytes).
+amsfonts/cm/cmr6.pfb><C:/Users/huan111/AppData/Local/Programs/MiKTeX/fonts/type
+1/public/amsfonts/cm/cmr8.pfb><C:/Users/huan111/AppData/Local/Programs/MiKTeX/f
+onts/type1/public/amsfonts/cm/cmss10.pfb><C:/Users/huan111/AppData/Local/Progra
+ms/MiKTeX/fonts/type1/public/amsfonts/cm/cmss12.pfb><C:/Users/huan111/AppData/L
+ocal/Programs/MiKTeX/fonts/type1/public/amsfonts/cm/cmss8.pfb><C:/Users/huan111
+/AppData/Local/Programs/MiKTeX/fonts/type1/public/amsfonts/cm/cmss9.pfb><C:/Use
+rs/huan111/AppData/Local/Programs/MiKTeX/fonts/type1/public/amsfonts/cm/cmssbx1
+0.pfb><C:/Users/huan111/AppData/Local/Programs/MiKTeX/fonts/type1/public/amsfon
+ts/cm/cmssi8.pfb><C:/Users/huan111/AppData/Local/Programs/MiKTeX/fonts/type1/pu
+blic/amsfonts/cm/cmsy10.pfb><C:/Users/huan111/AppData/Local/Programs/MiKTeX/fon
+ts/type1/public/amsfonts/cm/cmsy5.pfb><C:/Users/huan111/AppData/Local/Programs/
+MiKTeX/fonts/type1/public/amsfonts/cm/cmsy6.pfb><C:/Users/huan111/AppData/Local
+/Programs/MiKTeX/fonts/type1/public/amsfonts/cm/cmsy8.pfb><C:/Users/huan111/App
+Data/Local/Programs/MiKTeX/fonts/type1/public/amsfonts/cm/cmtt8.pfb><C:/Users/h
+uan111/AppData/Local/Programs/MiKTeX/fonts/type1/public/amsfonts/cm/cmtt9.pfb><
+C:/Users/huan111/AppData/Local/Programs/MiKTeX/fonts/type1/public/amsfonts/symb
+ols/msam10.pfb>
+Output written on report_01.pdf (6 pages, 1185511 bytes).
 PDF statistics:
- 150 PDF objects out of 1000 (max. 8388607)
+ 170 PDF objects out of 1000 (max. 8388607)
  13 named destinations out of 1000 (max. 500000)
  109 words of extra memory for PDF output out of 10000 (max. 10000000)
 
