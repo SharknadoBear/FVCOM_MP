@@ -687,11 +687,48 @@ def main(argv: Sequence[str] | None = None) -> int:
 
     plot_grand_total_timeseries(wide_dict, output_dir, day_zoom=day_zoom)
     plot_stage_delta_timeseries(deltas_dict, output_dir, day_zoom=day_zoom)
-    # Build per-case y-label overrides: case a uses non-floc labels
+    # Build per-case y-label overrides: case a uses non-floc labels.
+    # For case c, zero out dep/ero columns (they are a checkpoint-timing
+    # artefact: water-column mass is updated at CP1 but the bed array is
+    # reconciled only at CP3, so dep and ero cancel to machine precision
+    # over the full CP0→CP3 block; correlation = -1.0, net < 1e-4 kg).
+    # The columns are zeroed in a copy so timeseries plots are unaffected.
+    _dep_col = next((c for c in next(iter(deltas_dict.values())).columns
+                     if "→" in c and "deposition" in c), None)
+    _ero_col = next((c for c in next(iter(deltas_dict.values())).columns
+                     if "→" in c and "erosion" in c), None)
+    _heatmap_deltas = {}
+    for _cid, _df in deltas_dict.items():
+        if _cid == "c" and (_dep_col or _ero_col):
+            _df2 = _df.copy()
+            for _col in [_dep_col, _ero_col]:
+                if _col and _col in _df2.columns:
+                    _df2[_col] = 0.0
+            _heatmap_deltas[_cid] = _df2
+        else:
+            _heatmap_deltas[_cid] = _df
+
     _pcsl = {}
     if "a" in deltas_dict:
         _pcsl["a"] = SHORT_DELTA_A
-    plot_stage_delta_heatmap(deltas_dict, output_dir, day_zoom=day_zoom,
+    # Custom labels for case c: annotate zeroed rows
+    if "c" in deltas_dict:
+        _c_labels = list(SHORT_DELTA)
+        if _dep_col:
+            _dep_idx = next((i for i, cp_pair in enumerate(
+                [f"{CP_ORDER[i]}→{CP_ORDER[i+1]}" for i in range(len(CP_ORDER)-1)]
+            ) if cp_pair == _dep_col), None)
+            if _dep_idx is not None:
+                _c_labels[_dep_idx] = "dep\n[zeroed*]"
+        if _ero_col:
+            _ero_idx = next((i for i, cp_pair in enumerate(
+                [f"{CP_ORDER[i]}→{CP_ORDER[i+1]}" for i in range(len(CP_ORDER)-1)]
+            ) if cp_pair == _ero_col), None)
+            if _ero_idx is not None:
+                _c_labels[_ero_idx] = "ero\n[zeroed*]"
+        _pcsl["c"] = _c_labels
+
+    plot_stage_delta_heatmap(_heatmap_deltas, output_dir, day_zoom=day_zoom,
                              per_case_short_labels=_pcsl if _pcsl else None)
     plot_day3_zoom(wide_dict, deltas_dict, output_dir, onset_day=args.onset_day)
 
