@@ -9,6 +9,8 @@
 \usepackage{xcolor}
 \usepackage{enumerate}
 \usepackage{subcaption}
+\usepackage{float}       % [H] exact figure placement
+\usepackage{placeins}    % \FloatBarrier between sections
 
 \title{Memo 05: Spatial Distribution Checking\\
        for FVCOM-MP Cases a, b, and c}
@@ -32,6 +34,14 @@ physically plausible gradients across the Delaware River and Bay domain.
 
 This memo documents the extraction methodology, the spatial distributions
 observed, and a comparison of the three cases at eight monitoring stations.
+
+\textbf{Note on case~c parameterisation:}
+Prior to the runs analysed here, both \texttt{waterPACT\_b\_run.nml} and
+\texttt{waterPACT\_c\_run.nml} referenced the same sediment file
+(D50~=~0.1~mm), making the two cases numerically identical.
+The corrected case~c uses \texttt{generic\_sediment\_c.inp} (D50~=~1.0~mm;
+coarser sediment, stronger heteroaggregation kinetics); all figures and
+observations in this memo refer to the corrected run.
 
 \section*{Objective}
 
@@ -150,108 +160,246 @@ groups are produced:
 
 All figures are saved to \texttt{PYTHON/output/spatial\_distribution/}.
 
-\section*{Results}
+\section*{Results: 10-Day Test Run}
 
-\subsection*{Day-Mean Spatial Distributions}
+All figures in this section are derived from the 10-day test runs
+(simulation days 0--9.96).  Plan-view maps show the temporal mean
+over the final 24 output hours; pointwise-maximum maps show the
+node-wise peak over the same window.
+Case~a: no-floc baseline; case~b: floc-enabled, D50~=~0.1~mm (fine);
+case~c: floc-enabled, D50~=~1.0~mm (coarse, corrected run).
 
-% ── PLACEHOLDER: replace with actual figure paths after analysis ──────────
-\begin{figure}[h]
+% -----------------------------------------------------------------------
+\subsection*{R1.\ Day-Mean Depth-Averaged mp1 Concentration}
+
+\begin{figure}[H]
 \centering
-\begin{subfigure}[b]{0.48\textwidth}
+\begin{subfigure}[b]{0.32\textwidth}
   \includegraphics[width=\textwidth]{../FVCOM_MP_test_run/PYTHON/output/spatial_distribution/planview_dayavg_mp1_davg_casea.png}
-  \caption{Case a — mp1 depth-averaged}
+  \caption{Case a (no-floc)}
 \end{subfigure}
 \hfill
-\begin{subfigure}[b]{0.48\textwidth}
+\begin{subfigure}[b]{0.32\textwidth}
   \includegraphics[width=\textwidth]{../FVCOM_MP_test_run/PYTHON/output/spatial_distribution/planview_dayavg_mp1_davg_caseb.png}
-  \caption{Case b — mp1 depth-averaged}
+  \caption{Case b (D50~=~0.1~mm)}
 \end{subfigure}
-\caption{Day-mean depth-averaged mp1 concentration [$\mathrm{kg\,m^{-3}}$]
-         over the last 24 hours of simulation.  Source locations are at the
-         nine river mouths.}
+\hfill
+\begin{subfigure}[b]{0.32\textwidth}
+  \includegraphics[width=\textwidth]{../FVCOM_MP_test_run/PYTHON/output/spatial_distribution/planview_dayavg_mp1_davg_casec.png}
+  \caption{Case c (D50~=~1.0~mm)}
+\end{subfigure}
+\caption{Day-mean depth-averaged mp1 concentration [$\mathrm{kg\,m^{-3}}$],
+         final 24~h of the 10-day run.  Log colour scale.
+         Cases~a and~b are visually identical (peak
+         $1.7\times10^{-4}$~kg\,m$^{-3}$).
+         Case~c peak is $3.7\times10^{-3}$~kg\,m$^{-3}$ ($\approx$21$\times$
+         higher) due to active aggregation and altered settling.}
 \label{fig:davg_mp1}
 \end{figure}
 
-\begin{figure}[h]
+% -----------------------------------------------------------------------
+\subsection*{R2.\ Day-Mean Floc-Component Split (Cases b and c)}
+
+\begin{figure}[H]
 \centering
-\begin{subfigure}[b]{0.48\textwidth}
-  \includegraphics[width=\textwidth]{../FVCOM_MP_test_run/PYTHON/output/spatial_distribution/planview_dayavg_bot_mass_casea.png}
-  \caption{Case a — bot\_mass\_mp1}
+\begin{subfigure}[b]{0.32\textwidth}
+  \includegraphics[width=\textwidth]{../FVCOM_MP_test_run/PYTHON/output/spatial_distribution/planview_dayavg_mp1_agg_davg_caseb.png}
+  \caption{Case b --- \texttt{mp1\_agg} (aggregated)}
 \end{subfigure}
 \hfill
-\begin{subfigure}[b]{0.48\textwidth}
-  \includegraphics[width=\textwidth]{../FVCOM_MP_test_run/PYTHON/output/spatial_distribution/planview_dayavg_bot_mass_caseb.png}
-  \caption{Case b — bot\_mass\_mp1}
+\begin{subfigure}[b]{0.32\textwidth}
+  \includegraphics[width=\textwidth]{../FVCOM_MP_test_run/PYTHON/output/spatial_distribution/planview_dayavg_mp1_agg_davg_casec.png}
+  \caption{Case c --- \texttt{mp1\_agg} (aggregated)}
 \end{subfigure}
-\caption{Day-mean bed plastic mass density [$\mathrm{kg\,m^{-2}}$]
-         over the last 24 hours.}
+\hfill
+\begin{subfigure}[b]{0.32\textwidth}
+  \includegraphics[width=\textwidth]{../FVCOM_MP_test_run/PYTHON/output/spatial_distribution/planview_dayavg_mp1_dis_davg_casec.png}
+  \caption{Case c --- \texttt{mp1\_dis} (disaggregated)}
+\end{subfigure}
+\caption{Day-mean depth-averaged aggregated (\texttt{mp1\_agg}) and
+         disaggregated (\texttt{mp1\_dis}) fractions,
+         final 24~h of the 10-day run.
+         Case~b: \texttt{mp1\_agg}~=~0 everywhere (fine sediment,
+         D50~=~0.1~mm --- weak heteroaggregation kinetics).
+         Case~c: \texttt{mp1\_agg} reaches
+         $1.1\times10^{-3}$~kg\,m$^{-3}$ and is non-zero across
+         most of the domain; \texttt{mp1\_dis} mirrors the overall plume.}
+\label{fig:davg_agg}
+\end{figure}
+
+% -----------------------------------------------------------------------
+\subsection*{R3.\ Day-Mean Bed Plastic Mass Density}
+
+\begin{figure}[H]
+\centering
+\begin{subfigure}[b]{0.32\textwidth}
+  \includegraphics[width=\textwidth]{../FVCOM_MP_test_run/PYTHON/output/spatial_distribution/planview_dayavg_bot_mass_casea.png}
+  \caption{Case a}
+\end{subfigure}
+\hfill
+\begin{subfigure}[b]{0.32\textwidth}
+  \includegraphics[width=\textwidth]{../FVCOM_MP_test_run/PYTHON/output/spatial_distribution/planview_dayavg_bot_mass_caseb.png}
+  \caption{Case b}
+\end{subfigure}
+\hfill
+\begin{subfigure}[b]{0.32\textwidth}
+  \includegraphics[width=\textwidth]{../FVCOM_MP_test_run/PYTHON/output/spatial_distribution/planview_dayavg_bot_mass_casec.png}
+  \caption{Case c}
+\end{subfigure}
+\caption{Day-mean bed plastic mass density [$\mathrm{kg\,m^{-2}}$],
+         final 24~h of the 10-day run.
+         Cases~a and~b: zero bed mass throughout.
+         Case~c: widespread deposition (max
+         $6.5\times10^{-3}$~kg\,m$^{-2}$; positive at 833\,468 nodes),
+         concentrated near the upper-bay tributary junctions.}
 \label{fig:bot_mass}
 \end{figure}
 
-\subsection*{Pointwise-Maximum Maps}
+% -----------------------------------------------------------------------
+\subsection*{R4.\ Pointwise-Maximum Depth-Averaged mp1}
 
-% ── PLACEHOLDER ──────────────────────────────────────────────────────────
-\begin{figure}[h]
+\begin{figure}[H]
 \centering
-\includegraphics[width=0.6\textwidth]{../FVCOM_MP_test_run/PYTHON/output/spatial_distribution/planview_max_mp1_davg_casea.png}
-\caption{Pointwise maximum depth-averaged mp1 over the last 24 hours,
-         case~a.  Hotspots (if any) would indicate localised numerical
-         accumulation.}
+\begin{subfigure}[b]{0.32\textwidth}
+  \includegraphics[width=\textwidth]{../FVCOM_MP_test_run/PYTHON/output/spatial_distribution/planview_max_mp1_davg_casea.png}
+  \caption{Case a}
+\end{subfigure}
+\hfill
+\begin{subfigure}[b]{0.32\textwidth}
+  \includegraphics[width=\textwidth]{../FVCOM_MP_test_run/PYTHON/output/spatial_distribution/planview_max_mp1_davg_caseb.png}
+  \caption{Case b}
+\end{subfigure}
+\hfill
+\begin{subfigure}[b]{0.32\textwidth}
+  \includegraphics[width=\textwidth]{../FVCOM_MP_test_run/PYTHON/output/spatial_distribution/planview_max_mp1_davg_casec.png}
+  \caption{Case c}
+\end{subfigure}
+\caption{Node-wise maximum depth-averaged mp1 concentration over the
+         final 24~h of the 10-day run.
+         No isolated hotspot nodes disconnected from river sources are
+         present in any case, confirming the absence of localized
+         numerical accumulation.}
 \label{fig:max_mp1}
 \end{figure}
 
-\subsection*{Cross-Case Difference Maps}
+% -----------------------------------------------------------------------
+\subsection*{R5.\ Cross-Case Difference Maps --- Depth-Averaged mp1}
 
-% ── PLACEHOLDER ──────────────────────────────────────────────────────────
-\begin{figure}[h]
+\begin{figure}[H]
 \centering
-\includegraphics[width=0.6\textwidth]{../FVCOM_MP_test_run/PYTHON/output/spatial_distribution/diff_mp1_davg_caseb_minus_casea.png}
-\caption{Day-mean mp1 depth-averaged difference: case~b $-$ case~a.
-         Blue = less plastic in floc case; red = more.}
-\label{fig:diff_mp1_ba}
+\begin{subfigure}[b]{0.32\textwidth}
+  \includegraphics[width=\textwidth]{../FVCOM_MP_test_run/PYTHON/output/spatial_distribution/diff_mp1_davg_caseb_minus_casea.png}
+  \caption{Case b $-$ case a}
+\end{subfigure}
+\hfill
+\begin{subfigure}[b]{0.32\textwidth}
+  \includegraphics[width=\textwidth]{../FVCOM_MP_test_run/PYTHON/output/spatial_distribution/diff_mp1_davg_casec_minus_casea.png}
+  \caption{Case c $-$ case a}
+\end{subfigure}
+\hfill
+\begin{subfigure}[b]{0.32\textwidth}
+  \includegraphics[width=\textwidth]{../FVCOM_MP_test_run/PYTHON/output/spatial_distribution/diff_mp1_davg_casec_minus_caseb.png}
+  \caption{Case c $-$ case b}
+\end{subfigure}
+\caption{Day-mean depth-averaged mp1 difference maps [$\mathrm{kg\,m^{-3}}$],
+         final 24~h of the 10-day run.  Diverging colour scale
+         (red~=~gain, blue~=~loss).
+         \emph{b$-$a}: near-zero everywhere --- cases~a and~b are
+         identical (D50~=~0.1~mm, no aggregation).
+         \emph{c$-$a} and \emph{c$-$b}: case~c shows elevated
+         concentrations near river mouths (stronger local aggregation)
+         and reduced concentrations further downstream (faster bed removal).}
+\label{fig:diff_mp1}
 \end{figure}
 
-\subsection*{Station Time Series}
+% -----------------------------------------------------------------------
+\subsection*{R6.\ Station Time Series --- Depth-Averaged mp1}
 
-% ── PLACEHOLDER ──────────────────────────────────────────────────────────
-\begin{figure}[h]
+\begin{figure}[H]
 \centering
 \includegraphics[width=\textwidth]{../FVCOM_MP_test_run/PYTHON/output/spatial_distribution/station_timeseries_mp1_davg.png}
-\caption{Depth-averaged mp1 time series at the eight monitoring stations
-         for all three cases.  Blue: case~a; orange: case~b; green:~case~c.}
+\caption{Depth-averaged mp1 concentration time series at the eight
+         monitoring stations over the full 10-day run.
+         Blue: case~a (no-floc); orange: case~b (D50~=~0.1~mm);
+         green: case~c (D50~=~1.0~mm).
+         Cases~a and~b are indistinguishable at all stations.
+         Case~c diverges from day~2 onward at the upstream Delaware and
+         Schuylkill stations, reflecting the onset of active aggregation
+         and bed deposition under the coarser sediment parameterisation.}
 \label{fig:station_mp1}
 \end{figure}
 
 \section*{Observations}
 
-% ── TO BE FILLED IN after reviewing the figures ───────────────────────────
-\textit{This section will be completed after reviewing the plots generated
-by the Python analysis script.  The following items should be addressed:}
-
 \begin{enumerate}[(1)]
-  \item \textbf{Spatial extent of plastic:} does the plume extend realistically
-        downstream of the river sources?  Are there any cells with
-        unexpectedly high concentrations ($> 10^{-2}~\mathrm{kg\,m^{-3}}$)?
-  \item \textbf{Bed accumulation pattern:} are bed deposits concentrated near
-        the river mouths and along the main channel, as expected from the
-        tidal forcing?
-  \item \textbf{Floc-case differences (cases b/c vs.\ a):} does aggregation
-        (PLAST\_FLOC=T) produce noticeably different horizontal distributions?
-        Where is the sign of the difference most pronounced?
-  \item \textbf{Sediment distribution (cases b/c):} is the \texttt{coarse\_sand\_1}
-        field physically consistent with the bathymetry and tidal currents?
-  \item \textbf{Station time series:} do the stations downstream of sources
-        show coherent tidal oscillations?  Are there stations where the three
-        cases diverge significantly after day~5?
-  \item \textbf{Numerical anomalies:} are there isolated hotspot nodes in the
-        pointwise-max maps that are not connected to any river source?  If so,
-        report the node index, lon/lat, depth, and peak concentration.
+  \item \textbf{Spatial extent of plastic (all cases).}
+        The mp1 plume originates at the river source nodes and disperses
+        downstream into the Delaware Bay under tidal forcing.  The plume
+        pattern is physically plausible: highest concentrations near the
+        Schuylkill confluence and upper Delaware River, decreasing toward
+        the bay mouth.
+        The pointwise-maximum maps show no isolated hotspot nodes
+        disconnected from river sources, confirming the absence of
+        localized numerical accumulation.
+
+  \item \textbf{Cases a and b are numerically identical.}
+        The b$-$a difference map is uniformly near-zero
+        (max $|\Delta|$ $\ll 10^{-5}$~kg\,m$^{-3}$).  With
+        D50~=~0.1~mm (fine sediment), the floc kinetic term produces
+        no aggregated mass (\texttt{mp1\_agg}~=~0 everywhere in case~b),
+        so the \texttt{PLAST\_FLOC=T} path reduces to the same
+        behaviour as case~a.
+
+  \item \textbf{Case c shows active aggregation (D50~=~1.0~mm).}
+        With coarser sediment, \texttt{mp1\_agg} is non-zero across
+        1\,372\,802 node$\times$snapshot combinations
+        (peak $1.1\times10^{-3}$~kg\,m$^{-3}$, depth-averaged day-mean).
+        The aggregated fraction is spatially co-located with the source
+        plume and decays with distance from the river mouths, consistent
+        with heteroaggregation driven by local sediment concentration.
+
+  \item \textbf{Bed deposition active only in case c.}
+        Cases~a and~b show zero bed mass throughout; case~c accumulates
+        bed plastic at 833\,468 nodes (max
+        $6.5\times10^{-3}$~kg\,m$^{-2}$), concentrated near the
+        upper-bay and tributary junctions where tidal currents slow and
+        aggregated particles settle.
+
+  \item \textbf{Elevated water-column peak in case c.}
+        The depth-averaged mp1 peak in case~c
+        ($3.7\times10^{-3}$~kg\,m$^{-3}$) is $\approx$21$\times$
+        higher than in cases~a and~b ($1.7\times10^{-4}$~kg\,m$^{-3}$).
+        This reflects the combined effect of slower net settling
+        (aggregated particles have altered settling velocity relative to
+        free MP) and spatial redistribution by tidal currents before
+        deposition.
+
+  \item \textbf{No numerical anomalies detected.}
+        No isolated hotspot nodes appear in any pointwise-maximum map.
+        The neg-clamp events identified in the checkpoint analysis
+        (376 steps, max $1.9\times10^{-4}$~kg/step) produce no
+        visible spatial artefacts in the concentration fields.
 \end{enumerate}
 
 \section*{Summary and Next Steps}
 
-% ── TO BE FILLED IN ───────────────────────────────────────────────────────
-\textit{Summary to be written after observations are recorded.}
+The spatial distribution analysis confirms that:
+\begin{itemize}
+  \item The mp1 plume is physically plausible and free of numerical
+        accumulation artefacts in all three cases.
+  \item Cases~a and~b are numerically identical under the current
+        parameterisation (\texttt{SOURCE\_AG\_RATE}~=~0, D50~=~0.1~mm);
+        no aggregation or bed deposition occurs.
+  \item The corrected case~c (D50~=~1.0~mm) demonstrates the full
+        floc-interaction pathway: active aggregation
+        (\texttt{mp1\_agg} $> 0$ domain-wide), bed deposition at
+        $\sim$56\% of nodes, and a 21$\times$ higher peak water-column
+        concentration relative to cases~a and~b.
+  \item Fix~B\texttt{+} (Memo~04) maintains mass conservation with
+        active kinetics; the split-consistency error
+        $|\texttt{mp1\_agg}+\texttt{mp1\_dis}-\texttt{mp1}|$ remains
+        at machine precision ($< 3\times10^{-7}$~kg domain-wide).
+\end{itemize}
 
 Potential next steps:
 \begin{itemize}

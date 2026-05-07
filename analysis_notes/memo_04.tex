@@ -725,24 +725,21 @@ following steps are planned.
         \texttt{adv\_scal\_backward}/\texttt{fct\_sed}).  All three cases
         (a, b, c) will be run.
 
-  \item \textbf{Open-boundary oscillation hypothesis.}
-        The 10-day domain-integrated mass time series shows a low-amplitude
-        oscillation that is roughly constant from the first output step.
-        Two explanations are under consideration:
-        \begin{itemize}
-          \item \emph{Tidal OBC exchange} --- the dominant tidal node at the
-                Delaware Bay / Chesapeake--Delaware Canal boundary exchanges
-                water volume (and whatever MP concentration the boundary
-                carries) on each tidal half-cycle.  If the OBC imposes a
-                non-zero MP concentration at the boundary, the domain total
-                will oscillate with the tidal prism.
-          \item \emph{Internal numerical artefact} --- a remaining advection
-                or flux-reconstruction issue that requires a targeted code fix.
-        \end{itemize}
-        The 30-day run will allow inspection of the oscillation at longer
-        times to distinguish these hypotheses: a true OBC tidal signal should
-        be phase-locked to the tide throughout, while a growing numerical
-        error would diverge from a constant amplitude.
+  \item \textbf{Checkpoint mass oscillation --- \textsc{resolved}.}
+        See Section~``River Source Mechanism and Tidal OBC Oscillation'' below.
+        The oscillation has a dominant period of 12.06~h (M$_2$ tidal), is
+        present from day~0, and grows monotonically.  River source nodes are
+        interior mesh nodes (\texttt{isonb}~$\neq$~2); mass cannot exit at
+        the injection site.  The C\&D Canal OBC (nearest boundary) shows zero
+        plastic until day~8, ruling out OBC exchange.  The root cause is a
+        sigma-coordinate depth-correction artefact: the CP3 checkpoint uses the
+        post-external-mode depth~$D^{n+1}$ with the pre-advection concentration
+        $f^n$, while CP4 uses the same $D^{n+1}$ with the post-advection
+        concentration that already incorporates the $D^n/D^{n+1}$ scaling.
+        The resulting apparent per-step oscillation scales as
+        $-\sum_i M_i\cdot\Delta\eta_i/D_i^{n+1}$ and grows with the
+        accumulated near-source mass.  The true domain mass increases
+        strictly as $Q\cdot C\cdot\Delta t$ per step.  No code fix required.
 
   \item \textbf{Spatial distribution maps.}
         For each tracer (mp1 water-column concentration, mp1 bed mass,
@@ -755,5 +752,232 @@ following steps are planned.
 \end{enumerate}
 
 \end{enumerate}
+
+% ============================================================
+\section*{River Source Mechanism and Tidal OBC Oscillation}
+% ============================================================
+
+\subsection*{Motivation}
+
+The domain-total mass time series shows a growing sinusoidal oscillation
+superimposed on the monotonically increasing river-source trend.
+A spectral analysis of the transport-stage checkpoint delta (case~a,
+CP3$\to$CP3p5) reveals a dominant period of \textbf{12.06~h} (M$_2$ tidal),
+identifying the oscillation as a semi-diurnal tidal signal.
+Contrary to an earlier hypothesis, the oscillation is \emph{not} delayed
+to day~2 but is measurable from day~0 with a very small standard deviation
+($\approx$0.3~g/step); it grows monotonically to $\approx$34~g/step
+by day~10 (Table~\ref{tab:transport_osc}).
+Two features constrain the mechanism:
+\begin{itemize}
+  \item The dedicated OBC-concentration-update stage (CP7$\to$CP8) shows
+        essentially zero signal (max $4\times10^{-7}$~kg), confirming
+        the oscillation is not from OBC boundary-concentration nudging.
+  \item The oscillation is present from day~0, before any plastic
+        could travel the $\sim$180~km to the southern Delaware Bay mouth
+        (travel time at tidal advection velocity $\sim$2~days).
+\end{itemize}
+Together these point to the \emph{river-head open-boundary nodes} as the
+primary source, as detailed below.
+
+\subsection*{River Source Pathway in \texttt{RIVER\_TS\_SETTING = 'calculated'} Mode}
+
+With \texttt{PLAST\_PTSOURCE~=~T} and
+\texttt{RIVER\_TS\_SETTING~=~'calculated'},
+the plastic river source is applied \emph{inside} \texttt{Adv\_Scal}
+(\texttt{mod\_scal.F}), not in \texttt{Bcond\_Scal\_PTsource}:
+
+\begin{verbatim}
+  ! Inside Adv_Scal, point-source block (source = .true.)
+  if(RIVER_TS_SETTING == 'calculated') then
+    do j = 1, numqbc
+      jj = inodeq(j)
+      fpoint = fdis(j)            ! = cdis(j): discharge concentration
+      do k = 1, kbm1
+        xflux(jj,k) = xflux(jj,k) - qdis(j)*vqdist(j,k)*fpoint
+      end do
+    end do
+  end if
+\end{verbatim}
+
+The resulting mass added per timestep at river~$j$ is:
+\[
+  \Delta M_j = Q_j \cdot C_{\text{dis},j} \cdot \Delta t
+  \qquad (\text{summed over } k \text{ via } \textstyle\sum_k v_{\text{qdist},j,k} = 1)
+\]
+where $Q_j = \texttt{qdis}(j)$ is the river discharge
+[$\mathrm{m^3\,s^{-1}}$], $C_{\text{dis},j} = \texttt{cdis}(j)$
+is the prescribed plastic discharge concentration
+[$\mathrm{kg\,m^{-3}}$], and $\Delta t = \texttt{DTplast}$.
+This is physically correct: mass flux = $Q \times C$.
+
+By contrast, \texttt{Bcond\_Scal\_PTsource} only acts for
+\texttt{RIVER\_TS\_SETTING~=~'specified'}, in which case it
+directly overrides \texttt{fn(jj,k)~=~cdis(j)} regardless of
+discharge volume.  The \texttt{'specified'} mode does not conserve
+river mass flux and would be physically incorrect for a concentration-forced
+source with variable discharge.  It is \emph{not} used in the current runs.
+
+\textbf{Implication for checkpoints.}\\
+Because the river source is embedded inside \texttt{adv\_scal}, it is
+captured in the transport-stage checkpoint (CP3$\to$CP3p5 for case~a,
+CP3p5$\to$CP4 for cases~b/c) rather than the dedicated
+CP8$\to$CP9 (\texttt{PTsource}) stage.  As a result, the checkpoint
+CSV shows CP8$\to$CP9~=~0 at every step even when rivers are actively
+injecting plastic.  This is a known limitation of the current checkpoint
+placement, not a mass-conservation error.
+
+\subsection*{Identified Cause of the Growing Oscillation}
+
+\begin{table}[h]
+\centering
+\caption{Transport-stage delta (CP3$\to$CP3p5, case~a) statistics
+         by simulation day.  The mean represents the net river import;
+         the growing standard deviation produces the observed
+         oscillation in the checkpoint-derived mass time series.}
+\label{tab:transport_osc}
+\small
+\begin{tabular}{rrrr}
+\toprule
+Sim.\ day & Mean [kg/step] & Std.\ dev.\ [kg/step] & Max abs [kg/step] \\
+\midrule
+0 & 0.0005 & 0.0003 & 0.0011 \\
+1 & 0.0015 & 0.0012 & 0.0038 \\
+2 & 0.0021 & 0.0034 & 0.0075 \\
+3 & 0.0026 & 0.0065 & 0.0120 \\
+4 & 0.0036 & 0.0101 & 0.0181 \\
+5 & 0.0032 & 0.0150 & 0.0236 \\
+6 & 0.0029 & 0.0183 & 0.0262 \\
+7 & 0.0031 & 0.0228 & 0.0328 \\
+8 & 0.0042 & 0.0219 & 0.0324 \\
+9 & $-$0.0012 & 0.0283 & 0.0364 \\
+10 & 0.0039 & 0.0341 & 0.0427 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+The mean of the transport-stage delta ($\sim$0.001--0.004~kg/step)
+represents net river plastic import and is relatively steady.
+The standard deviation grows from 0.0003~kg/step on day~0 to
+0.034~kg/step on day~10 ($\approx$100$\times$), producing the
+observed oscillation.
+
+\paragraph{River source nodes are interior nodes, not open-boundary nodes.}
+In \texttt{tge.F}, \texttt{isonb}~=~2 (open-boundary node) is assigned
+\emph{only} for nodes in the \texttt{I\_OBC\_N} list populated from the
+grid OBC files.  River source nodes (\texttt{INODEQ(j)}) are loaded from
+the river namelist and carry \texttt{isonb}~=~0 or~1.
+Therefore \texttt{Adv\_Scal} does \emph{not} apply any OBC special treatment
+at river nodes, and no domain-boundary face exists at the injection site
+through which mass can leave.
+
+Furthermore, the C\&D Canal OBC (the nearest true OBC segment) shows
+essentially zero plastic concentration through day~8 (Memo~05 Figure~R6),
+so OBC exchange cannot explain the oscillation that is already visible
+from day~0.  Any OBC-exchange signal from more distant boundaries (southern
+Delaware Bay mouth, $\sim$180~km from the source) would require days of
+plume travel to appear.
+
+These two constraints --- no OBC at the injection site and no plastic at
+any OBC until day~8 --- conclusively rule out OBC exchange as the cause.
+
+\paragraph{Root cause: sigma-coordinate depth-correction artefact in
+the checkpoint mass computation.}
+
+The explanation lies in the timing of depth and concentration updates
+within FVCOM's mode-split algorithm.  Inspection of
+\texttt{internal\_step.F} reveals the following sequence each
+3D timestep:
+\begin{enumerate}
+  \item \textbf{Start of 3D step}: \texttt{D}$\,= H + \eta^n$ (old depth),
+        \texttt{DT}$\,= D^n$, \texttt{DTFA}$\,= D^n$.
+  \item \textbf{External (2D) sub-steps} (\texttt{ISPLIT} iterations):
+        each call to \texttt{EXTERNAL\_STEP} advances $\eta$ and
+        immediately sets \texttt{D}$\,= H + \eta^{n+1}$ and
+        \texttt{DTFA}$\,= D^{n+1}$ (\texttt{external\_step.F}, line~357).
+        By the end of all sub-steps, \texttt{D}~=~\texttt{DTFA}~=~$D^{n+1}$,
+        but \texttt{DT} is still~$D^n$.
+  \item \textbf{ADVANCE\_PLAST} is called with
+        \texttt{D}~=~$D^{n+1}$, \texttt{DT}~=~$D^n$,
+        \texttt{DTFA}~=~$D^{n+1}$, but concentration arrays still holding
+        the old-time values~$f^n$.
+\end{enumerate}
+
+The checkpoint routine \texttt{Write\_Mass\_Checkpoint} computes:
+\[
+  M^{\text{CP}} = \sum_{i,k} c(i,k)\cdot \texttt{ART1}(i)\cdot \texttt{D}(i)\cdot \texttt{DZ}(i,k)
+\]
+using \texttt{D}~=~$D^{n+1}$ at call time.  Inside \texttt{Adv\_Scal},
+the concentration update is:
+\[
+  f^{n+1}(i,k) = \Bigl(f^n(i,k) - \frac{\text{xflux}\cdot\Delta t}{A_i\,D^n\,dz_k}\Bigr)
+                 \cdot \frac{D^n}{D^{n+1}}
+\]
+The $D^n/D^{n+1}$ factor is the sigma-coordinate volume correction:
+it reduces concentration as the water column deepens (flood tide) and
+increases it as the column shoals (ebb), so that the \emph{true} mass
+$f\cdot A\cdot D\cdot dz$ is conserved in the absence of sources.
+
+The transport-stage checkpoint delta (CP3$\to$CP4) is therefore:
+\begin{align}
+  \Delta M^{\text{checkpoint}} &=
+    \sum_{i,k}(f^{n+1}-f^n)\cdot A_i\cdot D_i^{n+1}\cdot dz_k \nonumber\\
+  &= \underbrace{Q\cdot C\cdot\Delta t}_{\text{constant river source}}
+     \;\underbrace{-\;\sum_i M_i(t)\cdot\frac{D_i^{n+1}-D_i^n}{D_i^{n+1}}}_{\text{tidal depth-correction residual}}
+  \label{eq:osc}
+\end{align}
+where $M_i(t)=\sum_k f^n(i,k)\cdot A_i\cdot D_i^{n+1}\cdot dz_k$ is the
+pre-advection mass at node~$i$ as seen by the CP3 checkpoint
+(using the already-updated $D^{n+1}$).
+
+The second term in Eq.~\eqref{eq:osc}:
+\begin{itemize}
+  \item \textbf{Oscillates at the M$_2$ tidal period} because
+        $D_i^{n+1}-D_i^n = \Delta\eta_i$ is the tidal sea-surface change
+        per 3D timestep, which reverses sign every half tidal cycle.
+  \item \textbf{Grows monotonically} because $M_i(t)$ increases as the
+        river continuously injects plastic.  The amplitude of the
+        residual is proportional to the accumulated near-source mass,
+        so it grows at the same rate as the injection.
+  \item \textbf{Is largest near the river injection nodes}, where
+        plastic concentration (and hence $M_i$) is highest.
+  \item \textbf{Starts from day~0} because the depth correction is
+        applied every 3D timestep from the start; no plume-travel
+        delay is needed.
+\end{itemize}
+
+\paragraph{The true domain mass is strictly monotonic.}
+The true physical mass at time~$n+1$ is
+$M^{n+1} = \sum_{i,k} f^{n+1}\cdot A_i\cdot D_i^{n+1}\cdot dz_k$.
+Substituting the \texttt{Adv\_Scal} update:
+\[
+  M^{n+1} = \sum_{i,k} f^n\cdot A_i\cdot D_i^n\cdot dz_k + Q\cdot C\cdot\Delta t
+           = M^n + Q\cdot C\cdot\Delta t
+\]
+(horizontal advection cancels over interior nodes; OBC exchange is zero
+because there is no plastic at any OBC through day~8).
+The $D^n/D^{n+1}$ factor cancels exactly when $f^{n+1}$ is evaluated
+at the correct new depth~$D^{n+1}$.  The oscillation therefore does
+\emph{not} appear in the NetCDF-based mass budget (which uses
+consistent time-level concentrations and depths); it is an artefact
+of comparing the checkpoint CP3 mass (using new $D^{n+1}$ with old
+concentration $f^n$) against the checkpoint CP4 mass (using new $D^{n+1}$
+with updated concentration $f^{n+1}$, which already embeds the
+$D^n/D^{n+1}$ scaling).
+
+\paragraph{Conclusion.}
+\texttt{RIVER\_TS\_SETTING~=~'calculated'} is correctly implemented;
+the river source adds a constant $Q\cdot C\cdot\Delta t$ per step to
+the true domain mass.  The growing M$_2$ tidal oscillation visible in
+the checkpoint-derived mass time series is a sigma-coordinate
+depth-correction artefact: the checkpoint at CP3 uses the post-external-mode
+depth~$D^{n+1}$ with the pre-advection concentration~$f^n$, while the
+checkpoint at CP4 uses $D^{n+1}$ with the concentration~$f^{n+1}$
+that has already been scaled by $D^n/D^{n+1}$.  The resulting apparent
+per-step mass change oscillates tidally with amplitude proportional to
+the accumulated near-source mass~$M(t)$, explaining both the M$_2$
+period and the monotonically growing amplitude.  No code fix is required;
+the oscillation is a measurement artefact of the checkpoint placement,
+not a mass-conservation error.
 
 \end{document}

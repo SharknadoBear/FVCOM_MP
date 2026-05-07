@@ -1,4 +1,4 @@
-This is pdfTeX, Version 3.141592653-2.6-1.40.24 (MiKTeX 22.11.25) (preloaded format=pdflatex 2026.4.12)  6 MAY 2026 14:25
+This is pdfTeX, Version 3.141592653-2.6-1.40.24 (MiKTeX 22.11.25) (preloaded format=pdflatex 2026.4.12)  7 MAY 2026 13:15
 entering extended mode
  restricted \write18 enabled.
  %&-line parsing enabled.
@@ -370,33 +370,43 @@ Package caption Info: New subtype `subfigure' on input line 238.
 \c@subfigure=\count291
 Package caption Info: New subtype `subtable' on input line 238.
 \c@subtable=\count292
+) (C:\Users\huan111\AppData\Local\Programs\MiKTeX\tex/latex/float\float.sty
+Package: float 2001/11/08 v1.3d Float enhancements (AL)
+\c@float@type=\count293
+\float@exts=\toks24
+\float@box=\box53
+\@float@everytoks=\toks25
+\@floatcapt=\box54
+)
+(C:\Users\huan111\AppData\Local\Programs\MiKTeX\tex/latex/placeins\placeins.sty
+Package: placeins 2005/04/18  v 2.2
 )
 (C:\Users\huan111\AppData\Local\Programs\MiKTeX\tex/latex/l3backend\l3backend-p
 dftex.def
 File: l3backend-pdftex.def 2022-10-26 L3 backend support: PDF output (pdfTeX)
-\l__color_backend_stack_int=\count293
-\l__pdf_internal_box=\box53
+\l__color_backend_stack_int=\count294
+\l__pdf_internal_box=\box55
 ) (memo_05.aux)
 \openout1 = `memo_05.aux'.
 
-LaTeX Font Info:    Checking defaults for OML/cmm/m/it on input line 18.
-LaTeX Font Info:    ... okay on input line 18.
-LaTeX Font Info:    Checking defaults for OMS/cmsy/m/n on input line 18.
-LaTeX Font Info:    ... okay on input line 18.
-LaTeX Font Info:    Checking defaults for OT1/cmr/m/n on input line 18.
-LaTeX Font Info:    ... okay on input line 18.
-LaTeX Font Info:    Checking defaults for T1/cmr/m/n on input line 18.
-LaTeX Font Info:    ... okay on input line 18.
-LaTeX Font Info:    Checking defaults for TS1/cmr/m/n on input line 18.
-LaTeX Font Info:    ... okay on input line 18.
-LaTeX Font Info:    Checking defaults for OMX/cmex/m/n on input line 18.
-LaTeX Font Info:    ... okay on input line 18.
-LaTeX Font Info:    Checking defaults for U/cmr/m/n on input line 18.
-LaTeX Font Info:    ... okay on input line 18.
-LaTeX Font Info:    Checking defaults for PD1/pdf/m/n on input line 18.
-LaTeX Font Info:    ... okay on input line 18.
-LaTeX Font Info:    Checking defaults for PU/pdf/m/n on input line 18.
-LaTeX Font Info:    ... okay on input line 18.
+LaTeX Font Info:    Checking defaults for OML/cmm/m/it on input line 20.
+LaTeX Font Info:    ... okay on input line 20.
+LaTeX Font Info:    Checking defaults for OMS/cmsy/m/n on input line 20.
+LaTeX Font Info:    ... okay on input line 20.
+LaTeX Font Info:    Checking defaults for OT1/cmr/m/n on input line 20.
+LaTeX Font Info:    ... okay on input line 20.
+LaTeX Font Info:    Checking defaults for T1/cmr/m/n on input line 20.
+LaTeX Font Info:    ... okay on input line 20.
+LaTeX Font Info:    Checking defaults for TS1/cmr/m/n on input line 20.
+LaTeX Font Info:    ... okay on input line 20.
+LaTeX Font Info:    Checking defaults for OMX/cmex/m/n on input line 20.
+LaTeX Font Info:    ... okay on input line 20.
+LaTeX Font Info:    Checking defaults for U/cmr/m/n on input line 20.
+LaTeX Font Info:    ... okay on input line 20.
+LaTeX Font Info:    Checking defaults for PD1/pdf/m/n on input line 20.
+LaTeX Font Info:    ... okay on input line 20.
+LaTeX Font Info:    Checking defaults for PU/pdf/m/n on input line 20.
+LaTeX Font Info:    ... okay on input line 20.
 
 *geometry* driver: auto-detecting
 *geometry* detected driver: pdftex
@@ -432,7 +442,7 @@ LaTeX Font Info:    ... okay on input line 18.
 * \@reversemarginfalse
 * (1in=72.27pt=25.4mm, 1cm=28.453pt)
 
-Package hyperref Info: Link coloring OFF on input line 18.
+Package hyperref Info: Link coloring OFF on input line 20.
 (memo_05.out) (memo_05.out)
 \@outlinefile=\write3
 \openout3 = `memo_05.out'.
@@ -441,17 +451,17 @@ Package hyperref Info: Link coloring OFF on input line 18.
 (C:\Users\huan111\AppData\Local\Programs\MiKTeX\tex/context/base/mkii\supp-pdf.
 mkii
 [Loading MPS to PDF converter (version 2006.09.02).]
-\scratchcounter=\count294
+\scratchcounter=\count295
 \scratchdimen=\dimen185
-\scratchbox=\box54
-\nofMPsegments=\count295
-\nofMParguments=\count296
-\everyMPshowfont=\toks24
-\MPscratchCnt=\count297
+\scratchbox=\box56
+\nofMPsegments=\count296
+\nofMParguments=\count297
+\everyMPshowfont=\toks26
+\MPscratchCnt=\count298
 \MPscratchDim=\dimen186
-\MPnumerator=\count298
-\makeMPintoPDFobject=\count299
-\everyMPtoPDFconversion=\toks25
+\MPnumerator=\count299
+\makeMPintoPDFobject=\count300
+\everyMPtoPDFconversion=\toks27
 )
 (C:\Users\huan111\AppData\Local\Programs\MiKTeX\tex/latex/epstopdf-pkg\epstopdf
 -base.sty
@@ -464,142 +474,245 @@ Package epstopdf-base Info: Redefining graphics rule for `.eps' on input line 4
 File: epstopdf-sys.cfg 2021/03/18 v2.0 Configuration of epstopdf for MiKTeX
 ))
 Package caption Info: Begin \AtBeginDocument code.
+Package caption Info: float package is loaded.
 Package caption Info: End \AtBeginDocument code.
-LaTeX Font Info:    Trying to load font information for U+msa on input line 21.
+LaTeX Font Info:    Trying to load font information for U+msa on input line 23.
 
 
 (C:\Users\huan111\AppData\Local\Programs\MiKTeX\tex/latex/amsfonts\umsa.fd
 File: umsa.fd 2013/01/14 v3.01 AMS symbols A
 )
-LaTeX Font Info:    Trying to load font information for U+msb on input line 21.
+LaTeX Font Info:    Trying to load font information for U+msb on input line 23.
 
 
 (C:\Users\huan111\AppData\Local\Programs\MiKTeX\tex/latex/amsfonts\umsb.fd
 File: umsb.fd 2013/01/14 v3.01 AMS symbols B
 )
-Underfull \hbox (badness 10000) in paragraph at lines 55--57
+Underfull \hbox (badness 5274) in paragraph at lines 38--45
+[]\OT1/cmr/bx/n/10.95 Note on case c pa-ram-e-ter-i-sa-tion: \OT1/cmr/m/n/10.95
+ Prior to the runs anal-ysed here, both
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 38--45
+\OT1/cmtt/m/n/10.95 waterPACT[]b[]run.nml \OT1/cmr/m/n/10.95 and \OT1/cmtt/m/n/
+10.95 waterPACT[]c[]run.nml \OT1/cmr/m/n/10.95 ref-er-enced the same sed-i-ment
+ file
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 65--67
 \OT1/cmr/m/n/10.95 Two MAT-LAB scripts were writ-ten fol-low-ing the con-ven-ti
 ons es-tab-lished in
  []
 
 LaTeX Font Info:    Font shape `OT1/cmtt/bx/n' in size <10.95> not available
-(Font)              Font shape `OT1/cmtt/m/n' tried instead on input line 59.
+(Font)              Font shape `OT1/cmtt/m/n' tried instead on input line 69.
 
-Underfull \hbox (badness 3895) in paragraph at lines 60--62
+Underfull \hbox (badness 3895) in paragraph at lines 70--72
 []\OT1/cmr/m/n/10.95 Reads \OT1/cmtt/m/n/10.95 OUTPUT[]a/backup[]data/waterPACT
 []a[]0001.nc
- []
-
-
-Overfull \hbox (2.4785pt too wide) in paragraph at lines 64--69
-[]\OT1/cmr/m/n/10.95 Reads \OT1/cmtt/m/n/10.95 OUTPUT[]b/backup[]data/waterPACT
-[]b[]0001.nc
  []
 
 [1
 
 {C:/Users/huan111/AppData/Local/MiKTeX/fonts/map/pdftex/pdftex.map}]
-LaTeX Font Info:    Trying to load font information for OMS+cmtt on input line 
-72.
-LaTeX Font Info:    No file OMScmtt.fd. on input line 72.
+Overfull \hbox (2.4785pt too wide) in paragraph at lines 74--79
+[]\OT1/cmr/m/n/10.95 Reads \OT1/cmtt/m/n/10.95 OUTPUT[]b/backup[]data/waterPACT
+[]b[]0001.nc
+ []
 
+LaTeX Font Info:    Trying to load font information for OMS+cmtt on input line 
+82.
+LaTeX Font Info:    No file OMScmtt.fd. on input line 82.
 
 LaTeX Font Warning: Font shape `OMS/cmtt/m/n' undefined
 (Font)              using `OMS/cmsy/m/n' instead
-(Font)              for symbol `textbraceleft' on input line 72.
+(Font)              for symbol `textbraceleft' on input line 82.
 
 
-Underfull \hbox (badness 10000) in paragraph at lines 82--84
+Underfull \hbox (badness 10000) in paragraph at lines 92--94
 []\OT1/cmr/m/n/10.95 Bed plas-tic mass den-sity (\OT1/cmtt/m/n/10.95 bot[]mass[
 ]mp1\OT1/cmr/m/n/10.95 ) and sed-i-ment bed frac-tion
  []
 
 [2]
 <../FVCOM_MP_test_run/PYTHON/output/spatial_distribution/planview_dayavg_mp1_da
-vg_casea.png, id=40, 593.5776pt x 348.3414pt>
+vg_casea.png, id=41, 593.5776pt x 348.3414pt>
 File: ../FVCOM_MP_test_run/PYTHON/output/spatial_distribution/planview_dayavg_m
 p1_davg_casea.png Graphic file (type png)
 <use ../FVCOM_MP_test_run/PYTHON/output/spatial_distribution/planview_dayavg_mp
 1_davg_casea.png>
 Package pdftex.def Info: ../FVCOM_MP_test_run/PYTHON/output/spatial_distributio
-n/planview_dayavg_mp1_davg_casea.png  used on input line 161.
-(pdftex.def)             Requested size: 225.4804pt x 132.32326pt.
+n/planview_dayavg_mp1_davg_casea.png  used on input line 178.
+(pdftex.def)             Requested size: 150.32504pt x 88.21729pt.
 <../FVCOM_MP_test_run/PYTHON/output/spatial_distribution/planview_dayavg_mp1_da
-vg_caseb.png, id=42, 593.5776pt x 348.3414pt>
+vg_caseb.png, id=43, 593.5776pt x 348.3414pt>
 File: ../FVCOM_MP_test_run/PYTHON/output/spatial_distribution/planview_dayavg_m
 p1_davg_caseb.png Graphic file (type png)
 <use ../FVCOM_MP_test_run/PYTHON/output/spatial_distribution/planview_dayavg_mp
 1_davg_caseb.png>
 Package pdftex.def Info: ../FVCOM_MP_test_run/PYTHON/output/spatial_distributio
-n/planview_dayavg_mp1_davg_caseb.png  used on input line 166.
-(pdftex.def)             Requested size: 225.4804pt x 132.32326pt.
+n/planview_dayavg_mp1_davg_caseb.png  used on input line 183.
+(pdftex.def)             Requested size: 150.32504pt x 88.21729pt.
+<../FVCOM_MP_test_run/PYTHON/output/spatial_distribution/planview_dayavg_mp1_da
+vg_casec.png, id=44, 593.5776pt x 348.3414pt>
+File: ../FVCOM_MP_test_run/PYTHON/output/spatial_distribution/planview_dayavg_m
+p1_davg_casec.png Graphic file (type png)
+<use ../FVCOM_MP_test_run/PYTHON/output/spatial_distribution/planview_dayavg_mp
+1_davg_casec.png>
+Package pdftex.def Info: ../FVCOM_MP_test_run/PYTHON/output/spatial_distributio
+n/planview_dayavg_mp1_davg_casec.png  used on input line 188.
+(pdftex.def)             Requested size: 150.32504pt x 88.21729pt.
+<../FVCOM_MP_test_run/PYTHON/output/spatial_distribution/planview_dayavg_mp1_ag
+g_davg_caseb.png, id=45, 610.9224pt x 350.2686pt>
+File: ../FVCOM_MP_test_run/PYTHON/output/spatial_distribution/planview_dayavg_m
+p1_agg_davg_caseb.png Graphic file (type png)
+<use ../FVCOM_MP_test_run/PYTHON/output/spatial_distribution/planview_dayavg_mp
+1_agg_davg_caseb.png>
+Package pdftex.def Info: ../FVCOM_MP_test_run/PYTHON/output/spatial_distributio
+n/planview_dayavg_mp1_agg_davg_caseb.png  used on input line 206.
+(pdftex.def)             Requested size: 150.32504pt x 86.188pt.
+
+Underfull \hbox (badness 1152) in paragraph at lines 207--207
+[]\OT1/cmr/m/n/10 (a) |Case b --- \OT1/cmtt/m/n/10 mp1[]agg \OT1/cmr/m/n/10 (ag
+-gre-
+ []
+
+<../FVCOM_MP_test_run/PYTHON/output/spatial_distribution/planview_dayavg_mp1_ag
+g_davg_casec.png, id=46, 594.0594pt x 348.3414pt>
+File: ../FVCOM_MP_test_run/PYTHON/output/spatial_distribution/planview_dayavg_m
+p1_agg_davg_casec.png Graphic file (type png)
+<use ../FVCOM_MP_test_run/PYTHON/output/spatial_distribution/planview_dayavg_mp
+1_agg_davg_casec.png>
+Package pdftex.def Info: ../FVCOM_MP_test_run/PYTHON/output/spatial_distributio
+n/planview_dayavg_mp1_agg_davg_casec.png  used on input line 211.
+(pdftex.def)             Requested size: 150.32504pt x 88.14818pt.
+<../FVCOM_MP_test_run/PYTHON/output/spatial_distribution/planview_dayavg_mp1_di
+s_davg_casec.png, id=47, 594.0594pt x 348.3414pt>
+File: ../FVCOM_MP_test_run/PYTHON/output/spatial_distribution/planview_dayavg_m
+p1_dis_davg_casec.png Graphic file (type png)
+<use ../FVCOM_MP_test_run/PYTHON/output/spatial_distribution/planview_dayavg_mp
+1_dis_davg_casec.png>
+Package pdftex.def Info: ../FVCOM_MP_test_run/PYTHON/output/spatial_distributio
+n/planview_dayavg_mp1_dis_davg_casec.png  used on input line 216.
+(pdftex.def)             Requested size: 150.32504pt x 88.14818pt.
+[3 <../FVCOM_MP_test_run/PYTHON/output/spatial_distribution/planview_dayavg_mp1
+_davg_casea.png> <../FVCOM_MP_test_run/PYTHON/output/spatial_distribution/planv
+iew_dayavg_mp1_davg_caseb.png> <../FVCOM_MP_test_run/PYTHON/output/spatial_dist
+ribution/planview_dayavg_mp1_davg_casec.png>]
 <../FVCOM_MP_test_run/PYTHON/output/spatial_distribution/planview_dayavg_bot_ma
-ss_casea.png, id=43, 610.9224pt x 350.2686pt>
+ss_casea.png, id=64, 610.9224pt x 350.2686pt>
 File: ../FVCOM_MP_test_run/PYTHON/output/spatial_distribution/planview_dayavg_b
 ot_mass_casea.png Graphic file (type png)
 <use ../FVCOM_MP_test_run/PYTHON/output/spatial_distribution/planview_dayavg_bo
 t_mass_casea.png>
 Package pdftex.def Info: ../FVCOM_MP_test_run/PYTHON/output/spatial_distributio
-n/planview_dayavg_bot_mass_casea.png  used on input line 178.
-(pdftex.def)             Requested size: 225.4804pt x 129.27667pt.
+n/planview_dayavg_bot_mass_casea.png  used on input line 236.
+(pdftex.def)             Requested size: 150.32504pt x 86.188pt.
 <../FVCOM_MP_test_run/PYTHON/output/spatial_distribution/planview_dayavg_bot_ma
-ss_caseb.png, id=44, 610.9224pt x 350.2686pt>
+ss_caseb.png, id=65, 610.9224pt x 350.2686pt>
 File: ../FVCOM_MP_test_run/PYTHON/output/spatial_distribution/planview_dayavg_b
 ot_mass_caseb.png Graphic file (type png)
 <use ../FVCOM_MP_test_run/PYTHON/output/spatial_distribution/planview_dayavg_bo
 t_mass_caseb.png>
 Package pdftex.def Info: ../FVCOM_MP_test_run/PYTHON/output/spatial_distributio
-n/planview_dayavg_bot_mass_caseb.png  used on input line 183.
-(pdftex.def)             Requested size: 225.4804pt x 129.27667pt.
-
-
-LaTeX Warning: `h' float specifier changed to `ht'.
-
+n/planview_dayavg_bot_mass_caseb.png  used on input line 241.
+(pdftex.def)             Requested size: 150.32504pt x 86.188pt.
+<../FVCOM_MP_test_run/PYTHON/output/spatial_distribution/planview_dayavg_bot_ma
+ss_casec.png, id=66, 594.0594pt x 348.3414pt>
+File: ../FVCOM_MP_test_run/PYTHON/output/spatial_distribution/planview_dayavg_b
+ot_mass_casec.png Graphic file (type png)
+<use ../FVCOM_MP_test_run/PYTHON/output/spatial_distribution/planview_dayavg_bo
+t_mass_casec.png>
+Package pdftex.def Info: ../FVCOM_MP_test_run/PYTHON/output/spatial_distributio
+n/planview_dayavg_bot_mass_casec.png  used on input line 246.
+(pdftex.def)             Requested size: 150.32504pt x 88.14818pt.
 <../FVCOM_MP_test_run/PYTHON/output/spatial_distribution/planview_max_mp1_davg_
-casea.png, id=45, 593.5776pt x 348.3414pt>
+casea.png, id=67, 593.5776pt x 348.3414pt>
 File: ../FVCOM_MP_test_run/PYTHON/output/spatial_distribution/planview_max_mp1_
 davg_casea.png Graphic file (type png)
 <use ../FVCOM_MP_test_run/PYTHON/output/spatial_distribution/planview_max_mp1_d
 avg_casea.png>
 Package pdftex.def Info: ../FVCOM_MP_test_run/PYTHON/output/spatial_distributio
-n/planview_max_mp1_davg_casea.png  used on input line 196.
-(pdftex.def)             Requested size: 281.85587pt x 165.41072pt.
-
-LaTeX Warning: `h' float specifier changed to `ht'.
-
+n/planview_max_mp1_davg_casea.png  used on input line 264.
+(pdftex.def)             Requested size: 150.32504pt x 88.21729pt.
+<../FVCOM_MP_test_run/PYTHON/output/spatial_distribution/planview_max_mp1_davg_
+caseb.png, id=68, 593.5776pt x 348.3414pt>
+File: ../FVCOM_MP_test_run/PYTHON/output/spatial_distribution/planview_max_mp1_
+davg_caseb.png Graphic file (type png)
+<use ../FVCOM_MP_test_run/PYTHON/output/spatial_distribution/planview_max_mp1_d
+avg_caseb.png>
+Package pdftex.def Info: ../FVCOM_MP_test_run/PYTHON/output/spatial_distributio
+n/planview_max_mp1_davg_caseb.png  used on input line 269.
+(pdftex.def)             Requested size: 150.32504pt x 88.21729pt.
+<../FVCOM_MP_test_run/PYTHON/output/spatial_distribution/planview_max_mp1_davg_
+casec.png, id=69, 593.5776pt x 348.3414pt>
+File: ../FVCOM_MP_test_run/PYTHON/output/spatial_distribution/planview_max_mp1_
+davg_casec.png Graphic file (type png)
+<use ../FVCOM_MP_test_run/PYTHON/output/spatial_distribution/planview_max_mp1_d
+avg_casec.png>
+Package pdftex.def Info: ../FVCOM_MP_test_run/PYTHON/output/spatial_distributio
+n/planview_max_mp1_davg_casec.png  used on input line 274.
+(pdftex.def)             Requested size: 150.32504pt x 88.21729pt.
 <../FVCOM_MP_test_run/PYTHON/output/spatial_distribution/diff_mp1_davg_caseb_mi
-nus_casea.png, id=46, 600.3228pt x 350.7504pt>
+nus_casea.png, id=70, 600.3228pt x 350.7504pt>
 File: ../FVCOM_MP_test_run/PYTHON/output/spatial_distribution/diff_mp1_davg_cas
 eb_minus_casea.png Graphic file (type png)
 <use ../FVCOM_MP_test_run/PYTHON/output/spatial_distribution/diff_mp1_davg_case
 b_minus_casea.png>
 Package pdftex.def Info: ../FVCOM_MP_test_run/PYTHON/output/spatial_distributio
-n/diff_mp1_davg_caseb_minus_casea.png  used on input line 208.
-(pdftex.def)             Requested size: 281.85587pt x 164.68144pt.
-
-LaTeX Warning: `h' float specifier changed to `ht'.
-
+n/diff_mp1_davg_caseb_minus_casea.png  used on input line 291.
+(pdftex.def)             Requested size: 150.32504pt x 87.82652pt.
+<../FVCOM_MP_test_run/PYTHON/output/spatial_distribution/diff_mp1_davg_casec_mi
+nus_casea.png, id=71, 594.0594pt x 350.7504pt>
+File: ../FVCOM_MP_test_run/PYTHON/output/spatial_distribution/diff_mp1_davg_cas
+ec_minus_casea.png Graphic file (type png)
+<use ../FVCOM_MP_test_run/PYTHON/output/spatial_distribution/diff_mp1_davg_case
+c_minus_casea.png>
+Package pdftex.def Info: ../FVCOM_MP_test_run/PYTHON/output/spatial_distributio
+n/diff_mp1_davg_casec_minus_casea.png  used on input line 296.
+(pdftex.def)             Requested size: 150.32504pt x 88.75778pt.
+<../FVCOM_MP_test_run/PYTHON/output/spatial_distribution/diff_mp1_davg_casec_mi
+nus_caseb.png, id=72, 594.0594pt x 350.7504pt>
+File: ../FVCOM_MP_test_run/PYTHON/output/spatial_distribution/diff_mp1_davg_cas
+ec_minus_caseb.png Graphic file (type png)
+<use ../FVCOM_MP_test_run/PYTHON/output/spatial_distribution/diff_mp1_davg_case
+c_minus_caseb.png>
+Package pdftex.def Info: ../FVCOM_MP_test_run/PYTHON/output/spatial_distributio
+n/diff_mp1_davg_casec_minus_caseb.png  used on input line 301.
+(pdftex.def)             Requested size: 150.32504pt x 88.75778pt.
+ [4 <../FVCOM_MP_test_run/PYTHON/output/spatial_distribution/planview_dayavg_mp
+1_agg_davg_caseb.png> <../FVCOM_MP_test_run/PYTHON/output/spatial_distribution/
+planview_dayavg_mp1_agg_davg_casec.png> <../FVCOM_MP_test_run/PYTHON/output/spa
+tial_distribution/planview_dayavg_mp1_dis_davg_casec.png> <../FVCOM_MP_test_run
+/PYTHON/output/spatial_distribution/planview_dayavg_bot_mass_casea.png> <../FVC
+OM_MP_test_run/PYTHON/output/spatial_distribution/planview_dayavg_bot_mass_case
+b.png> <../FVCOM_MP_test_run/PYTHON/output/spatial_distribution/planview_dayavg
+_bot_mass_casec.png> <../FVCOM_MP_test_run/PYTHON/output/spatial_distribution/p
+lanview_max_mp1_davg_casea.png> <../FVCOM_MP_test_run/PYTHON/output/spatial_dis
+tribution/planview_max_mp1_davg_caseb.png> <../FVCOM_MP_test_run/PYTHON/output/
+spatial_distribution/planview_max_mp1_davg_casec.png>]
 <../FVCOM_MP_test_run/PYTHON/output/spatial_distribution/station_timeseries_mp1
-_davg.png, id=47, 1005.5166pt x 997.8078pt>
+_davg.png, id=92, 1005.5166pt x 997.8078pt>
 File: ../FVCOM_MP_test_run/PYTHON/output/spatial_distribution/station_timeserie
 s_mp1_davg.png Graphic file (type png)
 <use ../FVCOM_MP_test_run/PYTHON/output/spatial_distribution/station_timeseries
 _mp1_davg.png>
 Package pdftex.def Info: ../FVCOM_MP_test_run/PYTHON/output/spatial_distributio
-n/station_timeseries_mp1_davg.png  used on input line 219.
+n/station_timeseries_mp1_davg.png  used on input line 320.
 (pdftex.def)             Requested size: 469.75502pt x 466.15306pt.
+ [5 <../FVCOM_MP_test_run/PYTHON/output/spatial_distribution/diff_mp1_davg_case
+b_minus_casea.png> <../FVCOM_MP_test_run/PYTHON/output/spatial_distribution/dif
+f_mp1_davg_casec_minus_casea.png> <../FVCOM_MP_test_run/PYTHON/output/spatial_d
+istribution/diff_mp1_davg_casec_minus_caseb.png>] [6 <../FVCOM_MP_test_run/PYTH
+ON/output/spatial_distribution/station_timeseries_mp1_davg.png>]
+Underfull \hbox (badness 10000) in paragraph at lines 390--393
+[]\OT1/cmr/m/n/10.95 Cases a and b are nu-mer-i-cally iden-ti-cal un-der the cu
+r-rent pa-ram-e-ter-i-sa-tion
+ []
 
-LaTeX Warning: `h' float specifier changed to `ht'.
-
-[3 <../FVCOM_MP_test_run/PYTHON/output/spatial_distribution/planview_dayavg_mp1
-_davg_casea.png> <../FVCOM_MP_test_run/PYTHON/output/spatial_distribution/planv
-iew_dayavg_mp1_davg_caseb.png>] [4 <../FVCOM_MP_test_run/PYTHON/output/spatial_
-distribution/planview_dayavg_bot_mass_casea.png> <../FVCOM_MP_test_run/PYTHON/o
-utput/spatial_distribution/planview_dayavg_bot_mass_caseb.png> <../FVCOM_MP_tes
-t_run/PYTHON/output/spatial_distribution/planview_max_mp1_davg_casea.png>]
-[5 <../FVCOM_MP_test_run/PYTHON/output/spatial_distribution/diff_mp1_davg_caseb
-_minus_casea.png>] [6 <../FVCOM_MP_test_run/PYTHON/output/spatial_distribution/
-station_timeseries_mp1_davg.png>] (memo_05.aux)
+[7] [8] (memo_05.aux)
 
 LaTeX Font Warning: Some font shapes were not available, defaults substituted.
 
@@ -607,13 +720,13 @@ Package rerunfilecheck Info: File `memo_05.out' has not changed.
 (rerunfilecheck)             Checksum: D41D8CD98F00B204E9800998ECF8427E;0.
  ) 
 Here is how much of TeX's memory you used:
- 11978 strings out of 475284
- 196662 string characters out of 2773161
- 541838 words of memory out of 3000000
- 33260 multiletter control sequences out of 15000+600000
- 478162 words of font info for 62 fonts, out of 8000000 for 9000
+ 12152 strings out of 475284
+ 204320 string characters out of 2773161
+ 544745 words of memory out of 3000000
+ 33410 multiletter control sequences out of 15000+600000
+ 480029 words of font info for 71 fonts, out of 8000000 for 9000
  1141 hyphenation exceptions out of 8191
- 72i,9n,77p,350b,537s stack positions out of 10000i,1000n,20000p,200000b,80000s
+ 72i,9n,77p,797b,581s stack positions out of 10000i,1000n,20000p,200000b,80000s
  <C:\Users\huan111\AppData\Local\MiKTeX\fonts/pk/ljfour/jknappen/ec/dpi600\tc
 rm1095.pk><C:/Users/huan111/AppData/Local/Programs/MiKTeX/fonts/type1/public/am
 sfonts/cm/cmbx10.pfb><C:/Users/huan111/AppData/Local/Programs/MiKTeX/fonts/type
@@ -631,9 +744,9 @@ eX/fonts/type1/public/amsfonts/cm/cmsy10.pfb><C:/Users/huan111/AppData/Local/Pr
 ograms/MiKTeX/fonts/type1/public/amsfonts/cm/cmsy8.pfb><C:/Users/huan111/AppDat
 a/Local/Programs/MiKTeX/fonts/type1/public/amsfonts/cm/cmti10.pfb><C:/Users/hua
 n111/AppData/Local/Programs/MiKTeX/fonts/type1/public/amsfonts/cm/cmtt10.pfb>
-Output written on memo_05.pdf (6 pages, 989217 bytes).
+Output written on memo_05.pdf (8 pages, 1910159 bytes).
 PDF statistics:
- 171 PDF objects out of 1000 (max. 8388607)
- 45 named destinations out of 1000 (max. 500000)
- 36 words of extra memory for PDF output out of 10000 (max. 10000000)
+ 203 PDF objects out of 1000 (max. 8388607)
+ 50 named destinations out of 1000 (max. 500000)
+ 81 words of extra memory for PDF output out of 10000 (max. 10000000)
 

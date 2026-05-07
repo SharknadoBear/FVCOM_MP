@@ -1,4 +1,4 @@
-This is pdfTeX, Version 3.141592653-2.6-1.40.24 (MiKTeX 22.11.25) (preloaded format=pdflatex 2026.4.12)  7 MAY 2026 08:58
+This is pdfTeX, Version 3.141592653-2.6-1.40.24 (MiKTeX 22.11.25) (preloaded format=pdflatex 2026.4.12)  7 MAY 2026 15:17
 entering extended mode
  restricted \write18 enabled.
  %&-line parsing enabled.
@@ -617,8 +617,8 @@ LaTeX Warning: `h' float specifier changed to `ht'.
 bplus_10d_abc_all3_match/total_mass_by_case.png>] [12 <../FVCOM_MP_test_run/PYT
 HON/output/mass_conservation/archive/v009_adv_scal_no_fct_abc_all3_match/total_
 mass_by_case.png>] [13] [14 <../FVCOM_MP_test_run/PYTHON/output/mass_conservati
-on/total_mass_by_case.png>] [15 <../FVCOM_MP_test_run/PYTHON/output/mass_conser
-vation/water_bed_partition.png>] (memo_04.aux)
+on/total_mass_by_case.png>] [15] [16] [17] [18 <../FVCOM_MP_test_run/PYTHON/out
+put/mass_conservation/water_bed_partition.png>] (memo_04.aux)
 
 LaTeX Font Warning: Some font shapes were not available, defaults substituted.
 
@@ -626,13 +626,13 @@ Package rerunfilecheck Info: File `memo_04.out' has not changed.
 (rerunfilecheck)             Checksum: D41D8CD98F00B204E9800998ECF8427E;0.
  ) 
 Here is how much of TeX's memory you used:
- 10572 strings out of 475284
- 168057 string characters out of 2773161
- 526588 words of memory out of 3000000
- 31843 multiletter control sequences out of 15000+600000
+ 10590 strings out of 475284
+ 168233 string characters out of 2773161
+ 526949 words of memory out of 3000000
+ 31845 multiletter control sequences out of 15000+600000
  482785 words of font info for 81 fonts, out of 8000000 for 9000
  1141 hyphenation exceptions out of 8191
- 72i,12n,77p,1439b,677s stack positions out of 10000i,1000n,20000p,200000b,80000s
+ 72i,16n,77p,1439b,677s stack positions out of 10000i,1000n,20000p,200000b,80000s
  <C:\Users\huan111\AppData\Local\MiKTeX\fonts/pk/ljfour/jknappen/ec/dpi600\tc
 rm1095.pk><C:/Users/huan111/AppData/Local/Programs/MiKTeX/fonts/type1/public/am
 sfonts/cm/cmbx10.pfb><C:/Users/huan111/AppData/Local/Programs/MiKTeX/fonts/type
@@ -655,9 +655,9 @@ sers/huan111/AppData/Local/Programs/MiKTeX/fonts/type1/public/amsfonts/cm/cmti1
 ts/cm/cmtt10.pfb><C:/Users/huan111/AppData/Local/Programs/MiKTeX/fonts/type1/pu
 blic/amsfonts/cm/cmtt12.pfb><C:/Users/huan111/AppData/Local/Programs/MiKTeX/fon
 ts/type1/public/amsfonts/symbols/msam10.pfb>
-Output written on memo_04.pdf (15 pages, 1434582 bytes).
+Output written on memo_04.pdf (18 pages, 1457997 bytes).
 PDF statistics:
- 238 PDF objects out of 1000 (max. 8388607)
- 59 named destinations out of 1000 (max. 500000)
+ 269 PDF objects out of 1000 (max. 8388607)
+ 75 named destinations out of 1000 (max. 500000)
  26 words of extra memory for PDF output out of 10000 (max. 10000000)
 
