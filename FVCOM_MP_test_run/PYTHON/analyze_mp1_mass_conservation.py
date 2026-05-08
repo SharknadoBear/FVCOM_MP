@@ -28,6 +28,12 @@ except ImportError as exc:  # pragma: no cover - exercised only on missing envs
         "Install the Python requirements with: pip install -r requirements.txt"
     ) from exc
 
+try:
+    import netCDF4
+    _HAS_NETCDF4 = True
+except ImportError:
+    _HAS_NETCDF4 = False
+
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
@@ -68,7 +74,16 @@ def main(argv: list[str] | None = None) -> int:
     print(f"\nComparison time origin: FVCOM day {time_origin_days:.6f}")
 
     write_tables(cases, output_dir)
-    make_plots(cases, output_dir, time_origin_days=time_origin_days, show=args.show)
+    river_nc = args.river_nc
+    if river_nc is None:
+        default_nc = SCRIPT_DIR.parent / "INPUT" / "waterPACT_riv_floc_MP.nc"
+        if default_nc.is_file():
+            river_nc = default_nc
+
+    make_plots(cases, output_dir, time_origin_days=time_origin_days,
+               river_nc=river_nc, iramp=args.iramp,
+               extstep_seconds=args.extstep_seconds, isplit=args.isplit,
+               show=args.show)
 
     print("\nMass-conservation comparison complete.")
     print(f"Outputs written to: {output_dir}")
@@ -135,6 +150,42 @@ def parse_args(argv: list[str] | None) -> argparse.Namespace:
         help=(
             "FVCOM day used as x=0 in comparison plots. "
             "Default: earliest finite output time among loaded cases."
+        ),
+    )
+    parser.add_argument(
+        "--river-nc",
+        type=Path,
+        default=None,
+        help=(
+            "River NetCDF file (waterPACT_riv_floc_MP.nc) used to compute "
+            "the analytic M0 + int(Q*C dt) river-source mass line. "
+            "Defaults to INPUT/waterPACT_riv_floc_MP.nc next to this script."
+        ),
+    )
+    parser.add_argument(
+        "--iramp",
+        type=int,
+        default=216000,
+        help=(
+            "FVCOM IRAMP value (number of external barotropic steps over which "
+            "the tanh ramp factor reaches ~1). Set 0 to disable ramp correction. "
+            "Default: 216000 (matching RUN_a/b/c nml)."
+        ),
+    )
+    parser.add_argument(
+        "--extstep-seconds",
+        type=float,
+        default=0.4,
+        dest="extstep_seconds",
+        help="FVCOM EXTSTEP_SECONDS (s). Default: 0.4.",
+    )
+    parser.add_argument(
+        "--isplit",
+        type=int,
+        default=5,
+        help=(
+            "FVCOM ISPLIT (external steps per internal step). "
+            "Used in ramp: TMP = t_sec / (ISPLIT * EXTSTEP). Default: 5."
         ),
     )
     return parser.parse_args(argv)
@@ -420,17 +471,94 @@ def write_tables(cases: Iterable[CaseBudget], output_dir: Path) -> None:
     print(summary[existing].to_string(index=False))
 
 
+def compute_analytic_river_mass(
+    river_nc: Path,
+    time_origin_days: float,
+    query_days: np.ndarray,
+    iramp: int = 0,
+    extstep_seconds: float = 1.0,
+    isplit: int = 1,
+) -> np.ndarray | None:
+    """Integrate sum_j RAMP(t)*Q_j(t)*C_j(t) from the river NC file and return
+    cumulative mass (kg) at each time in *query_days* (days since time_origin).
+
+    iramp            FVCOM IRAMP (number of external steps).  0 = no ramp.
+    extstep_seconds  FVCOM EXTSTEP_SECONDS (external barotropic step, s).
+    isplit           FVCOM ISPLIT (external steps per internal step).
+
+    RAMP(t) = tanh(TMP/IRAMP)  where  TMP = t_sec / (ISPLIT * EXTSTEP)
+    (matches external_step.F: TMP = (IINT-1) + IEXT/ISPLIT)
+    Returns None when netCDF4 is unavailable or the file cannot be read.
+    """
+    if not _HAS_NETCDF4:
+        print("  [analytic line] netCDF4 not available, skipping.")
+        return None
+    try:
+        ds = netCDF4.Dataset(river_nc)
+        # time in 'days since 1858-11-17 00:00:00' (Modified Julian Day)
+        riv_time_mjd = np.asarray(ds.variables["time"][:], dtype=float)
+        q = np.asarray(ds.variables["river_flux"][:], dtype=float)   # (nt, nriv) m3/s
+        c = np.asarray(ds.variables["mp1"][:], dtype=float)           # (nt, nriv) kg/m3
+        ds.close()
+    except Exception as exc:
+        print(f"  [analytic line] could not read river NC: {exc}")
+        return None
+
+    # Total Q*C rate [kg/s] at each river-file timestep
+    qc_rate = np.sum(q * c, axis=1)          # (nt,)
+
+    # Convert river file time (MJD) to comparison days (days since time_origin)
+    riv_comp_days = riv_time_mjd - time_origin_days
+
+    # Apply FVCOM tanh ramp: RAMP(t) = tanh(TMP/IRAMP)
+    # where TMP = t_sec / (ISPLIT * EXTSTEP)  [matches external_step.F]
+    if iramp > 0 and extstep_seconds > 0.0 and isplit > 0:
+        t_sec = np.maximum(riv_comp_days * 86400.0, 0.0)  # clamp pre-origin to 0
+        tmp   = t_sec / (float(isplit) * extstep_seconds)
+        ramp  = np.tanh(tmp / float(iramp))               # (nt,)
+        qc_rate = qc_rate * ramp
+
+    # Cumulative integral [kg] using trapezoidal rule
+    dt_days = np.diff(riv_comp_days)               # (nt-1,) days
+    dt_sec  = dt_days * 86400.0                    # seconds
+    mid_rate = 0.5 * (qc_rate[:-1] + qc_rate[1:]) # (nt-1,) kg/s
+    dM       = mid_rate * dt_sec                   # (nt-1,) kg per interval
+
+    riv_cumulative = np.zeros(len(riv_comp_days))
+    riv_cumulative[1:] = np.cumsum(dM)
+
+    # Anchor so that cumulative mass added = 0 at comparison day 0 (model start)
+    offset = float(np.interp(0.0, riv_comp_days, riv_cumulative))
+    riv_cumulative -= offset
+
+    # Interpolate onto query_days
+    analytic = np.interp(
+        query_days,
+        riv_comp_days,
+        riv_cumulative,
+        left=np.nan,
+        right=np.nan,
+    )
+    return analytic
+
+
 def make_plots(
     cases: Iterable[CaseBudget],
     output_dir: Path,
     time_origin_days: float,
+    river_nc: Path | None = None,
+    iramp: int = 0,
+    extstep_seconds: float = 1.0,
+    isplit: int = 1,
     show: bool = False,
 ) -> None:
     cases = list(cases)
     plt.style.use("seaborn-v0_8-whitegrid")
     x_label = f"Days since FVCOM day {time_origin_days:.6f}"
 
-    plot_total_mass(cases, output_dir, x_label)
+    plot_total_mass(cases, output_dir, x_label,
+                    time_origin_days=time_origin_days, river_nc=river_nc,
+                    iramp=iramp, extstep_seconds=extstep_seconds, isplit=isplit)
     plot_mass_change(cases, output_dir, x_label)
     plot_max_concentration(cases, output_dir, x_label)
     plot_cap_counts(cases, output_dir, x_label)
@@ -445,11 +573,67 @@ def make_plots(
         plt.close("all")
 
 
-def plot_total_mass(cases: list[CaseBudget], output_dir: Path, x_label: str) -> None:
+def plot_total_mass(
+    cases: list[CaseBudget],
+    output_dir: Path,
+    x_label: str,
+    time_origin_days: float = 0.0,
+    river_nc: Path | None = None,
+    iramp: int = 0,
+    extstep_seconds: float = 1.0,
+    isplit: int = 1,
+) -> None:
     fig, ax = plt.subplots(figsize=(9, 5))
+
+    # --- model output lines ---
     for case in cases:
         frame = case.frame
-        ax.plot(frame["comparison_days"], frame["total_mass_kg"], label=f"case {case.case_id}", linewidth=2)
+        ax.plot(
+            frame["comparison_days"],
+            frame["total_mass_kg"],
+            label=f"case {case.case_id}",
+            linewidth=2,
+        )
+
+    # --- analytic M^0 + int(Q*C dt) river-source line ---
+    if river_nc is not None and river_nc.is_file():
+        # Use a dense query grid spanning all loaded cases
+        all_days = np.concatenate([
+            case.frame["comparison_days"].to_numpy(dtype=float)
+            for case in cases
+        ])
+        finite_days = all_days[np.isfinite(all_days)]
+        if finite_days.size > 0:
+            query_days = np.linspace(finite_days.min(), finite_days.max(), 2000)
+            analytic_dM = compute_analytic_river_mass(
+                river_nc, time_origin_days, query_days,
+                iramp=iramp, extstep_seconds=extstep_seconds, isplit=isplit,
+            )
+            if analytic_dM is not None:
+                # Anchor to the initial total mass of the first case
+                M0 = first_finite(
+                    cases[0].frame["total_mass_kg"].to_numpy(dtype=float)
+                )
+                analytic_mass = M0 + analytic_dM
+                # Downsample to visible dots (every ~50th point)
+                stride = max(1, len(query_days) // 120)
+                ramp_label = (
+                    r"$M^0+\int \mathrm{RAMP}(t)\,QC\,dt$ (analytic, IRAMP)"
+                    if iramp > 0
+                    else r"$M^0+\int QC\,dt$ (analytic)"
+                )
+                ax.plot(
+                    query_days[::stride],
+                    analytic_mass[::stride],
+                    marker="o",
+                    markersize=5,
+                    markerfacecolor=(1.0, 0.0, 0.0, 0.35),
+                    markeredgecolor=(0.7, 0.0, 0.0, 0.6),
+                    linestyle="none",
+                    label=ramp_label,
+                    zorder=5,
+                )
+
     ax.set_title("Domain-Integrated mp1 Total Mass")
     ax.set_xlabel(x_label)
     ax.set_ylabel("Water + bed mass (kg)")
