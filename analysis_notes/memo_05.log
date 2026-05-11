@@ -1,4 +1,4 @@
-This is pdfTeX, Version 3.141592653-2.6-1.40.24 (MiKTeX 22.11.25) (preloaded format=pdflatex 2026.4.12)  7 MAY 2026 13:15
+This is pdfTeX, Version 3.141592653-2.6-1.40.24 (MiKTeX 22.11.25) (preloaded format=pdflatex 2026.4.12)  11 MAY 2026 13:47
 entering extended mode
  restricted \write18 enabled.
  %&-line parsing enabled.
@@ -537,41 +537,41 @@ Underfull \hbox (badness 10000) in paragraph at lines 92--94
  []
 
 [2]
-<../FVCOM_MP_test_run/PYTHON/output/spatial_distribution/planview_dayavg_mp1_da
-vg_casea.png, id=41, 593.5776pt x 348.3414pt>
-File: ../FVCOM_MP_test_run/PYTHON/output/spatial_distribution/planview_dayavg_m
-p1_davg_casea.png Graphic file (type png)
-<use ../FVCOM_MP_test_run/PYTHON/output/spatial_distribution/planview_dayavg_mp
-1_davg_casea.png>
+<../FVCOM_MP_test_run/PYTHON/output/spatial_distribution/day10/planview_dayavg_
+mp1_davg_casea.png, id=41, 593.5776pt x 348.3414pt>
+File: ../FVCOM_MP_test_run/PYTHON/output/spatial_distribution/day10/planview_da
+yavg_mp1_davg_casea.png Graphic file (type png)
+<use ../FVCOM_MP_test_run/PYTHON/output/spatial_distribution/day10/planview_day
+avg_mp1_davg_casea.png>
 Package pdftex.def Info: ../FVCOM_MP_test_run/PYTHON/output/spatial_distributio
-n/planview_dayavg_mp1_davg_casea.png  used on input line 178.
+n/day10/planview_dayavg_mp1_davg_casea.png  used on input line 178.
 (pdftex.def)             Requested size: 150.32504pt x 88.21729pt.
-<../FVCOM_MP_test_run/PYTHON/output/spatial_distribution/planview_dayavg_mp1_da
-vg_caseb.png, id=43, 593.5776pt x 348.3414pt>
-File: ../FVCOM_MP_test_run/PYTHON/output/spatial_distribution/planview_dayavg_m
-p1_davg_caseb.png Graphic file (type png)
-<use ../FVCOM_MP_test_run/PYTHON/output/spatial_distribution/planview_dayavg_mp
-1_davg_caseb.png>
+<../FVCOM_MP_test_run/PYTHON/output/spatial_distribution/day10/planview_dayavg_
+mp1_davg_caseb.png, id=43, 593.5776pt x 348.3414pt>
+File: ../FVCOM_MP_test_run/PYTHON/output/spatial_distribution/day10/planview_da
+yavg_mp1_davg_caseb.png Graphic file (type png)
+<use ../FVCOM_MP_test_run/PYTHON/output/spatial_distribution/day10/planview_day
+avg_mp1_davg_caseb.png>
 Package pdftex.def Info: ../FVCOM_MP_test_run/PYTHON/output/spatial_distributio
-n/planview_dayavg_mp1_davg_caseb.png  used on input line 183.
+n/day10/planview_dayavg_mp1_davg_caseb.png  used on input line 183.
 (pdftex.def)             Requested size: 150.32504pt x 88.21729pt.
-<../FVCOM_MP_test_run/PYTHON/output/spatial_distribution/planview_dayavg_mp1_da
-vg_casec.png, id=44, 593.5776pt x 348.3414pt>
-File: ../FVCOM_MP_test_run/PYTHON/output/spatial_distribution/planview_dayavg_m
-p1_davg_casec.png Graphic file (type png)
-<use ../FVCOM_MP_test_run/PYTHON/output/spatial_distribution/planview_dayavg_mp
-1_davg_casec.png>
+<../FVCOM_MP_test_run/PYTHON/output/spatial_distribution/day10/planview_dayavg_
+mp1_davg_casec.png, id=44, 593.5776pt x 348.3414pt>
+File: ../FVCOM_MP_test_run/PYTHON/output/spatial_distribution/day10/planview_da
+yavg_mp1_davg_casec.png Graphic file (type png)
+<use ../FVCOM_MP_test_run/PYTHON/output/spatial_distribution/day10/planview_day
+avg_mp1_davg_casec.png>
 Package pdftex.def Info: ../FVCOM_MP_test_run/PYTHON/output/spatial_distributio
-n/planview_dayavg_mp1_davg_casec.png  used on input line 188.
+n/day10/planview_dayavg_mp1_davg_casec.png  used on input line 188.
 (pdftex.def)             Requested size: 150.32504pt x 88.21729pt.
-<../FVCOM_MP_test_run/PYTHON/output/spatial_distribution/planview_dayavg_mp1_ag
-g_davg_caseb.png, id=45, 610.9224pt x 350.2686pt>
-File: ../FVCOM_MP_test_run/PYTHON/output/spatial_distribution/planview_dayavg_m
-p1_agg_davg_caseb.png Graphic file (type png)
-<use ../FVCOM_MP_test_run/PYTHON/output/spatial_distribution/planview_dayavg_mp
-1_agg_davg_caseb.png>
+<../FVCOM_MP_test_run/PYTHON/output/spatial_distribution/day10/planview_dayavg_
+mp1_agg_davg_caseb.png, id=45, 610.9224pt x 350.2686pt>
+File: ../FVCOM_MP_test_run/PYTHON/output/spatial_distribution/day10/planview_da
+yavg_mp1_agg_davg_caseb.png Graphic file (type png)
+<use ../FVCOM_MP_test_run/PYTHON/output/spatial_distribution/day10/planview_day
+avg_mp1_agg_davg_caseb.png>
 Package pdftex.def Info: ../FVCOM_MP_test_run/PYTHON/output/spatial_distributio
-n/planview_dayavg_mp1_agg_davg_caseb.png  used on input line 206.
+n/day10/planview_dayavg_mp1_agg_davg_caseb.png  used on input line 206.
 (pdftex.def)             Requested size: 150.32504pt x 86.188pt.
 
 Underfull \hbox (badness 1152) in paragraph at lines 207--207
@@ -579,134 +579,136 @@ Underfull \hbox (badness 1152) in paragraph at lines 207--207
 -gre-
  []
 
-<../FVCOM_MP_test_run/PYTHON/output/spatial_distribution/planview_dayavg_mp1_ag
-g_davg_casec.png, id=46, 594.0594pt x 348.3414pt>
-File: ../FVCOM_MP_test_run/PYTHON/output/spatial_distribution/planview_dayavg_m
-p1_agg_davg_casec.png Graphic file (type png)
-<use ../FVCOM_MP_test_run/PYTHON/output/spatial_distribution/planview_dayavg_mp
-1_agg_davg_casec.png>
+<../FVCOM_MP_test_run/PYTHON/output/spatial_distribution/day10/planview_dayavg_
+mp1_agg_davg_casec.png, id=46, 594.0594pt x 348.3414pt>
+File: ../FVCOM_MP_test_run/PYTHON/output/spatial_distribution/day10/planview_da
+yavg_mp1_agg_davg_casec.png Graphic file (type png)
+<use ../FVCOM_MP_test_run/PYTHON/output/spatial_distribution/day10/planview_day
+avg_mp1_agg_davg_casec.png>
 Package pdftex.def Info: ../FVCOM_MP_test_run/PYTHON/output/spatial_distributio
-n/planview_dayavg_mp1_agg_davg_casec.png  used on input line 211.
+n/day10/planview_dayavg_mp1_agg_davg_casec.png  used on input line 211.
 (pdftex.def)             Requested size: 150.32504pt x 88.14818pt.
-<../FVCOM_MP_test_run/PYTHON/output/spatial_distribution/planview_dayavg_mp1_di
-s_davg_casec.png, id=47, 594.0594pt x 348.3414pt>
-File: ../FVCOM_MP_test_run/PYTHON/output/spatial_distribution/planview_dayavg_m
-p1_dis_davg_casec.png Graphic file (type png)
-<use ../FVCOM_MP_test_run/PYTHON/output/spatial_distribution/planview_dayavg_mp
-1_dis_davg_casec.png>
+<../FVCOM_MP_test_run/PYTHON/output/spatial_distribution/day10/planview_dayavg_
+mp1_dis_davg_casec.png, id=47, 594.0594pt x 348.3414pt>
+File: ../FVCOM_MP_test_run/PYTHON/output/spatial_distribution/day10/planview_da
+yavg_mp1_dis_davg_casec.png Graphic file (type png)
+<use ../FVCOM_MP_test_run/PYTHON/output/spatial_distribution/day10/planview_day
+avg_mp1_dis_davg_casec.png>
 Package pdftex.def Info: ../FVCOM_MP_test_run/PYTHON/output/spatial_distributio
-n/planview_dayavg_mp1_dis_davg_casec.png  used on input line 216.
+n/day10/planview_dayavg_mp1_dis_davg_casec.png  used on input line 216.
 (pdftex.def)             Requested size: 150.32504pt x 88.14818pt.
-[3 <../FVCOM_MP_test_run/PYTHON/output/spatial_distribution/planview_dayavg_mp1
-_davg_casea.png> <../FVCOM_MP_test_run/PYTHON/output/spatial_distribution/planv
-iew_dayavg_mp1_davg_caseb.png> <../FVCOM_MP_test_run/PYTHON/output/spatial_dist
-ribution/planview_dayavg_mp1_davg_casec.png>]
-<../FVCOM_MP_test_run/PYTHON/output/spatial_distribution/planview_dayavg_bot_ma
-ss_casea.png, id=64, 610.9224pt x 350.2686pt>
-File: ../FVCOM_MP_test_run/PYTHON/output/spatial_distribution/planview_dayavg_b
-ot_mass_casea.png Graphic file (type png)
-<use ../FVCOM_MP_test_run/PYTHON/output/spatial_distribution/planview_dayavg_bo
-t_mass_casea.png>
+[3 <../FVCOM_MP_test_run/PYTHON/output/spatial_distribution/day10/planview_daya
+vg_mp1_davg_casea.png> <../FVCOM_MP_test_run/PYTHON/output/spatial_distribution
+/day10/planview_dayavg_mp1_davg_caseb.png> <../FVCOM_MP_test_run/PYTHON/output/
+spatial_distribution/day10/planview_dayavg_mp1_davg_casec.png>]
+<../FVCOM_MP_test_run/PYTHON/output/spatial_distribution/day10/planview_dayavg_
+bot_mass_casea.png, id=64, 610.9224pt x 350.2686pt>
+File: ../FVCOM_MP_test_run/PYTHON/output/spatial_distribution/day10/planview_da
+yavg_bot_mass_casea.png Graphic file (type png)
+<use ../FVCOM_MP_test_run/PYTHON/output/spatial_distribution/day10/planview_day
+avg_bot_mass_casea.png>
 Package pdftex.def Info: ../FVCOM_MP_test_run/PYTHON/output/spatial_distributio
-n/planview_dayavg_bot_mass_casea.png  used on input line 236.
+n/day10/planview_dayavg_bot_mass_casea.png  used on input line 236.
 (pdftex.def)             Requested size: 150.32504pt x 86.188pt.
-<../FVCOM_MP_test_run/PYTHON/output/spatial_distribution/planview_dayavg_bot_ma
-ss_caseb.png, id=65, 610.9224pt x 350.2686pt>
-File: ../FVCOM_MP_test_run/PYTHON/output/spatial_distribution/planview_dayavg_b
-ot_mass_caseb.png Graphic file (type png)
-<use ../FVCOM_MP_test_run/PYTHON/output/spatial_distribution/planview_dayavg_bo
-t_mass_caseb.png>
+<../FVCOM_MP_test_run/PYTHON/output/spatial_distribution/day10/planview_dayavg_
+bot_mass_caseb.png, id=65, 610.9224pt x 350.2686pt>
+File: ../FVCOM_MP_test_run/PYTHON/output/spatial_distribution/day10/planview_da
+yavg_bot_mass_caseb.png Graphic file (type png)
+<use ../FVCOM_MP_test_run/PYTHON/output/spatial_distribution/day10/planview_day
+avg_bot_mass_caseb.png>
 Package pdftex.def Info: ../FVCOM_MP_test_run/PYTHON/output/spatial_distributio
-n/planview_dayavg_bot_mass_caseb.png  used on input line 241.
+n/day10/planview_dayavg_bot_mass_caseb.png  used on input line 241.
 (pdftex.def)             Requested size: 150.32504pt x 86.188pt.
-<../FVCOM_MP_test_run/PYTHON/output/spatial_distribution/planview_dayavg_bot_ma
-ss_casec.png, id=66, 594.0594pt x 348.3414pt>
-File: ../FVCOM_MP_test_run/PYTHON/output/spatial_distribution/planview_dayavg_b
-ot_mass_casec.png Graphic file (type png)
-<use ../FVCOM_MP_test_run/PYTHON/output/spatial_distribution/planview_dayavg_bo
-t_mass_casec.png>
+<../FVCOM_MP_test_run/PYTHON/output/spatial_distribution/day10/planview_dayavg_
+bot_mass_casec.png, id=66, 594.0594pt x 348.3414pt>
+File: ../FVCOM_MP_test_run/PYTHON/output/spatial_distribution/day10/planview_da
+yavg_bot_mass_casec.png Graphic file (type png)
+<use ../FVCOM_MP_test_run/PYTHON/output/spatial_distribution/day10/planview_day
+avg_bot_mass_casec.png>
 Package pdftex.def Info: ../FVCOM_MP_test_run/PYTHON/output/spatial_distributio
-n/planview_dayavg_bot_mass_casec.png  used on input line 246.
+n/day10/planview_dayavg_bot_mass_casec.png  used on input line 246.
 (pdftex.def)             Requested size: 150.32504pt x 88.14818pt.
-<../FVCOM_MP_test_run/PYTHON/output/spatial_distribution/planview_max_mp1_davg_
-casea.png, id=67, 593.5776pt x 348.3414pt>
-File: ../FVCOM_MP_test_run/PYTHON/output/spatial_distribution/planview_max_mp1_
-davg_casea.png Graphic file (type png)
-<use ../FVCOM_MP_test_run/PYTHON/output/spatial_distribution/planview_max_mp1_d
-avg_casea.png>
+<../FVCOM_MP_test_run/PYTHON/output/spatial_distribution/day10/planview_max_mp1
+_davg_casea.png, id=67, 593.5776pt x 348.3414pt>
+File: ../FVCOM_MP_test_run/PYTHON/output/spatial_distribution/day10/planview_ma
+x_mp1_davg_casea.png Graphic file (type png)
+<use ../FVCOM_MP_test_run/PYTHON/output/spatial_distribution/day10/planview_max
+_mp1_davg_casea.png>
 Package pdftex.def Info: ../FVCOM_MP_test_run/PYTHON/output/spatial_distributio
-n/planview_max_mp1_davg_casea.png  used on input line 264.
+n/day10/planview_max_mp1_davg_casea.png  used on input line 264.
 (pdftex.def)             Requested size: 150.32504pt x 88.21729pt.
-<../FVCOM_MP_test_run/PYTHON/output/spatial_distribution/planview_max_mp1_davg_
-caseb.png, id=68, 593.5776pt x 348.3414pt>
-File: ../FVCOM_MP_test_run/PYTHON/output/spatial_distribution/planview_max_mp1_
-davg_caseb.png Graphic file (type png)
-<use ../FVCOM_MP_test_run/PYTHON/output/spatial_distribution/planview_max_mp1_d
-avg_caseb.png>
+<../FVCOM_MP_test_run/PYTHON/output/spatial_distribution/day10/planview_max_mp1
+_davg_caseb.png, id=68, 593.5776pt x 348.3414pt>
+File: ../FVCOM_MP_test_run/PYTHON/output/spatial_distribution/day10/planview_ma
+x_mp1_davg_caseb.png Graphic file (type png)
+<use ../FVCOM_MP_test_run/PYTHON/output/spatial_distribution/day10/planview_max
+_mp1_davg_caseb.png>
 Package pdftex.def Info: ../FVCOM_MP_test_run/PYTHON/output/spatial_distributio
-n/planview_max_mp1_davg_caseb.png  used on input line 269.
+n/day10/planview_max_mp1_davg_caseb.png  used on input line 269.
 (pdftex.def)             Requested size: 150.32504pt x 88.21729pt.
-<../FVCOM_MP_test_run/PYTHON/output/spatial_distribution/planview_max_mp1_davg_
-casec.png, id=69, 593.5776pt x 348.3414pt>
-File: ../FVCOM_MP_test_run/PYTHON/output/spatial_distribution/planview_max_mp1_
-davg_casec.png Graphic file (type png)
-<use ../FVCOM_MP_test_run/PYTHON/output/spatial_distribution/planview_max_mp1_d
-avg_casec.png>
+<../FVCOM_MP_test_run/PYTHON/output/spatial_distribution/day10/planview_max_mp1
+_davg_casec.png, id=69, 593.5776pt x 348.3414pt>
+File: ../FVCOM_MP_test_run/PYTHON/output/spatial_distribution/day10/planview_ma
+x_mp1_davg_casec.png Graphic file (type png)
+<use ../FVCOM_MP_test_run/PYTHON/output/spatial_distribution/day10/planview_max
+_mp1_davg_casec.png>
 Package pdftex.def Info: ../FVCOM_MP_test_run/PYTHON/output/spatial_distributio
-n/planview_max_mp1_davg_casec.png  used on input line 274.
+n/day10/planview_max_mp1_davg_casec.png  used on input line 274.
 (pdftex.def)             Requested size: 150.32504pt x 88.21729pt.
-<../FVCOM_MP_test_run/PYTHON/output/spatial_distribution/diff_mp1_davg_caseb_mi
-nus_casea.png, id=70, 600.3228pt x 350.7504pt>
-File: ../FVCOM_MP_test_run/PYTHON/output/spatial_distribution/diff_mp1_davg_cas
-eb_minus_casea.png Graphic file (type png)
-<use ../FVCOM_MP_test_run/PYTHON/output/spatial_distribution/diff_mp1_davg_case
-b_minus_casea.png>
+<../FVCOM_MP_test_run/PYTHON/output/spatial_distribution/day10/diff_mp1_davg_ca
+seb_minus_casea.png, id=70, 600.3228pt x 350.7504pt>
+File: ../FVCOM_MP_test_run/PYTHON/output/spatial_distribution/day10/diff_mp1_da
+vg_caseb_minus_casea.png Graphic file (type png)
+<use ../FVCOM_MP_test_run/PYTHON/output/spatial_distribution/day10/diff_mp1_dav
+g_caseb_minus_casea.png>
 Package pdftex.def Info: ../FVCOM_MP_test_run/PYTHON/output/spatial_distributio
-n/diff_mp1_davg_caseb_minus_casea.png  used on input line 291.
+n/day10/diff_mp1_davg_caseb_minus_casea.png  used on input line 291.
 (pdftex.def)             Requested size: 150.32504pt x 87.82652pt.
-<../FVCOM_MP_test_run/PYTHON/output/spatial_distribution/diff_mp1_davg_casec_mi
-nus_casea.png, id=71, 594.0594pt x 350.7504pt>
-File: ../FVCOM_MP_test_run/PYTHON/output/spatial_distribution/diff_mp1_davg_cas
-ec_minus_casea.png Graphic file (type png)
-<use ../FVCOM_MP_test_run/PYTHON/output/spatial_distribution/diff_mp1_davg_case
-c_minus_casea.png>
+<../FVCOM_MP_test_run/PYTHON/output/spatial_distribution/day10/diff_mp1_davg_ca
+sec_minus_casea.png, id=71, 594.0594pt x 350.7504pt>
+File: ../FVCOM_MP_test_run/PYTHON/output/spatial_distribution/day10/diff_mp1_da
+vg_casec_minus_casea.png Graphic file (type png)
+<use ../FVCOM_MP_test_run/PYTHON/output/spatial_distribution/day10/diff_mp1_dav
+g_casec_minus_casea.png>
 Package pdftex.def Info: ../FVCOM_MP_test_run/PYTHON/output/spatial_distributio
-n/diff_mp1_davg_casec_minus_casea.png  used on input line 296.
+n/day10/diff_mp1_davg_casec_minus_casea.png  used on input line 296.
 (pdftex.def)             Requested size: 150.32504pt x 88.75778pt.
-<../FVCOM_MP_test_run/PYTHON/output/spatial_distribution/diff_mp1_davg_casec_mi
-nus_caseb.png, id=72, 594.0594pt x 350.7504pt>
-File: ../FVCOM_MP_test_run/PYTHON/output/spatial_distribution/diff_mp1_davg_cas
-ec_minus_caseb.png Graphic file (type png)
-<use ../FVCOM_MP_test_run/PYTHON/output/spatial_distribution/diff_mp1_davg_case
-c_minus_caseb.png>
+<../FVCOM_MP_test_run/PYTHON/output/spatial_distribution/day10/diff_mp1_davg_ca
+sec_minus_caseb.png, id=72, 594.0594pt x 350.7504pt>
+File: ../FVCOM_MP_test_run/PYTHON/output/spatial_distribution/day10/diff_mp1_da
+vg_casec_minus_caseb.png Graphic file (type png)
+<use ../FVCOM_MP_test_run/PYTHON/output/spatial_distribution/day10/diff_mp1_dav
+g_casec_minus_caseb.png>
 Package pdftex.def Info: ../FVCOM_MP_test_run/PYTHON/output/spatial_distributio
-n/diff_mp1_davg_casec_minus_caseb.png  used on input line 301.
+n/day10/diff_mp1_davg_casec_minus_caseb.png  used on input line 301.
 (pdftex.def)             Requested size: 150.32504pt x 88.75778pt.
- [4 <../FVCOM_MP_test_run/PYTHON/output/spatial_distribution/planview_dayavg_mp
-1_agg_davg_caseb.png> <../FVCOM_MP_test_run/PYTHON/output/spatial_distribution/
-planview_dayavg_mp1_agg_davg_casec.png> <../FVCOM_MP_test_run/PYTHON/output/spa
-tial_distribution/planview_dayavg_mp1_dis_davg_casec.png> <../FVCOM_MP_test_run
-/PYTHON/output/spatial_distribution/planview_dayavg_bot_mass_casea.png> <../FVC
-OM_MP_test_run/PYTHON/output/spatial_distribution/planview_dayavg_bot_mass_case
-b.png> <../FVCOM_MP_test_run/PYTHON/output/spatial_distribution/planview_dayavg
-_bot_mass_casec.png> <../FVCOM_MP_test_run/PYTHON/output/spatial_distribution/p
-lanview_max_mp1_davg_casea.png> <../FVCOM_MP_test_run/PYTHON/output/spatial_dis
-tribution/planview_max_mp1_davg_caseb.png> <../FVCOM_MP_test_run/PYTHON/output/
-spatial_distribution/planview_max_mp1_davg_casec.png>]
-<../FVCOM_MP_test_run/PYTHON/output/spatial_distribution/station_timeseries_mp1
-_davg.png, id=92, 1005.5166pt x 997.8078pt>
-File: ../FVCOM_MP_test_run/PYTHON/output/spatial_distribution/station_timeserie
-s_mp1_davg.png Graphic file (type png)
-<use ../FVCOM_MP_test_run/PYTHON/output/spatial_distribution/station_timeseries
-_mp1_davg.png>
+ [4 <../FVCOM_MP_test_run/PYTHON/output/spatial_distribution/day10/planview_day
+avg_mp1_agg_davg_caseb.png> <../FVCOM_MP_test_run/PYTHON/output/spatial_distrib
+ution/day10/planview_dayavg_mp1_agg_davg_casec.png> <../FVCOM_MP_test_run/PYTHO
+N/output/spatial_distribution/day10/planview_dayavg_mp1_dis_davg_casec.png> <..
+/FVCOM_MP_test_run/PYTHON/output/spatial_distribution/day10/planview_dayavg_bot
+_mass_casea.png> <../FVCOM_MP_test_run/PYTHON/output/spatial_distribution/day10
+/planview_dayavg_bot_mass_caseb.png> <../FVCOM_MP_test_run/PYTHON/output/spatia
+l_distribution/day10/planview_dayavg_bot_mass_casec.png> <../FVCOM_MP_test_run/
+PYTHON/output/spatial_distribution/day10/planview_max_mp1_davg_casea.png> <../F
+VCOM_MP_test_run/PYTHON/output/spatial_distribution/day10/planview_max_mp1_davg
+_caseb.png> <../FVCOM_MP_test_run/PYTHON/output/spatial_distribution/day10/plan
+view_max_mp1_davg_casec.png>]
+<../FVCOM_MP_test_run/PYTHON/output/spatial_distribution/day10/station_timeseri
+es_mp1_davg.png, id=92, 1005.5166pt x 997.8078pt>
+File: ../FVCOM_MP_test_run/PYTHON/output/spatial_distribution/day10/station_tim
+eseries_mp1_davg.png Graphic file (type png)
+<use ../FVCOM_MP_test_run/PYTHON/output/spatial_distribution/day10/station_time
+series_mp1_davg.png>
 Package pdftex.def Info: ../FVCOM_MP_test_run/PYTHON/output/spatial_distributio
-n/station_timeseries_mp1_davg.png  used on input line 320.
+n/day10/station_timeseries_mp1_davg.png  used on input line 320.
 (pdftex.def)             Requested size: 469.75502pt x 466.15306pt.
- [5 <../FVCOM_MP_test_run/PYTHON/output/spatial_distribution/diff_mp1_davg_case
-b_minus_casea.png> <../FVCOM_MP_test_run/PYTHON/output/spatial_distribution/dif
-f_mp1_davg_casec_minus_casea.png> <../FVCOM_MP_test_run/PYTHON/output/spatial_d
-istribution/diff_mp1_davg_casec_minus_caseb.png>] [6 <../FVCOM_MP_test_run/PYTH
-ON/output/spatial_distribution/station_timeseries_mp1_davg.png>]
+ [5 <../FVCOM_MP_test_run/PYTHON/output/spatial_distribution/day10/diff_mp1_dav
+g_caseb_minus_casea.png> <../FVCOM_MP_test_run/PYTHON/output/spatial_distributi
+on/day10/diff_mp1_davg_casec_minus_casea.png> <../FVCOM_MP_test_run/PYTHON/outp
+ut/spatial_distribution/day10/diff_mp1_davg_casec_minus_caseb.png>] [6 <../FVCO
+M_MP_test_run/PYTHON/output/spatial_distribution/day10/station_timeseries_mp1_d
+avg.png>]
 Underfull \hbox (badness 10000) in paragraph at lines 390--393
 []\OT1/cmr/m/n/10.95 Cases a and b are nu-mer-i-cally iden-ti-cal un-der the cu
 r-rent pa-ram-e-ter-i-sa-tion
@@ -721,7 +723,7 @@ Package rerunfilecheck Info: File `memo_05.out' has not changed.
  ) 
 Here is how much of TeX's memory you used:
  12152 strings out of 475284
- 204320 string characters out of 2773161
+ 204902 string characters out of 2773161
  544745 words of memory out of 3000000
  33410 multiletter control sequences out of 15000+600000
  480029 words of font info for 71 fonts, out of 8000000 for 9000
@@ -744,7 +746,7 @@ eX/fonts/type1/public/amsfonts/cm/cmsy10.pfb><C:/Users/huan111/AppData/Local/Pr
 ograms/MiKTeX/fonts/type1/public/amsfonts/cm/cmsy8.pfb><C:/Users/huan111/AppDat
 a/Local/Programs/MiKTeX/fonts/type1/public/amsfonts/cm/cmti10.pfb><C:/Users/hua
 n111/AppData/Local/Programs/MiKTeX/fonts/type1/public/amsfonts/cm/cmtt10.pfb>
-Output written on memo_05.pdf (8 pages, 1910159 bytes).
+Output written on memo_05.pdf (8 pages, 1900053 bytes).
 PDF statistics:
  203 PDF objects out of 1000 (max. 8388607)
  50 named destinations out of 1000 (max. 500000)

@@ -52,8 +52,10 @@
 %   WATERPACT_SAVE_CASE_MATS true/false for saving one MAT per case
 
 %% User Settings
+%  Absolute Kestrel paths are set as defaults.  Override via environment
+%  variables for portability to other systems.
 case_ids = {'b', 'c'};
-output_root = '';
+output_root = '/kfs3/scratch/yhuang168/waterPACT_MP_floc';
 output_dirs = {};
 nc_files = {};
 out_mat = '';
@@ -62,6 +64,11 @@ save_grid_metrics = true;
 save_case_mats = true;
 cap_threshold_kgm3 = 100.0;
 cap_tolerance_kgm3 = 1.0e-6;
+% File suffix labels to search per case.  Files that do not exist are
+% skipped with a warning, so you can safely list all labels even if only
+% a subset is available locally.
+%   e.g. set WATERPACT_FILE_LABELS=0003 to use only the third file.
+file_labels = {'0001', '0002', '0003'};
 
 %% Environment Overrides
 case_ids = getenv_list('WATERPACT_CASE_IDS', case_ids);
@@ -74,12 +81,22 @@ save_grid_metrics = getenv_logical('WATERPACT_SAVE_GRID', save_grid_metrics);
 save_case_mats = getenv_logical('WATERPACT_SAVE_CASE_MATS', save_case_mats);
 cap_threshold_kgm3 = getenv_number('WATERPACT_CAP_THRESHOLD_KGM3', cap_threshold_kgm3);
 cap_tolerance_kgm3 = getenv_number('WATERPACT_CAP_TOLERANCE_KGM3', cap_tolerance_kgm3);
+file_labels = getenv_list('WATERPACT_FILE_LABELS', file_labels);
 
+%% Resolve root path
+% WATERPACT_TEST_ROOT overrides auto-detection so the script works when
+% MATLAB is launched via run() in batch mode and mfilename returns empty.
+%   export WATERPACT_TEST_ROOT=/kfs3/scratch/yhuang168/waterPACT_MP_floc
 script_dir = fileparts(mfilename('fullpath'));
 if isempty(script_dir)
     script_dir = pwd;
 end
-test_root = fileparts(script_dir);
+test_root_env = getenv_default('WATERPACT_TEST_ROOT', '');
+if ~isempty(test_root_env)
+    test_root = test_root_env;
+else
+    test_root = fileparts(script_dir);
+end
 
 if isempty(output_root)
     output_root = test_root;
@@ -136,15 +153,26 @@ for icase = 1:numel(case_ids)
     else
         case_output_dir = char(output_dirs{icase});
     end
-    file_labels = {'0001', '0002', '0003'};
-    case_nc_files = cell(numel(file_labels), 1);
+    % Build the candidate file list from file_labels, then keep only those
+    % that actually exist on disk.  Missing files are skipped with a warning
+    % so that a partial set (e.g. only _0003.nc available locally) works.
+    case_nc_files = {};
     for ilab = 1:numel(file_labels)
-        fname = sprintf('waterPACT_%s_%s.nc', case_id, file_labels{ilab});
-        case_nc_files{ilab} = fullfile(case_output_dir, fname);
+        fname = sprintf('waterPACT_%s_%s.nc', case_id, char(file_labels{ilab}));
+        fpath = fullfile(case_output_dir, fname);
+        if isfile(fpath)
+            case_nc_files{end+1} = fpath; %#ok<AGROW>
+        else
+            fprintf('  [skip] Not found: %s\n', fpath);
+        end
     end
 
     fprintf('Case %s\n', case_id);
     fprintf('  NetCDF directory: %s\n', case_output_dir);
+    if isempty(case_nc_files)
+        warning('No NetCDF files found for case %s in %s. Skipping.', case_id, case_output_dir);
+        continue;
+    end
     for ilab = 1:numel(case_nc_files)
         fprintf('  File %d: %s\n', ilab, case_nc_files{ilab});
     end
@@ -197,12 +225,19 @@ function diagnostic = extract_one_case(case_id, output_dir, nc_files_list, time_
 if ischar(nc_files_list)
     nc_files_list = {nc_files_list};
 end
+% Filter to existing files (missing files were already warned about in the
+% main loop; re-filter here as a safety net).
+files = {};
 for ilab = 1:numel(nc_files_list)
-    if ~isfile(nc_files_list{ilab})
-        error('NetCDF file does not exist: %s', nc_files_list{ilab});
+    if isfile(nc_files_list{ilab})
+        files{end+1} = nc_files_list{ilab}; %#ok<AGROW>
+    else
+        warning('extract_one_case: skipping missing file: %s', nc_files_list{ilab});
     end
 end
-files = nc_files_list;
+if isempty(files)
+    error('No readable NetCDF files for case %s.', case_id);
+end
 
 fprintf('  Reading %d NetCDF file(s) (~30-day concatenation).\n', numel(files));
 
@@ -263,7 +298,16 @@ for ifile = 1:numel(files)
 
     fprintf('    %s: %d selected record(s)\n', get_filename(ncfile), numel(local_records));
 
-    file_time = double(ncread(ncfile, 'time'));
+    file_time = double(ncread(ncfile, 'time'));   % absolute days (MJD)
+    % Convert to simulation-relative days: file _000N starts at (N-1)*10 sim-days.
+    tok_t = regexp(ncfile, '_(\d{4})\.nc', 'tokens', 'once');
+    if ~isempty(tok_t)
+        file_num_t = str2double(tok_t{1});
+    else
+        file_num_t = 1;
+        warning('Could not parse file number from %s; assuming file 1.', ncfile);
+    end
+    rel_time = file_time - file_time(1) + (file_num_t - 1) * 10;
     file_iint = safe_read_vector(ncfile, 'iint');
     file_itime = safe_read_vector(ncfile, 'Itime');
     file_itime2 = safe_read_vector(ncfile, 'Itime2');
@@ -301,7 +345,7 @@ for ifile = 1:numel(files)
 
         budget.file_index(out_idx) = ifile;
         budget.record_index(out_idx) = tindex;
-        budget.time_days(out_idx) = file_time(tindex);
+        budget.time_days(out_idx) = rel_time(tindex);  % simulation-relative days
         budget.iint(out_idx) = vector_value_or_nan(file_iint, tindex);
         budget.Itime(out_idx) = vector_value_or_nan(file_itime, tindex);
         budget.Itime2(out_idx) = vector_value_or_nan(file_itime2, tindex);
@@ -441,7 +485,7 @@ summary = make_summary(case_id, output_dir, files, budget, grid_summary, ...
 diagnostic = struct();
 diagnostic.case_id = case_id;
 diagnostic.output_dir = char(output_dir);
-diagnostic.nc_file = char(nc_file);
+diagnostic.nc_file = files(:);
 diagnostic.files = files(:);
 diagnostic.vars_available = vars_available;
 diagnostic.grid_summary = grid_summary;

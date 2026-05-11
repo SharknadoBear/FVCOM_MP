@@ -25,10 +25,11 @@
 %   WATERPACT_SAVE_GRID     true/false for saving art1/h/sigma fractions
 
 %% User Settings
-% Edit these values for a normal script run. Leave output_dir and out_mat
-% blank to use ../OUTPUT_<case_id>/mp1_mass_budget_<case_id>.mat.
+% Edit these values for a normal script run.
+%  Absolute Kestrel paths are set as defaults.  Override via environment
+%  variables for portability to other systems.
 case_id = 'a';
-output_dir = '';
+output_dir = '/kfs3/scratch/yhuang168/waterPACT_MP_floc/OUTPUT_a';
 out_mat = '';
 nc_file = '';
 time_stride = 1;
@@ -37,6 +38,10 @@ read_flux_fields = true;
 save_grid_metrics = true;
 cap_threshold_kgm3 = 100.0;
 cap_tolerance_kgm3 = 1.0e-6;
+% File suffix labels to search.  Files that do not exist are skipped with a
+% warning, so a partial local set (e.g. only _0003.nc) works fine.
+%   e.g. set WATERPACT_FILE_LABELS=0003 to use only the third file.
+file_labels = {'0001', '0002', '0003'};
 
 % Optional batch-job overrides. If an environment variable is empty, the
 % editable value above is kept.
@@ -50,12 +55,22 @@ read_flux_fields = getenv_logical('WATERPACT_READ_FLUX', read_flux_fields);
 save_grid_metrics = getenv_logical('WATERPACT_SAVE_GRID', save_grid_metrics);
 cap_threshold_kgm3 = getenv_number('WATERPACT_CAP_THRESHOLD_KGM3', cap_threshold_kgm3);
 cap_tolerance_kgm3 = getenv_number('WATERPACT_CAP_TOLERANCE_KGM3', cap_tolerance_kgm3);
+file_labels = getenv_list('WATERPACT_FILE_LABELS', file_labels);
 
+%% Resolve root path
+% WATERPACT_TEST_ROOT overrides auto-detection so the script works when
+% MATLAB is launched via run() in batch mode and mfilename returns empty.
+%   export WATERPACT_TEST_ROOT=/kfs3/scratch/yhuang168/waterPACT_MP_floc
 script_dir = fileparts(mfilename('fullpath'));
 if isempty(script_dir)
     script_dir = pwd;
 end
-test_root = fileparts(script_dir);
+test_root_env = getenv_default('WATERPACT_TEST_ROOT', '');
+if ~isempty(test_root_env)
+    test_root = test_root_env;
+else
+    test_root = fileparts(script_dir);
+end
 
 if isempty(output_dir)
     output_dir = fullfile(test_root, ['OUTPUT_' case_id]);
@@ -63,12 +78,19 @@ else
     case_id = infer_case_id(output_dir);
 end
 
-% Build list of the three output files that together span ~30 days.
-file_labels = {'0001', '0002', '0003'};
-files = cell(numel(file_labels), 1);
+% Build list of output files from file_labels; skip any that don't exist.
+files = {};
 for ilab = 1:numel(file_labels)
-    fname = sprintf('waterPACT_%s_%s.nc', case_id, file_labels{ilab});
-    files{ilab} = fullfile(output_dir, fname);
+    fname = sprintf('waterPACT_%s_%s.nc', case_id, char(file_labels{ilab}));
+    fpath = fullfile(output_dir, 'backup_data', fname);
+    if isfile(fpath)
+        files{end+1} = fpath; %#ok<AGROW>
+    else
+        fprintf('  [skip] Not found: %s\n', fpath);
+    end
+end
+if isempty(files)
+    error('No readable NetCDF files found in %s/backup_data/ for case %s.', output_dir, case_id);
 end
 
 if isempty(out_mat)
@@ -90,12 +112,6 @@ config.created_by = mfilename;
 config.created_on = char(datetime('now', 'Format', 'yyyy-MM-dd HH:mm:ss'));
 
 config.time_stride = max(1, round(config.time_stride));
-
-for ilab = 1:numel(files)
-    if ~isfile(files{ilab})
-        error('NetCDF file does not exist: %s', files{ilab});
-    end
-end
 
 fprintf('Reading %d NetCDF files (~30-day concatenation):\n', numel(files));
 for ilab = 1:numel(files)
@@ -157,7 +173,16 @@ for ifile = 1:numel(files)
 
     fprintf('  %s: %d selected record(s)\n', get_filename(ncfile), numel(local_records));
 
-    file_time = double(ncread(ncfile, 'time'));
+    file_time = double(ncread(ncfile, 'time'));   % absolute days (MJD)
+    % Convert to simulation-relative days: file _000N starts at (N-1)*10 sim-days.
+    tok_t = regexp(ncfile, '_(\d{4})\.nc', 'tokens', 'once');
+    if ~isempty(tok_t)
+        file_num_t = str2double(tok_t{1});
+    else
+        file_num_t = 1;
+        warning('Could not parse file number from %s; assuming file 1.', ncfile);
+    end
+    rel_time = file_time - file_time(1) + (file_num_t - 1) * 10;
     file_iint = safe_read_vector(ncfile, 'iint');
     file_itime = safe_read_vector(ncfile, 'Itime');
     file_itime2 = safe_read_vector(ncfile, 'Itime2');
@@ -187,7 +212,7 @@ for ifile = 1:numel(files)
 
         budget.file_index(out_idx) = ifile;
         budget.record_index(out_idx) = tindex;
-        budget.time_days(out_idx) = file_time(tindex);
+        budget.time_days(out_idx) = rel_time(tindex);  % simulation-relative days
         budget.iint(out_idx) = vector_value_or_nan(file_iint, tindex);
         budget.Itime(out_idx) = vector_value_or_nan(file_itime, tindex);
         budget.Itime2(out_idx) = vector_value_or_nan(file_itime2, tindex);
@@ -349,6 +374,22 @@ switch lower(strtrim(text_value))
         value = false;
     otherwise
         error('Environment variable %s must be true/false. Got: %s', name, text_value);
+end
+end
+
+function values = getenv_list(name, default_values)
+text_value = getenv(name);
+if isempty(text_value)
+    values = default_values;
+    return;
+end
+parts = regexp(text_value, ',', 'split');
+values = {};
+for i = 1:numel(parts)
+    item = strtrim(parts{i});
+    if ~isempty(item)
+        values{end + 1} = item; %#ok<AGROW>
+    end
 end
 end
 
