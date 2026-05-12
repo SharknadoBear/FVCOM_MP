@@ -1,0 +1,142 @@
+% report_02.tex -- FVCOM-MP late-time spatial diagnostics
+% May 2026 | WaterPACT Delaware River Test Cases
+
+\PassOptionsToPackage{table,dvipsnames}{xcolor}
+\documentclass[aspectratio=169,10pt]{beamer}
+\usetheme{Madrid}
+\usecolortheme{beaver}
+\setbeamertemplate{navigation symbols}{}
+\setbeamerfont{title}{size=\large}
+
+\usepackage{booktabs}
+\usepackage{graphicx}
+\usepackage{amsmath}
+\usepackage{amssymb}
+\setlength{\tabcolsep}{4pt}
+
+\newcommand{\ca}{\textcolor{OliveGreen}{\textbf{a}}}
+\newcommand{\cb}{\textcolor{NavyBlue}{\textbf{b}}}
+\newcommand{\cc}{\textcolor{BurntOrange}{\textbf{c}}}
+
+\title{FVCOM-MP: Late-Time Tracer Diagnostics}
+\subtitle{Delaware River Estuary Test Cases}
+\author{WaterPACT FVCOM-MP Development}
+\date{May 2026}
+
+\begin{document}
+
+\begin{frame}
+  \titlepage
+
+  \vspace{-0.8em}
+  \begin{center}
+    \colorbox{NavyBlue!10}{%
+      \parbox{0.78\textwidth}{\centering\small
+        Current FVCOM-MP test outputs now span multi-month integrations
+        ($>3$ months), enabling day-30 and day-90 tracer checks beyond the
+        initial 10-day mass-balance archive.}}
+  \end{center}
+\end{frame}
+
+\begin{frame}{Delaware River Test Cases}
+  \centering
+  \vspace{0.3em}
+  \footnotesize
+  \begin{tabular}{lcccc}
+    \toprule
+    & & Case \ca & Case \cb & Case \cc \\
+    \cmidrule(lr){3-5}
+    Role & & \textit{baseline (published)} & sensitivity b & sensitivity c \\
+    \midrule
+    \texttt{PLAST\_FLOC}   & & F & T & T \\
+    \texttt{SEDIMENT\_MODEL} & & F$^{\dagger}$ & T & T \\
+    \texttt{SED\_SD50}     & & --- & 0.1\,mm & 1.0\,mm \\
+    MP water field(s)      & & $c$ &
+                             \multicolumn{2}{c}{$c_a + c_d$} \\
+    Agg.\ gate $d_{MP}^{\max}$ & & --- &
+                             $34\,\mu$m (excl.) &
+                             $162\,\mu$m (act.) \\
+    MP settling est. & & --- &
+                             \shortstack{$c_d\approx-0.39$\,mm\,s$^{-1}$\\
+                             buoyant/free MP} &
+                             \shortstack{$c_a=+3.0$\,mm\,s$^{-1}$\\
+                             $\Delta\approx3.4$\,mm\,s$^{-1}$} \\
+    \bottomrule
+  \end{tabular}
+
+  \vspace{0.5em}
+  {\scriptsize
+    $c$\,=\,disaggregated conc.\hfill
+    $c_a$\,=\,aggregated,\;$c_d$\,=\,disaggregated (floc path)\\[2pt]
+    $^{\dagger}$sed.\ initialized; \texttt{adv\_scal}/FCT bypassed
+    $\;\bullet\;$
+    \texttt{SOURCE\_AG\_RATE\,=\,0} $\Rightarrow$ $c_a\equiv 0$
+    $\;\bullet\;$
+    $\rho_p=950\,\mathrm{kg\,m^{-3}}$,\; $d_p=100\,\mu\mathrm{m}$
+    $\;\bullet\;$
+    settling estimate uses $\rho_w\approx1025\,\mathrm{kg\,m^{-3}}$ and
+    \texttt{SED\_WSET}=3\,mm\,s$^{-1}$}
+\end{frame}
+
+\begin{frame}{First 10-Day Mass Balance: v012 Ramp-Corrected Analytic Archive}
+  \centering
+  \includegraphics[width=0.92\textwidth,height=0.72\textheight,keepaspectratio]{%
+    ../FVCOM_MP_test_run/PYTHON/output/mass_conservation/archive/%
+    v012_ramp_corrected_analytic/total_mass_by_case.png}
+
+  \vspace{0.2em}
+  \colorbox{OliveGreen!14}{%
+    \parbox{0.82\textwidth}{\centering\small
+      Final 10-day archive check: total mass by case is well behaved after the
+      ramp-corrected analytic source treatment.}}
+\end{frame}
+
+\begin{frame}{Day 30 Spatial Contrast: Water Column and Bed Mass}
+  \centering
+  \scriptsize
+  \begin{tabular}{ccc}
+    \textbf{Case a: \texttt{mp1\_davg}} &
+    \textbf{Case b: \texttt{mp1\_davg}} &
+    \textbf{Case c: \texttt{mp1\_davg}} \\
+    \includegraphics[width=0.30\textwidth,height=0.275\textheight,keepaspectratio]{%
+      ../FVCOM_MP_test_run/PYTHON/output/spatial_distribution/day30/planview_dayavg_mp1_davg_casea.png} &
+    \includegraphics[width=0.30\textwidth,height=0.275\textheight,keepaspectratio]{%
+      ../FVCOM_MP_test_run/PYTHON/output/spatial_distribution/day30/planview_dayavg_mp1_davg_caseb.png} &
+    \includegraphics[width=0.30\textwidth,height=0.275\textheight,keepaspectratio]{%
+      ../FVCOM_MP_test_run/PYTHON/output/spatial_distribution/day30/planview_dayavg_mp1_davg_casec.png} \\
+    \textbf{Case a: bed mass} &
+    \textbf{Case b: bed mass} &
+    \textbf{Case c: bed mass} \\
+    \includegraphics[width=0.30\textwidth,height=0.275\textheight,keepaspectratio]{%
+      ../FVCOM_MP_test_run/PYTHON/output/spatial_distribution/day30/planview_dayavg_bot_mass_casea.png} &
+    \includegraphics[width=0.30\textwidth,height=0.275\textheight,keepaspectratio]{%
+      ../FVCOM_MP_test_run/PYTHON/output/spatial_distribution/day30/planview_dayavg_bot_mass_caseb.png} &
+    \includegraphics[width=0.30\textwidth,height=0.275\textheight,keepaspectratio]{%
+      ../FVCOM_MP_test_run/PYTHON/output/spatial_distribution/day30/planview_dayavg_bot_mass_casec.png}
+  \end{tabular}
+\end{frame}
+
+\begin{frame}{Floc-Component Split: Case c, Day 30 vs. Day 90}
+  \centering
+  \scriptsize
+  \begin{tabular}{cc}
+    \textbf{Day 30: \texttt{mp1\_agg\_davg}} &
+    \textbf{Day 30: \texttt{mp1\_dis\_davg}} \\
+    \includegraphics[width=0.39\textwidth,height=0.305\textheight,keepaspectratio]{%
+      ../FVCOM_MP_test_run/PYTHON/output/spatial_distribution/day30/planview_dayavg_mp1_agg_davg_casec.png} &
+    \includegraphics[width=0.39\textwidth,height=0.305\textheight,keepaspectratio]{%
+      ../FVCOM_MP_test_run/PYTHON/output/spatial_distribution/day30/planview_dayavg_mp1_dis_davg_casec.png} \\
+    \textbf{Day 90: \texttt{mp1\_agg\_davg}} &
+    \textbf{Day 90: \texttt{mp1\_dis\_davg}} \\
+    \includegraphics[width=0.39\textwidth,height=0.305\textheight,keepaspectratio]{%
+      ../FVCOM_MP_test_run/PYTHON/output/spatial_distribution/day90/planview_dayavg_mp1_agg_davg_casec.png} &
+    \includegraphics[width=0.39\textwidth,height=0.305\textheight,keepaspectratio]{%
+      ../FVCOM_MP_test_run/PYTHON/output/spatial_distribution/day90/planview_dayavg_mp1_dis_davg_casec.png}
+  \end{tabular}
+
+  \vspace{0.2em}
+  {\small Case \cc\ shows the active floc pathway; case \cb\ remains effectively
+  zero in the aggregated component under the fine-sediment parameterization.}
+\end{frame}
+
+\end{document}
