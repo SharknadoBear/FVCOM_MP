@@ -1,0 +1,434 @@
+\documentclass[11pt]{article}
+\usepackage[margin=1in]{geometry}
+\usepackage{booktabs}
+\usepackage{hyperref}
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{url}
+\usepackage{xcolor}
+\usepackage{enumerate}
+\usepackage{float}
+
+\title{Memo 07: Minimum-Effort Sediment Floc Simulation\\
+       Using the Existing FVCOM Sediment Capability}
+\author{FVCOM-MP WaterPACT Investigation}
+\date{May 2026}
+
+\begin{document}
+\sloppy
+\maketitle
+
+\section*{Purpose}
+
+This memo records a code-level investigation of how to simulate sediment floc
+behavior by itself in the WaterPACT estuary setup, with minimum code and input
+disruption.  The user request referred to \texttt{sed\_mod.F}; in this
+repository there is no file with that exact name.  The relevant sediment source
+files are:
+\begin{itemize}
+  \item \texttt{mod\_sed.F}: the original FVCOM sediment module, enabled by
+        \texttt{-DSEDIMENT -DORIG\_SED}.
+  \item \texttt{mod\_sed\_cstms.F} and \texttt{mod\_flocmod.F}: the CSTMS
+        sediment and floc population-balance modules, enabled by
+        \texttt{-DSEDIMENT -DCSTMS\_SED}.
+\end{itemize}
+
+The practical question is whether we can run only sediment flocculation in the
+estuary without activating the microplastic floc-interaction machinery and
+without moving to a new sediment framework.
+
+\section*{Main Finding}
+
+The minimum-effort path is to keep the original FVCOM sediment module
+(\texttt{ORIG\_SED}) and change the sediment class from
+\texttt{non-cohesive} to \texttt{cohesive}.  In \texttt{mod\_sed.F}, the
+cohesive branch of \texttt{Calc\_Deposition} automatically calls
+\texttt{Calc\_Wset\_Floc}; the non-cohesive branch uses the constant
+\texttt{SED\_WSET}.  Therefore, the current WaterPACT sediment files do not
+exercise the sediment floc settling logic because they set:
+\begin{verbatim}
+SED_TYPE = non-cohesive
+\end{verbatim}
+
+Changing that one semantic switch, with a physically smaller
+\texttt{SED\_SD50} and \texttt{SED\_WSET}, gives a sediment-only floc
+experiment using existing code.
+
+\section*{What the Existing ORIG Sediment Floc Path Does}
+
+For each cohesive sediment class, \texttt{mod\_sed.F} computes a local settling
+velocity multiplier from suspended sediment concentration, salinity, turbulence
+intensity, and primary grain size:
+\[
+  W_s = W_{s0}\,
+        \frac{a\,C^b\,S^d\,G^e}{(D_{50,\mathrm{mm}})^f},
+\]
+with default constants in the source:
+\[
+  a=0.274,\quad b=0.48,\quad d=0.03,\quad e=0.22,\quad f=0.58.
+\]
+The code enforces a minimum multiplier of 1.0 and only allows enhancement in
+brackish water:
+\[
+  5 < S < 15.
+\]
+It also caps the settling velocity at \texttt{0.5e-3 m/s}, or
+0.5 mm/s.  This matters because the current WaterPACT sediment files use
+\texttt{SED\_WSET = 3.0} mm/s for sand-like particles; if that value is reused
+for cohesive sediment, the result will immediately hit the cap.  A floc-only
+cohesive test should use a smaller base settling speed, for example
+\texttt{SED\_WSET = 0.05--0.2} mm/s.
+
+This path is lightweight but limited: it represents flocculation as a
+diagnostic settling-velocity adjustment, not as an explicit floc size
+distribution.
+
+\subsection*{Meaning of the Formula Variables}
+
+In the source routine \texttt{Calc\_Wset\_Floc(n,c,s,g1,ds50,w0,wset)}, the
+variables in the empirical multiplier are:
+\begin{itemize}
+  \item \texttt{c}: suspended sediment concentration in the water column.  In
+        the ORIG sediment module this is stored internally as kg\,m$^{-3}$,
+        which is numerically equal to g\,L$^{-1}$.
+  \item \texttt{s}: salinity, from \texttt{s1(i,k)}.
+  \item \texttt{g1}: a turbulence-intensity/shear proxy computed immediately
+        before the call from local velocity, water depth, the Manning-like
+        coefficient \texttt{mf=0.012}, gravity, and \texttt{Vcons=1.e-6}.  It
+        is not a direct GOTM/GLS dissipation rate; it is the ORIG module's
+        empirical turbulence-intensity argument for this formula.
+  \item \texttt{ds50}: primary sediment diameter after conversion to meters.
+        In the formula it is multiplied by 1000, so the denominator uses
+        \texttt{D50} in mm.
+  \item \texttt{w0}: base settling velocity without the floc multiplier.
+  \item \texttt{wset}: final settling velocity passed into the vertical
+        settling calculation.
+\end{itemize}
+So, yes: in the shorthand interpretation of the formula, \(C\) is concentration,
+\(S\) is salinity, and \(G\) is the local turbulence/shear-intensity argument
+used by this empirical ORIG sediment closure.
+
+\section*{Can This Be Used To Back Out an Equivalent Floc Size?}
+
+Only with additional assumptions.  The ORIG settling-velocity formulation does
+not prognose floc diameter, floc density, porosity, or fractal dimension.  It
+returns an effective settling velocity.  A unique floc size cannot be recovered
+from settling velocity alone because floc settling depends on both diameter and
+effective density, and floc effective density itself usually varies with floc
+size and composition.
+
+For post-processing, one could compute a diagnostic ``Stokes-equivalent''
+diameter by assuming a spherical floc with a specified effective density:
+\[
+  d_{\mathrm{eq}} =
+  \left(\frac{18\mu W_s}{g(\rho_f-\rho_w)}\right)^{1/2}.
+\]
+This is useful only as an interpretation aid.  It is sensitive to the assumed
+\(\rho_f-\rho_w\), and it becomes especially ambiguous near the hard cap
+\(W_s \le 0.5\) mm\,s$^{-1}$.
+
+A more floc-aware diagnostic would assume a primary particle diameter
+\(d_p\), sediment density \(\rho_s\), water density \(\rho_w\), and fractal
+dimension \(n_f\), for example:
+\[
+  \rho_f-\rho_w = (\rho_s-\rho_w)
+  \left(\frac{d_p}{d_f}\right)^{3-n_f}.
+\]
+Under Stokes-flow assumptions this gives:
+\[
+  d_f =
+  \left[
+  \frac{18\mu W_s}{g(\rho_s-\rho_w)d_p^{\,3-n_f}}
+  \right]^{1/(n_f-1)}.
+\]
+That calculation would still be diagnostic, not part of the current model
+state.  If explicit floc size is a primary output requirement, the CSTMS
+\texttt{mod\_flocmod.F} route is the more appropriate model structure.
+
+\section*{Planned MP--Floc Coupling Extension}
+
+The preferred future coupling plan is to keep the simplified ORIG sediment
+floc module internally unchanged, while using a diagnostic/effective floc size
+only inside the plastic--floc interaction pathway.  In other words:
+\begin{itemize}
+  \item \texttt{SED\_SD50} remains the constant primary cohesive sediment size
+        used by \texttt{mod\_sed.F}.
+  \item The sediment floc formula continues to compute the local
+        floc-affected settling velocity and stores it internally as
+        \texttt{sed(ised)\%wset0(i,k)}.
+  \item \texttt{plast(iplast)\%dequ} remains the true MP equivalent particle
+        diameter.  It should not be overwritten by a floc diameter.
+  \item A separate diagnostic variable, conceptually
+        \texttt{d\_floc\_eff(i,k,ised)}, would represent the effective floc
+        size used only for MP--floc aggregation, size-exclusion, and related
+        plastic interaction terms.
+\end{itemize}
+
+This is a one-way coupling approximation: sediment concentration, salinity,
+turbulence, and primary sediment size determine the floc environment; MP then
+responds to that environment.  Because MP concentration is much smaller than
+suspended sediment concentration in the intended application, MP does not need
+to feed back on the sediment floc state in this minimum implementation.
+
+\subsection*{Current Behavior to Preserve}
+
+In the present \texttt{mod\_plast.F} floc-interaction pathway, the switch
+\texttt{PLAST\_FLOC} activates the two-tracer aggregated/disaggregated MP
+logic.  The current implementation uses sediment \texttt{D50}-based proxies:
+\begin{itemize}
+  \item the MP--floc aggregation kernel uses \texttt{sed(ised)\%Sd50} as the
+        floc-size proxy;
+  \item the differential-settling term uses the class settling velocity
+        \texttt{sed(ised)\%Wset};
+  \item aggregated MP settling currently uses the sediment settling velocity
+        proxy already in the code.
+\end{itemize}
+This current behavior should remain exactly available as the baseline option.
+
+\subsection*{Proposed New Switch}
+
+Add one additional plastic-module runtime switch after the literature
+parameterization is selected, for example:
+\begin{verbatim}
+PLAST_FLOC_EFFECTIVE = F
+\end{verbatim}
+The exact name can be chosen during implementation.  The required behavior is:
+\begin{itemize}
+  \item \textbf{When false:} preserve the current \texttt{mod\_plast.F}
+        behavior exactly.  MP--floc interaction uses sediment
+        \texttt{Sd50}/\texttt{Wset} proxies, with no diagnostic effective floc
+        size.
+  \item \textbf{When true:} use the modified floc quantities only inside the
+        plastic--floc interaction pathway.  The aggregation and size-exclusion
+        calculations should use \texttt{d\_floc\_eff(i,k,ised)}, and the
+        aggregated MP settling calculation should use the floc-affected
+        sediment settling velocity, preferably \texttt{sed(ised)\%wset0(i,k)}
+        or a sediment-concentration-weighted equivalent if multiple cohesive
+        classes are active.
+\end{itemize}
+
+The open science item is the parameterization for
+\texttt{d\_floc\_eff}.  The simple Stokes or fractal inversion written above is
+not yet satisfactory as a production closure.  Before implementing this switch,
+we should choose a defensible literature-based relation for effective floc
+diameter and, if needed, floc effective density/porosity.  That reference
+choice should also define how sediment mass concentration is converted to floc
+number density in the MP aggregation kernel.
+
+\section*{Reference Trail for the ORIG Formula}
+
+The immediate source-code reference is the comment block above
+\texttt{Calc\_Wset\_Floc}.  It attributes the cohesive floc settling method to
+Qingyu Sha and lists:
+\begin{itemize}
+  \item Ding P.X., Hu K.L., Kong Y.Z., Zhu S.X. et al. (2003).
+        ``Numerical simulation of total sediment under waves and currents in
+        the Changjiang Estuary.'' \textit{Acta Oceanologica Sinica},
+        25(5):113--124.  The same citation is visible in online bibliographic
+        lists and environmental reports as a Chinese article with an English
+        abstract.
+  \item Hu K.L. (2003). ``2-D Suspended Sediment Numerical Simulation under
+        Waves and Currents in Yangtze Estuary.'' Ph.D. dissertation, East
+        China Normal University, as cited by the source comment.
+\end{itemize}
+
+I could verify the bibliographic identity of the Ding et al. paper online, but
+I did not find an openly accessible copy containing the exact empirical
+coefficient equation.  The strongest citation for the exact coefficient set is
+therefore the FVCOM source comment itself, which appears to have embedded the
+Changjiang/Yangtze-estuary empirical relation directly from the cited Chinese
+paper/dissertation trail.
+
+Online sources checked include a later Yangtze Estuary process-modeling paper
+whose reference list includes Ding et al. (2003), and a Changjiang Estuary
+flocculation review/survey PDF.  Those sources support the same physical
+dependencies used by the code: concentration, salinity, particle size, and
+hydrodynamic/turbulence conditions control floc formation and settling.  Recent
+summaries also place an important Changjiang flocculation salinity range around
+5--10, which is consistent with the source code's brackish activation gate of
+5--15.
+\begin{itemize}
+  \item Process-modeling reference list checked:
+        \url{https://www.researchgate.net/publication/292835947_A_process-based_approach_to_sediment_transport_in_the_Yangtze_Estuary}
+  \item Changjiang Estuary flocculation survey PDF checked:
+        \url{https://zjjcmspublic.oss-cn-hangzhou-zwynet-d01-a.internet.cloud.zj.gov.cn/jcms_files/jcms1/web2548/site/attach/0/15fb3123b5794fea9144293da397749a.pdf}
+\end{itemize}
+
+\section*{Current WaterPACT Configuration Relevant to Floc-Only Runs}
+
+\begin{table}[H]
+\centering
+\caption{Current input features that matter for a sediment-only floc test.}
+\small
+\begin{tabular}{p{0.20\textwidth}p{0.34\textwidth}p{0.36\textwidth}}
+\toprule
+Item & Current setting & Implication \\
+\midrule
+Run namelist & \texttt{SEDIMENT\_MODEL = T} & Sediment runtime switch is already used. \\
+Run namelist & \texttt{PLASTIC\_MODEL = T} & Turn this off for sediment-only floc. \\
+Sediment file & \texttt{SED\_TYPE = non-cohesive} & Floc settling path is inactive. \\
+Sediment file & \texttt{SED\_WSET = 3.0} mm/s & Too large for cohesive floc branch. \\
+Sediment file & \texttt{MORPHO\_FACTOR = 10.0} & Accelerates bed exchange; use 1.0 for cleaner physics. \\
+Sediment file & \texttt{INIT\_BED\_FRACTION} has six entries & For \texttt{NSED=1}, set it to 1.0. \\
+River file & variable \texttt{coarse\_sand\_1} exists & Keep this sediment name to avoid NetCDF edits. \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+The existing river NetCDF file \texttt{waterPACT\_riv\_floc\_MP.nc} already
+contains a sediment concentration variable named \texttt{coarse\_sand\_1},
+with values about \texttt{4.5e-4} to \texttt{1.6e-2} g/L.  FVCOM looks up
+river sediment variables by the sediment class names passed from
+\texttt{SETUP\_SED}; therefore, the lowest-effort route is to keep
+\texttt{SED\_NAME = coarse\_sand\_1} even if the class is reinterpreted as
+cohesive mud/floc material.  If the name is changed to \texttt{mud\_floc} or
+similar, the river NetCDF file must also contain a matching variable.
+
+\section*{Recommended Minimum-Effort Setup}
+
+\subsection*{1. Use the ORIG sediment build}
+
+For a fresh compile, make sure the executable is built with the original
+sediment module:
+\begin{verbatim}
+FLAG_21  = -DSEDIMENT
+FLAG_211 = -DORIG_SED
+\end{verbatim}
+The checked \texttt{make.inc} currently has these sediment flags commented,
+while \texttt{FLAG\_49 = -DPLASTIC} is enabled.  Existing executables may have
+been compiled from a different flag state, so this should be confirmed before
+rebuilding or submitting a new production run.
+
+\subsection*{2. Turn off plastic in the run namelist}
+
+Clone one of the current WaterPACT run directories and change only the model
+switches needed to remove microplastic:
+\begin{verbatim}
+SEDIMENT_MODEL          = T,
+SEDIMENT_MODEL_FILE     = 'generic_sediment_floc_only.inp',
+SEDIMENT_PARAMETER_TYPE = 'uniform',
+SEDIMENT_PARAMETER_FILE = 'none',
+PLASTIC_MODEL           = F,
+PLASTIC_MODEL_FILE      = 'none'
+\end{verbatim}
+
+Keep the existing river forcing:
+\begin{verbatim}
+RIVER_NUMBER       = 9,
+RIVER_INFO_FILE    = 'waterPACT_riv_floc_MP.nml',
+RIVER_KIND         = 'variable',
+RIVER_TS_SETTING   = 'calculated',
+RIVER_INFLOW_LOCATION = 'node'
+\end{verbatim}
+The river file contains both sediment and plastic variables.  With
+\texttt{PLASTIC\_MODEL = F}, the plastic variables are simply irrelevant.
+
+\subsection*{3. Create a cohesive sediment input file}
+
+Copy \texttt{generic\_sediment\_c.inp} or
+\texttt{mp\_sediment\_a\_no\_adv.inp} to
+\texttt{generic\_sediment\_floc\_only.inp}.  Then make these key edits:
+
+\begin{verbatim}
+BEDLOAD = F
+SUSLOAD = T
+SED_PTSOURCE = T
+MORPHO_MODEL = F
+MORPHO_FACTOR = 1.0
+
+NSED = 1
+SED_NAME = coarse_sand_1
+SED_TYPE = cohesive
+SED_SD50 = 0.004
+SED_WSET = 0.1
+SED_SRHO = 2650.
+SED_ERAT = 0.58E-3
+SED_TAUE = 0.1
+SED_TAUD = 0.1
+SED_PORS = 0.5
+
+NBED = 1
+INF_BED = T
+INIT_BED_POROSITY = 0.50
+INIT_BED_THICKNESS = 10.0
+INIT_BED_FRACTION = 1.0
+\end{verbatim}
+
+\texttt{SED\_SD50 = 0.004} mm is a placeholder primary-particle scale
+consistent with the floc literature values used in \texttt{mod\_flocmod.F}.
+For Delaware/Schuylkill suspended sediment, this should be tuned to the
+available grain-size data.  The important code-facing point is that it should
+be much smaller than the current sand values \texttt{0.1--1.0} mm.
+
+\section*{What Not To Expect From This Minimum Path}
+
+\begin{itemize}
+  \item It will not output an explicit floc diameter or full floc size
+        distribution.  The source only stores the floc-affected settling
+        velocity internally in \texttt{sed(i)\%wset0}; that field is not
+        registered as a standard sediment NetCDF output in the current
+        \texttt{mod\_ncdio.F}.
+  \item It will not use \texttt{SED\_CSED} for initial water-column sediment.
+        The ORIG initialization sets suspended sediment concentration to zero;
+        the practical sediment source is the river forcing unless
+        \texttt{init\_sed.F} is edited.
+  \item In the cohesive settling flux routine, the critical deposition stress
+        gate is commented out, so \texttt{SED\_TAUD} should not be relied on to
+        suppress deposition under high shear in this path.
+  \item The floc enhancement activates only where the simulated salinity is
+        between 5 and 15 PSU.  River-source salinity in the forcing file is
+        zero, so floc enhancement is expected mainly in the brackish mixing
+        region, not at the fresh river nodes.
+\end{itemize}
+
+\section*{Why Not Use \texttt{mod\_flocmod.F} First?}
+
+\texttt{mod\_flocmod.F} is the more complete sediment floc model.  It computes
+transfers among cohesive sediment classes through shear aggregation,
+differential-settling aggregation, shear fragmentation, optional
+collision-induced fragmentation, and optional bed deflocculation.  However, it
+is only active in the CSTMS build:
+\begin{verbatim}
+#if defined (SEDIMENT) && (CSTMS_SED)
+\end{verbatim}
+and is called from \texttt{mod\_sed\_cstms.F} only when \texttt{SED\_FLOCS =
+T}.  Using it would require:
+\begin{itemize}
+  \item rebuilding with \texttt{-DCSTMS\_SED} instead of \texttt{-DORIG\_SED};
+  \item writing a CSTMS-format sediment input with \texttt{NCS}, \texttt{NNS},
+        \texttt{MUD\_*}, \texttt{SED\_FLOCS}, and \texttt{f\_*} parameters;
+  \item creating river NetCDF variables for every cohesive class name;
+  \item rechecking NetCDF output and restart behavior for the CSTMS variables.
+\end{itemize}
+
+That is a valid future path if the research question requires an evolving floc
+size distribution.  It is not the minimum-effort path for a first estuary-scale
+sediment-floc-only experiment.
+
+\section*{Recommended First Experiment}
+
+Run a short pair of tests using the same hydrodynamics and river sediment
+forcing:
+\begin{enumerate}[(1)]
+  \item \textbf{No-floc control:} one sediment class with the same
+        \texttt{SED\_SD50} and \texttt{SED\_WSET}, but
+        \texttt{SED\_TYPE = non-cohesive}.
+  \item \textbf{Floc case:} identical file except
+        \texttt{SED\_TYPE = cohesive}.
+\end{enumerate}
+
+Compare the output variable \texttt{coarse\_sand\_1} in surface, bottom, and
+depth-averaged views, plus \texttt{coarse\_sand\_1\_bedfrac}.  This isolates
+the effect of the ORIG floc-settling formula without invoking plastic
+aggregation or the larger CSTMS framework.
+
+\section*{Bottom Line}
+
+For minimum effort, do not modify source code and do not start with
+\texttt{mod\_flocmod.F}.  Use the existing \texttt{ORIG\_SED} module, turn off
+plastic, keep the existing river sediment variable name, and run one cohesive
+sediment class.  This gives a sediment-only floc sensitivity experiment
+immediately.  Use CSTMS later only if the goal changes from ``floc-affected
+settling'' to an explicit evolving floc population.
+
+\end{document}
