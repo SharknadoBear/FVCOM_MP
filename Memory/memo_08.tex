@@ -1,0 +1,173 @@
+\documentclass[11pt]{article}
+\usepackage[margin=1in]{geometry}
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{hyperref}
+\usepackage{booktabs}
+\usepackage{url}
+
+\title{Memo 08: FVCOM-MP Effective Floc Size Coupling\\
+       Using the ORIG\_SED Floc Settling Treatment}
+\author{FVCOM-MP WaterPACT Investigation}
+\date{May 2026}
+
+\begin{document}
+\sloppy
+\maketitle
+
+\section*{Purpose}
+
+This memo records the technical implementation of a one-way FVCOM-MP coupling
+to the original FVCOM sediment flocculation treatment.  The sediment module
+remains unchanged.  The plastic module reconstructs the same local floc settling
+signal used by \texttt{mod\_sed.F}, converts that settling speed to a
+Stokes-equivalent floc diameter, and uses the result only inside the MP-floc
+interaction pathway.
+
+\section*{Theory Used}
+
+\subsection*{ORIG\_SED floc settling speed}
+
+For cohesive sediment, \texttt{mod\_sed.F} computes a local floc-enhanced
+settling velocity in \texttt{Calc\_Wset\_Floc}.  The implemented empirical form
+is
+\begin{equation}
+  W_s = W_0 F,
+\end{equation}
+where
+\begin{equation}
+  F =
+  \frac{0.274 C^{0.48} S^{0.03} G^{0.22}}
+       {(D_{50,\mathrm{mm}})^{0.58}} .
+\end{equation}
+Here $C$ is suspended sediment concentration in kg m$^{-3}$, $S$ is salinity,
+$G$ is the turbulence/shear intensity argument described below, and
+$D_{50,\mathrm{mm}}$ is the primary cohesive sediment diameter in mm.  The
+existing ORIG\_SED guards are preserved:
+\begin{itemize}
+  \item if $F < 1$, set $F = 1$;
+  \item if $S < 5$ or $S > 15$, set $F = 1$;
+  \item cap the final settling speed at $W_s \le 0.5 \times 10^{-3}$ m s$^{-1}$.
+\end{itemize}
+
+\subsection*{G computation}
+
+The MP implementation reconstructs the same $G$ expression used in
+\texttt{mod\_sed.F}.  Element velocities are first mapped to nodes with
+\texttt{E2N3D(u,unode)} and \texttt{E2N3D(v,vnode)}.  For each node and sigma
+layer,
+\begin{equation}
+  j_e = \frac{m_f^2 (u_n^2 + v_n^2)}
+             {\max(d,5)^{4/3}},
+\end{equation}
+with $m_f = 0.012$ and water depth $d$ in m.  The floc formula argument is then
+\begin{equation}
+  G =
+  \left(
+  \frac{g \sqrt{u_n^2+v_n^2} j_e}{V_{\mathrm{cons}}}
+  \right)^{1/2},
+\end{equation}
+with $V_{\mathrm{cons}} = 10^{-6}$ and gravitational acceleration from the
+FVCOM control module.  This is the same local calculation currently embedded in
+the sediment deposition routine, including the 5 m shallow-depth floor.
+
+\subsection*{Stokes-equivalent floc size}
+
+The sediment model does not prognose floc diameter.  The new MP option therefore
+uses an equivalent diameter obtained by assuming a spherical floc of constant
+effective density:
+\begin{equation}
+  d_{\mathrm{floc,eff}} =
+  \left[
+  \frac{18 \mu W_s}
+       {g(\rho_{\mathrm{floc,eff}}-\rho_w)}
+  \right]^{1/2}.
+\end{equation}
+The parameter \texttt{PLAST\_FLOC\_RHO\_EFF} supplies
+$\rho_{\mathrm{floc,eff}}$.  The default value is 1300 kg m$^{-3}$, matching the
+legacy MP aggregation kernel's floc density.  The water dynamic viscosity is
+computed from the same bounded temperature-dependent kinematic viscosity already
+used in the MP aggregation kernel:
+\begin{equation}
+  \nu = 10^{-6} \exp[-0.025(T-20)],
+  \qquad 0.5\times10^{-6} \le \nu \le 2.0\times10^{-6},
+\end{equation}
+and $\mu = \rho_w \nu$.  The implementation prevents the equivalent diameter
+from falling below the primary sediment $D_{50}$.
+
+\section*{Code Change Summary}
+
+\begin{itemize}
+  \item Added optional plastic inputs \texttt{PLAST\_FLOC\_EFFECTIVE} and
+        \texttt{PLAST\_FLOC\_RHO\_EFF}.  Missing keys preserve the old behavior:
+        the effective floc-size path is off and the density defaults to
+        1300 kg m$^{-3}$.
+  \item Added validation that \texttt{PLAST\_FLOC\_EFFECTIVE=T} requires
+        \texttt{PLAST\_FLOC=T} and \texttt{-DORIG\_SED}.
+  \item Added \texttt{Calc\_ORIG\_Floc\_Effective\_Cell} in
+        \texttt{mod\_plast.F} to reconstruct ORIG\_SED $W_s$, compute $G$, and
+        convert $W_s$ to $d_{\mathrm{floc,eff}}$.
+  \item Updated MP aggregation so size exclusion, collision radius, sediment
+        particle mass, and differential-settling kernels can use the effective
+        floc diameter and reconstructed floc settling speed.
+  \item Updated MP disaggregation so the maximum active floc size can come from
+        the effective floc diameter field when the new switch is active.
+  \item Updated aggregated MP settling so \texttt{wset\_floc} stores a
+        sediment-concentration-weighted reconstructed floc settling speed.  The
+        existing NetCDF variable \texttt{settle\_vel\_floc\_*} can therefore be
+        used in post-processing to back out
+        $d_{\mathrm{floc,eff}}$ with the same Stokes formula.
+  \item Created \texttt{FVCOM\_MP\_test\_run/INPUT/generic\_plastic\_d.inp} and
+        \texttt{FVCOM\_MP\_test\_run/INPUT/generic\_sediment\_d.inp} as the
+        switch-on case.  The \texttt{\_c} files remain the comparison case.
+\end{itemize}
+
+\section*{Implementation Plan}
+
+\begin{enumerate}
+  \item Push the updated \texttt{mod\_plast.F} to the HPC source tree and compile
+        with the existing FVCOM-MP build options plus \texttt{-DSEDIMENT},
+        \texttt{-DORIG\_SED}, and \texttt{-DPLASTIC}.  The new MP option has a
+        runtime guard, so a switch-on input will stop early if \texttt{ORIG\_SED}
+        is absent.
+  \item Keep the \texttt{\_c} inputs as the comparison case:
+        \texttt{generic\_plastic\_c.inp} and
+        \texttt{generic\_sediment\_c.inp}.  This case keeps
+        \texttt{PLAST\_FLOC=T} but does not activate the effective floc-size
+        option.
+  \item Use the \texttt{\_d} inputs as the switch-on case:
+        \texttt{generic\_plastic\_d.inp} sets
+        \texttt{PLAST\_FLOC\_EFFECTIVE=T} and
+        \texttt{PLAST\_FLOC\_RHO\_EFF=1300.0}; the new
+        \texttt{generic\_sediment\_d.inp} switches the single sediment class to
+        \texttt{SED\_TYPE=cohesive}, \texttt{SED\_SD50=0.004} mm, and
+        \texttt{SED\_WSET=0.1} mm s$^{-1}$.  The sediment name is kept as
+        \texttt{coarse\_sand\_1} so existing river-forcing variable names remain
+        compatible.
+  \item Create or copy a \texttt{RUN\_d} namelist from \texttt{RUN\_c} and point
+        it to \texttt{generic\_sediment\_d.inp} and
+        \texttt{generic\_plastic\_d.inp}.  Keep the hydrodynamic, river, source,
+        and reporting settings aligned with \texttt{RUN\_c} unless a deliberate
+        sensitivity change is being made.
+  \item After a successful compile, start with a short HPC run of case
+        \texttt{\_d}.  Confirm that the input guards pass, the run reaches the
+        first few reports, and the existing \texttt{settle\_vel\_floc\_*}
+        output is present for post-processing.
+  \item Use the \texttt{\_c} and \texttt{\_d} outputs as a paired comparison.
+        The \texttt{\_d} run is the ORIG\_SED effective-floc coupling case, and
+        the \texttt{\_c} run remains the non-effective MP-floc comparison.
+\end{enumerate}
+
+\section*{Post-processing Note}
+
+When \texttt{PLAST\_FLOC\_EFFECTIVE=T}, the output variable
+\texttt{settle\_vel\_floc\_<plastic name>} stores the effective aggregated MP
+floc-settling speed used by the plastic module.  A post-processing script can
+recover the model-used equivalent floc diameter by applying the same Stokes
+formula above with the output \texttt{ambient\_rho}, the configured
+\texttt{PLAST\_FLOC\_RHO\_EFF}, and the same temperature-dependent viscosity
+closure.  For multiple active sediment classes, this output represents the
+sediment-concentration-weighted effective settling speed used for aggregated MP
+settling, not a separate diameter for each sediment class.
+
+\end{document}

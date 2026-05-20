@@ -1,0 +1,190 @@
+!==============================================================================!
+!   INPUT FILE FOR PARAMETERS CONTROLLING FVCOM PLASTIC MODEL                  !
+!	(Modified based on generic_sediment input file)                            !
+!        FORMAT:			                                       			   !
+!       1.) VARIABLE  = VALUE  (EQUAL SIGN MUST BE USED)                       !
+!       2.) FLOATING POINT VARIABLES MUST CONTAIN A PERIOD "." EX: 1.3, 2.,etc !
+!       3.) BLANK LINES ARE IGNORED AS ARE LINES BEGINNING WITH ! (F90 COMMENT)!
+!       4.) COMMENTS CAN FOLLOW VALUES IF MARKED BY !                          !
+!       5.) ORDER OF VARIABLES IS NOT IMPORTANT                                !
+!       6.) FOR MULTIPLE VALUE VARIABLES FIRST ENTRY IS NUMBER OF VARIABLES    !
+!           TO FOLLOW (OR 0 IF NONE)                                           !
+!       7.) DO NOT USE COMMAS TO SEPARATE VARIABLES                            !
+!       8.) DO NOT EXCEED EIGHTY CHARACTERS PER LINE                           !
+!       9.)  TRUE = T, FALSE = F                                               !
+!                                                                              !
+!  THE PREVIOUS FORMAT OF "VARIABLE: VALUE" IS NO LONGER VALID                 !
+!  THE MORE ATTRACTIVE " = " FORMAT WAS SUGGESTED BY Hernan G. Arango          !
+!                                                                              !
+!------------------------------------------------------------------------------!
+! Plastic Module Dynamics Parameters
+!	PLAST_ONED: switch of 1D model
+!	PLAST_NUDGE: switch of OBC nudging
+!   PLAST_INFIL: switch of plastic infiltration submodule
+!   PLAST_FLOC: switch of plastic sediment interaction submodule, it has to be
+!               compiled with sediment transport module; for the present version
+!               the toxin and infiltration part is not compatible with the
+!               flocculation module.
+!   PLAST_FLOC_EFFECTIVE: use ORIG_SED floc Ws to compute an equivalent floc
+!               size inside the MP-floc interaction path.
+!   PLAST_FLOC_RHO_EFF: effective floc aggregate density used by the Stokes
+!               equivalent-size inversion [kg/m^3].
+!   PLAST_MASS_CHECK: (T/F) write in-run mass-conservation checkpoints to
+!               <casename>_mp_mass_check.csv at every N_REPORT step.
+!               Only active for the PLAST_FLOC=T path. Zero cost when F.
+!   PLAST_ALPHA: plastic nudging relaxation factor
+!	PLAST_RAMP: number of iterations over which to ramp plastic nudging
+!	PLAST_START: start interval for plastic model
+!	PLAST_PTSOURCE: switch of plastic point source (river input)
+!	PLAST_HOT_START: switch of plastic restart
+!   PLAST_UNIT: plastic unit setting for computation
+!				1) kg/m^3   (SI mass concentration unit)
+!				2) g/l      (cgs mass concentration unit)
+!				3) #/m^3    (SI number concentration unit)
+!				4) #/l	    (Liter number concentration unit)
+!	PLAST_BEDSET: Bottom treatment setting, there are five options in
+!       incorporating the dynamics with the bottom sediment bed
+!				1) levitation: microplastics are levitated with no
+!					settling or resuspension fluxes
+!				2) concrete_bottom: microplastics can settle down, or resuspend
+!					but the interaction with the sediment bed is not considered
+!				3) active_bottom: consider the microplastics interaction with
+!					sediment inside an active layer (armored sediment layer)
+!				4) bedload_bottom: consider the horizontal movement of microplastics
+!					with sediment through bedload, while the dynamics of
+!					microplastics inside the active bottom for resuspension and
+!					settling is also considered through V.Chavarrias et al. (2019)
+!  CSHIEDS: treatment of critical shields parameter
+!				1) R93: using the treatment from van Rijn 1993
+!				2) SW97: using the treatment from Soulsby and Whitehouse 1997
+!------------------------------------------------------------------------------!
+
+PLAST_ONED = F
+PLAST_NUDGE = F
+PLAST_INFIL = F
+PLAST_FLOC = T
+PLAST_FLOC_EFFECTIVE = T
+PLAST_FLOC_RHO_EFF = 1300.0
+PLAST_MASS_CHECK = T      ! enable CP0-CP12 mass-conservation CSV output
+PLAST_ALPHA = 0.5
+PLAST_RAMP  = 1
+PLAST_START = 1
+PLAST_PTSOURCE = T
+PLAST_LAB_LEACHING = F
+PLAST_HOT_START = F
+PLAST_UNIT = kg/m^3
+PLAST_BEDSET = concrete_bottom
+CSHIELDS = SW97
+
+!------------------------------------------------------------------------------!
+! Plastic Settling Parameters
+!   SETTLE_CFL: set the CFL number for the settling scheme [>0, 1]
+!   SETTLE_LIMITER: set the limiter type for the settling advection eq.
+!            =0:  1st order upwind
+!            =1:  minmod limiter
+!            =2:  Van Leer limiter
+!------------------------------------------------------------------------------!
+
+SETTLE_CFL = .8
+SETTLE_LIMITER = 1
+
+!------------------------------------------------------------------------------!
+! Plastic Module Reporting and Archiving Control
+!   PLAST_DUMPBOT: (T/F) Dump all the bottom variables
+!------------------------------------------------------------------------------!
+
+N_REPORT = 50
+PLAST_DUMPBOT = F
+
+!------------------------------------------------------------------------------!
+! Micro Plastic Parameters
+!   NPLAST:   number of microplastic types
+!   AMBIENT_DEN:   ambient seawater density
+!						(if constant option is used)			     [kg/m^3 ]
+!   PLAST_NAME:   plastic name										 [-      ]
+!	PLAST_SHAP:
+!   PLAST_AAXI:	  longest axis of the plastics 	    				 [mm     ]
+!	PLAST_BAXI:   medium axis of the plastics	    				 [mm     ]
+!	PLAST_CAXI:   shortest axis of the plastics         			 [mm     ]
+!   PLAST_PRHO:   plastic density                                    [kg/m^3 ]
+!   PLAST_AHAMA:  plastic Hamaker constant in the solid matrix       [J      ]
+!   PLAST_WSSED:  plastic settling velocity in the solid matrix      [m/s    ]
+!
+! Toxic vector module:
+! If toxic vector module is turned-on. The first-order consecutive chemical
+! reaction processes will be included as the micro-plastic transport. The
+! chemical will be release as tracer.
+!
+!   TOX_VECTOR: the switch for turning on or off the toxic vector module
+!   TOX_MOD: Toxic leaching mode 'SFOK'/'SI-FOK'/'SIR-FOK'
+!   TOX_NAME: Toxic name										     [-      ]
+!   TOX_CKL: Toxic releasing rate from bonded state 			     [1/s    ]
+!   TOX_CKD: Toxic decaying rate									 [1/s    ]
+!   TOX_CKG: Toxic generation rate									 [1/s    ]
+!   TOX_EAD: Toxin Arrhenius type activation energy                  [J/mol  ]
+!   TOX_ADP: Toxin Arrhenius type diffusion prefactor                [m^2/s  ]
+!   TOX_INR: Initial bottom toxic ratio								 [-		 ]
+!   TOX_MOD: Diameter of toxic molecular                             [nm     ]
+!------------------------------------------------------------------------------!
+
+NPLAST = 1
+TOX_VECTOR = F
+TOX_MOD = SFOK
+
+PLAST_NAME = mp1
+PLAST_SHAP = sphere
+PLAST_AAXI = 0.100
+PLAST_BAXI = 0.100
+PLAST_CAXI = 0.100
+PLAST_PRHO = 950.
+PLAST_PRAT = 0.0
+PLAST_AHAMA = 1E-6
+PLAST_WSSED = 0.01
+TOX_NAME = tox1
+TOX_CKL = 0.3
+TOX_CKD = 0.0
+TOX_CKG = 0.0
+TOX_EAD = 20.0
+TOX_ADP = 1E-7
+TOX_INR = 0.001
+TOX_MOD = 1
+
+!-------------------------------------------------------------------------------!
+!Ambient environment parameters, including the bed character (constant), and
+!the ambient water density (constant).
+!
+!   SED_PORS:   porosity, Vwater/(Vwater+Vsed) (if set constant)     [-      ]
+!   SED_SD50:   mean sediment diameter (if set constant)             [mm     ]
+!	SED_SRHO:   sediment density  (it set constant)                  [kg/m^3 ]
+!   SED_MUDP:   mud portion in the sediment	(if set constant)		 [-      ]
+!   AMBIENT_DEN: ambient water density 								 [kg/m^3 ]
+!   INI_MASS:	initial plastic mass on each grid point 	 		 [kg     ]
+!   INI_MRATE:  initial aggregated mass ratio on the ground          [-      ]
+!   INF_PLAST:  infinite plastic mass switch                         [-      ]
+!
+!   Infiltration parameters (when PLAST_INFIL = T):
+!   SED_LNUM:           sediment layer number                        [-      ]
+!   SED_TEMP:           sediment temperature                         [K      ]
+!   SED_TORT:           tortuosity factor (uniform)                  [-      ]
+!   SED_DARV:           pore water velocity (uniform, -=downward)    [m/s    ]
+!   INFIL_MAX_DEPTH:    maximum infiltration depth (uniform)         [m      ]
+!-------------------------------------------------------------------------------!
+
+SED_SRHO = 2650.
+SED_PORS = .5
+SED_SD50 = 0.35
+SED_MUDP = 0.05
+SED_TORT = 2.0
+SED_TEMP = 293
+SED_DARV = -1.0e-6
+SED_LNUM = 5
+
+AMBIENT_WDEN = 1025.
+
+INI_MASS = 0.0
+INI_CONC_AG_RATE = 0.0
+INI_MASS_AG_RATE = 0.0
+SOURCE_AG_RATE = 0.0
+OBC_AG_RATE = 0.0
+INF_PLAST = F
+INFIL_MAX_DEPTH = 1.0
