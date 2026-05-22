@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Spatial distribution comparison for FVCOM-MP cases c and d.
+"""Spatial distribution comparison for FVCOM-MP case pairs.
 
 This script reads the compact MAT files written by:
 
@@ -8,7 +8,8 @@ This script reads the compact MAT files written by:
     MATLAB/extract_spatial_distribution_v2_day90.m
 
 By default it processes cases c and d for days 10, 30, and 90, then writes
-per-case maps, d-c maps, CSV summaries, and a short README under:
+per-case maps, configurable difference maps, CSV summaries, and a short README
+under:
 
     PYTHON/output/spatial_distribution_v2/day10
     PYTHON/output/spatial_distribution_v2/day30
@@ -105,15 +106,34 @@ def main(argv: list[str] | None = None) -> int:
             print(f"  Per-case maps: case {case_id}")
             plot_case_maps(case_id, data, triang, output_dir, args.show)
 
-        if "c" in cases and "d" in cases and not args.no_diff_maps:
-            print("  Difference maps: case d - case c")
-            plot_diff_maps("d", "c", cases["d"], cases["c"], triang, output_dir, args.show)
+        diff_hi = args.diff_hi.lower()
+        diff_lo = args.diff_lo.lower()
+        if diff_hi in cases and diff_lo in cases and not args.no_diff_maps:
+            print(f"  Difference maps: case {diff_hi} - case {diff_lo}")
+            plot_diff_maps(
+                diff_hi,
+                diff_lo,
+                cases[diff_hi],
+                cases[diff_lo],
+                triang,
+                output_dir,
+                args.show,
+            )
         elif not args.no_diff_maps:
-            print("  Difference maps skipped; both cases c and d are required.")
+            print(
+                "  Difference maps skipped; both comparison cases "
+                f"{diff_hi} and {diff_lo} are required."
+            )
 
         write_summary_stats(cases, output_dir / "summary_stats.csv", day)
-        write_diff_summary_stats(cases, output_dir / "diff_summary_stats.csv", day)
-        write_day_readme(output_dir / "README.md", day, cases)
+        write_diff_summary_stats(
+            cases,
+            output_dir / "diff_summary_stats.csv",
+            day,
+            diff_hi,
+            diff_lo,
+        )
+        write_day_readme(output_dir / "README.md", day, cases, diff_hi, diff_lo)
         processed_days += 1
 
     if processed_days == 0:
@@ -131,7 +151,7 @@ def parse_args(argv: list[str] | None) -> argparse.Namespace:
         "--root",
         type=Path,
         default=TEST_ROOT,
-        help="FVCOM_MP_test_run root containing OUTPUT_c and OUTPUT_d.",
+        help="FVCOM_MP_test_run root containing OUTPUT_<case> folders.",
     )
     parser.add_argument(
         "--days",
@@ -160,7 +180,17 @@ def parse_args(argv: list[str] | None) -> argparse.Namespace:
     parser.add_argument(
         "--no-diff-maps",
         action="store_true",
-        help="Skip case d minus case c difference maps.",
+        help="Skip case-difference maps.",
+    )
+    parser.add_argument(
+        "--diff-hi",
+        default="d",
+        help="Case ID for the positive side of difference maps/stats. Default: d.",
+    )
+    parser.add_argument(
+        "--diff-lo",
+        default="c",
+        help="Case ID for the negative side of difference maps/stats. Default: c.",
     )
     parser.add_argument(
         "--show",
@@ -496,9 +526,15 @@ def write_summary_stats(cases: dict[str, dict], path: Path, day: int) -> None:
     )
 
 
-def write_diff_summary_stats(cases: dict[str, dict], path: Path, day: int) -> None:
+def write_diff_summary_stats(
+    cases: dict[str, dict],
+    path: Path,
+    day: int,
+    case_hi: str,
+    case_lo: str,
+) -> None:
     rows: list[dict[str, Any]] = []
-    if "c" not in cases or "d" not in cases:
+    if case_hi not in cases or case_lo not in cases:
         write_csv(
             path,
             rows,
@@ -518,8 +554,8 @@ def write_diff_summary_stats(cases: dict[str, dict], path: Path, day: int) -> No
         )
         return
 
-    data_hi = cases["d"]
-    data_lo = cases["c"]
+    data_hi = cases[case_hi]
+    data_lo = cases[case_lo]
     for spec in FIELD_SPECS:
         if spec.source not in data_hi or spec.source not in data_lo:
             continue
@@ -527,7 +563,7 @@ def write_diff_summary_stats(cases: dict[str, dict], path: Path, day: int) -> No
         lo = ensure_1d(data_lo[spec.source])
         if hi.size != lo.size:
             continue
-        rows.append(diff_summary_row(day, "d", "c", spec, hi - lo))
+        rows.append(diff_summary_row(day, case_hi, case_lo, spec, hi - lo))
 
     write_csv(
         path,
@@ -627,7 +663,13 @@ def write_csv(path: Path, rows: list[dict[str, Any]], fieldnames: list[str]) -> 
     print(f"  Wrote {path.name}")
 
 
-def write_day_readme(path: Path, day: int, cases: dict[str, dict]) -> None:
+def write_day_readme(
+    path: Path,
+    day: int,
+    cases: dict[str, dict],
+    diff_hi: str,
+    diff_lo: str,
+) -> None:
     case_lines = []
     for case_id, data in cases.items():
         n_records = data.get("n_records", "")
@@ -638,13 +680,12 @@ def write_day_readme(path: Path, day: int, cases: dict[str, dict]) -> None:
     text = f"""# Spatial Distribution v2: Day {day}
 
 This folder contains plan-view maps and statistics for the day-{day} final-24-hour
-average extracted from the FVCOM-MP case c/d NetCDF outputs.
+average extracted from the FVCOM-MP case outputs.
 
 ## Inputs
 {case_block}
 
-Case `c` is the comparison run. Case `d` is the ORIG_SED effective-floc coupling
-run. Difference figures and `diff_summary_stats.csv` use `d - c`.
+Difference figures and `diff_summary_stats.csv` use `{diff_hi} - {diff_lo}`.
 
 ## Fields
 The maps include sediment concentration, reconstructed floc settling speed,

@@ -1,0 +1,233 @@
+\documentclass[11pt]{article}
+\usepackage[margin=1in]{geometry}
+\usepackage{amsmath}
+\usepackage{booktabs}
+\usepackage{longtable}
+\usepackage{array}
+\usepackage{hyperref}
+\usepackage{url}
+
+\title{Memo 12: Spatial Distribution Analysis for FVCOM-MP Cases D and E\\
+       FSK Settling and Effective Grain-Size Coupling, Days 10 and 30}
+\author{FVCOM-MP WaterPACT Investigation}
+\date{May 2026}
+
+\begin{document}
+\sloppy
+\setlength{\tabcolsep}{4pt}
+\maketitle
+
+\section*{Purpose}
+
+This memo records a new spatial-distribution comparison using the day-10 and
+day-30 \texttt{OUTPUT\_d} and \texttt{OUTPUT\_e} MAT files.  The paired cases
+use the same cohesive FSK sediment setup and the same small MP size class.  The
+primary question is whether turning on the MP-side equivalent floc or grain
+size treatment changes the MP fields.
+
+\section*{Files and Command}
+
+The analysis inputs were:
+\begin{itemize}
+  \item \texttt{FVCOM\_MP\_test\_run/OUTPUT\_d/spatial\_distribution\_v2\_d\_day10.mat}
+  \item \texttt{FVCOM\_MP\_test\_run/OUTPUT\_e/spatial\_distribution\_v2\_e\_day10.mat}
+  \item \texttt{FVCOM\_MP\_test\_run/OUTPUT\_d/spatial\_distribution\_v2\_d\_day30.mat}
+  \item \texttt{FVCOM\_MP\_test\_run/OUTPUT\_e/spatial\_distribution\_v2\_e\_day30.mat}
+\end{itemize}
+
+The analysis was run with:
+\begin{verbatim}
+python FVCOM_MP_test_run/PYTHON/analyze_spatial_distribution_v2.py ^
+  --days 10 30 --cases d e --diff-hi d --diff-lo e ^
+  --output-base FVCOM_MP_test_run/PYTHON/output/spatial_distribution_v2_de
+\end{verbatim}
+
+The script was updated so the difference pair is configurable.  For this memo,
+difference maps and \texttt{diff\_summary\_stats.csv} use
+\texttt{case d - case e}.  The outputs were written to:
+\begin{itemize}
+  \item \texttt{FVCOM\_MP\_test\_run/PYTHON/output/spatial\_distribution\_v2\_de/day10}
+  \item \texttt{FVCOM\_MP\_test\_run/PYTHON/output/spatial\_distribution\_v2\_de/day30}
+\end{itemize}
+The run generated 108 PNG maps across the two day folders.
+
+\section*{Extraction Window}
+
+All four MAT files contain 24 output records.  The day-10 files span
+simulation day 9.0000 to 9.9570, and the day-30 files span simulation day
+29.0000 to 29.9570.  These are final-24-hour averages before the target day
+endpoints, matching the v2 workflow used in Memo 09.
+
+\section*{Paired Setup}
+
+Cases \texttt{d} and \texttt{e} are a cleaner pair than the Memo 09
+\texttt{c}--\texttt{d} comparison because the active sediment setup is the
+same.  Both cases use cohesive sediment, \texttt{SED\_WSET\_METHOD=FSK\_CONC},
+\texttt{SED\_SD50=0.010} mm, and \texttt{SED\_WSET=0.086} mm s$^{-1}$.
+The plastic setup is also the same except for the effective-floc switch:
+
+\begin{table}[h]
+\centering
+\caption{Active setup difference between cases \texttt{d} and \texttt{e}.}
+\begin{tabular}{lll}
+\toprule
+Item & Case \texttt{d} & Case \texttt{e} \\
+\midrule
+Sediment file & \texttt{generic\_sediment\_d.inp} & \texttt{generic\_sediment\_e.inp} \\
+Sediment type & cohesive & cohesive \\
+Settling method & \texttt{FSK\_CONC} & \texttt{FSK\_CONC} \\
+\texttt{SED\_SD50} & 0.010 mm & 0.010 mm \\
+\texttt{SED\_WSET} & 0.086 mm s$^{-1}$ & 0.086 mm s$^{-1}$ \\
+Plastic file & \texttt{generic\_plastic\_d.inp} & \texttt{generic\_plastic\_e.inp} \\
+\texttt{PLAST\_FLOC\_EFFECTIVE} & \texttt{T} & \texttt{F} \\
+MP axes & 0.010, 0.002, 0.002 mm & 0.010, 0.002, 0.002 mm \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+In the aggregation closure, the MP incorporation threshold uses the minimum MP
+dimension.  For this setup, the relevant MP size is therefore 0.002 mm, or
+2 $\mu$m.  The volume-equivalent MP diameter is approximately 3.42 $\mu$m.
+
+\section*{Key Spatial Statistics}
+
+Table~\ref{tab:stats} summarizes depth-averaged domain means for the fields
+most relevant to the FSK/effective-size question.  Case \texttt{e} is the
+matched control with \texttt{PLAST\_FLOC\_EFFECTIVE=F}; case \texttt{d} has
+the effective-size coupling turned on.
+
+\small
+\begin{longtable}{llrrr}
+\caption{Depth-averaged domain means from the generated summary CSV files.}
+\label{tab:stats}\\
+\toprule
+Day & Field & Case \texttt{e} & Case \texttt{d} & D/E or change \\
+\midrule
+\endfirsthead
+\toprule
+Day & Field & Case \texttt{e} & Case \texttt{d} & D/E or change \\
+\midrule
+\endhead
+\bottomrule
+\endfoot
+10 & Sediment & $9.555{\times}10^{-1}$ & $9.555{\times}10^{-1}$ & no change \\
+10 & $W_{\mathrm{floc}}$ (m s$^{-1}$) & $5.014{\times}10^{-5}$ & $1.533{\times}10^{-4}$ & $3.06{\times}$ \\
+10 & $d_{\mathrm{floc,eff}}$ ($\mu$m) & $16.01$ & $26.41$ & $1.65{\times}$ \\
+10 & $\lambda_a$ (s$^{-1}$) & $5.887{\times}10^{-1}$ & $3.181{\times}10^{-1}$ & $0.54{\times}$ \\
+10 & $\lambda_d$ (s$^{-1}$) & $1.394{\times}10^{-1}$ & $3.559{\times}10^{-2}$ & $0.26{\times}$ \\
+10 & MP total (kg m$^{-3}$) & $5.499{\times}10^{-7}$ & $6.037{\times}10^{-7}$ & $1.10{\times}$ \\
+10 & MP aggregated (kg m$^{-3}$) & $2.721{\times}10^{-7}$ & $5.307{\times}10^{-7}$ & $1.95{\times}$ \\
+10 & MP dispersed (kg m$^{-3}$) & $2.778{\times}10^{-7}$ & $7.302{\times}10^{-8}$ & $0.26{\times}$ \\
+10 & Aggregated MP fraction & $0.494$ & $0.855$ & $+0.361$ \\
+10 & Bottom MP mass (kg m$^{-2}$) & $4.965{\times}10^{-11}$ & $7.886{\times}10^{-10}$ & $15.9{\times}$ \\
+\midrule
+30 & Sediment & $9.703{\times}10^{-1}$ & $9.703{\times}10^{-1}$ & no change \\
+30 & $W_{\mathrm{floc}}$ (m s$^{-1}$) & $8.105{\times}10^{-5}$ & $2.078{\times}10^{-4}$ & $2.56{\times}$ \\
+30 & $d_{\mathrm{floc,eff}}$ ($\mu$m) & $26.12$ & $39.05$ & $1.50{\times}$ \\
+30 & $\lambda_a$ (s$^{-1}$) & $5.057{\times}10^{-1}$ & $2.705{\times}10^{-1}$ & $0.53{\times}$ \\
+30 & $\lambda_d$ (s$^{-1}$) & $1.199{\times}10^{-1}$ & $2.746{\times}10^{-2}$ & $0.23{\times}$ \\
+30 & MP total (kg m$^{-3}$) & $1.041{\times}10^{-6}$ & $1.315{\times}10^{-6}$ & $1.26{\times}$ \\
+30 & MP aggregated (kg m$^{-3}$) & $5.143{\times}10^{-7}$ & $1.140{\times}10^{-6}$ & $2.22{\times}$ \\
+30 & MP dispersed (kg m$^{-3}$) & $5.264{\times}10^{-7}$ & $1.758{\times}10^{-7}$ & $0.33{\times}$ \\
+30 & Aggregated MP fraction & $0.494$ & $0.863$ & $+0.369$ \\
+30 & Bottom MP mass (kg m$^{-2}$) & $9.516{\times}10^{-11}$ & $1.369{\times}10^{-9}$ & $14.4{\times}$ \\
+\end{longtable}
+\normalsize
+
+\section*{Main Findings}
+
+\subsection*{The sediment fields are unchanged}
+
+The \texttt{d-e} difference statistics show exactly zero difference in
+\texttt{sed\_davg}, \texttt{sed\_surf}, and \texttt{sed\_bot} for both days.
+This is important: the analysis isolates the MP-side effective-size switch
+rather than a sediment-regime change.  It also means that the MP response below
+is not caused by a different sediment concentration field.
+
+\subsection*{The FSK equivalent size is active and visible}
+
+With \texttt{PLAST\_FLOC\_EFFECTIVE=T}, case \texttt{d} uses the active FSK
+settling signal to compute the floc size used by the MP interaction path.  The
+depth-averaged diagnostic settling speed is about 3.06 times case \texttt{e}
+on day 10 and 2.56 times case \texttt{e} on day 30.  The corresponding
+domain-mean diagnostic Stokes-equivalent floc size increases from 16.0 to
+26.4 $\mu$m on day 10 and from 26.1 to 39.1 $\mu$m on day 30.
+
+Case \texttt{e} still has a diagnostic \texttt{d\_floc\_eff} field in the MAT
+files because the extractor back-calculates it from the saved settling
+velocity.  However, with \texttt{PLAST\_FLOC\_EFFECTIVE=F}, the model's
+aggregation kernel uses the static sediment size \texttt{SED\_SD50=0.010} mm
+inside the MP-floc interaction.
+
+\subsection*{The small MP class remains below the incorporation threshold}
+
+The aggregation code uses the minimum MP dimension for the Wu-style
+incorporation threshold, so the relevant MP size is 2 $\mu$m.  For a 10 $\mu$m
+static sediment size, the threshold
+\[
+  d_{\mathrm{MP,max}} =
+  -0.0002 d_{\mathrm{floc}}^2 + 0.36 d_{\mathrm{floc}}
+\]
+is about 3.58 $\mu$m.  For the case-\texttt{d} mean effective floc sizes of
+26--39 $\mu$m, the threshold is about 9--14 $\mu$m.  The 2 $\mu$m MP class is
+therefore allowed to aggregate in both cases, but the effective-size case has a
+much larger margin.  This is different from Memo 09, where the 100 $\mu$m MP
+class was too large for the small effective flocs.
+
+\subsection*{Aggregation rate decreases, but aggregated MP fraction increases}
+
+Turning on the effective-size treatment reduces the domain-mean aggregation
+rate by about 46\% on both days.  It also reduces the disaggregation rate more
+strongly: by about 74\% on day 10 and 77\% on day 30.  The lower
+disaggregation rate dominates the state variables: the aggregated MP fraction
+rises from about 0.494 in case \texttt{e} to 0.855--0.863 in case
+\texttt{d}.  The aggregated MP concentration approximately doubles, while the
+dispersed MP concentration drops to roughly one-quarter to one-third of the
+control.
+
+\subsection*{Bottom MP mass is highly sensitive to the switch}
+
+The bottom MP mass is much larger when the effective-size treatment is on:
+about 15.9 times the control on day 10 and 14.4 times the control on day 30.
+The bottom aggregated MP mass remains zero in the generated summaries, so this
+increase appears in the bottom dispersed MP mass diagnostic.  The result still
+indicates a strong transport and deposition response associated with the
+effective-size treatment.
+
+\section*{Interpretation}
+
+The answer to the main question is yes: turning on the equivalent grain or floc
+size treatment has a clear impact in this paired test.  Because cases
+\texttt{d} and \texttt{e} have identical sediment concentration fields, the
+impact is attributable to the MP-side use of the FSK-derived settling and
+equivalent-size information.
+
+The mechanism is not a simple increase in every aggregation metric.  The
+effective-size treatment makes the MP interaction use larger effective flocs
+and a stronger settling signal.  For the very small MP class used here, the MP
+remains comfortably below the floc incorporation threshold, so aggregation is
+not shut off.  Instead, the rate diagnostics show lower instantaneous
+aggregation but much lower disaggregation, which shifts the modeled MP state
+toward aggregated suspended mass and much larger bottom mass.
+
+This paired \texttt{d}--\texttt{e} comparison is therefore a useful production
+test for the new FSK/effective-size pathway.  It shows that the new pathway is
+active, spatially resolved, and dynamically important for small MPs.
+
+\section*{Recommended Next Checks}
+
+\begin{enumerate}
+  \item Inspect the day-30 difference maps for \texttt{lambda\_a\_davg},
+        \texttt{lambda\_d\_davg}, \texttt{agg\_fraction\_davg},
+        \texttt{mp1\_agg\_davg}, and \texttt{bot\_mass}; these are the fields
+        where the switch has the clearest spatial footprint.
+  \item Add a direct model output diagnostic for the floc size actually used by
+        the aggregation kernel and for $d_{\mathrm{MP,max}}$.  The current MAT
+        files include a useful post-processed equivalent size, but the
+        aggregation-kernel size is still inferred from the switch logic.
+  \item Repeat the same paired analysis for day 90 once
+        \texttt{spatial\_distribution\_v2\_d/e\_day90.mat} files are
+        available.
+\end{enumerate}
+
+\end{document}
