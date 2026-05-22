@@ -1,0 +1,368 @@
+\documentclass[11pt]{article}
+\usepackage[margin=1in]{geometry}
+\usepackage{amsmath}
+\usepackage{booktabs}
+\usepackage{hyperref}
+\usepackage{url}
+
+\title{Memo 10: Concentration-Regime Settling Velocity Formulation\\
+       for Fine Sediment and MP-Floc Coupling}
+\author{FVCOM-MP WaterPACT Investigation}
+\date{May 2026}
+
+\begin{document}
+\sloppy
+\maketitle
+
+\section*{Purpose}
+
+This memo records a replacement direction for the current ORIG\_SED plus
+Stokes-equivalent floc-size workflow.  The immediate problem is that a pure
+Stokes inversion of a capped settling velocity is only a hydraulic diagnostic;
+it is not a physically consistent floc-size estimate.  The alternative reviewed
+here is the concentration-regime settling velocity formulation used by
+Shiravani et al. (2023) for microplastic interaction with fine sediment under
+estuarine conditions.  The local reference implementation is
+\texttt{MPTM\_FSK\_Veloc.m}.
+
+\section*{Sources Reviewed}
+
+The paper is:
+\begin{quote}
+Shiravani, G., Oberrecht, D., Roscher, L., Kernchen, S., Halbach, M.,
+Gerriets, M., Scholz-Bottcher, B.M., Gerdts, G., Badewien, T.H., and
+Wurpts, A. (2023). Numerical modeling of microplastic interaction with fine
+sediment under estuarine conditions. \emph{Water Research}, 231, 119564.
+\url{https://doi.org/10.1016/j.watres.2022.119564}
+\end{quote}
+
+ScienceDirect lists the article as open access in \emph{Water Research}, volume
+231, article 119564.  The paper highlights a new approach for MP settling
+velocity and describes MP-fine sediment interaction through five settling
+velocity regions.  In the abstract, the key process is described as integration
+of small MP particles into fine sediment aggregates above a threshold sediment
+concentration, causing the effective MP settling velocity to approach that of
+sediment aggregates.
+
+The local MATLAB script \texttt{MPTM\_FSK\_Veloc.m} implements the same
+concept as a piecewise function of suspended fine sediment concentration.  This
+memo follows the script constants and algebra because it is the version
+available for direct implementation.
+
+\section*{Conceptual Difference from the Present ORIG/Stokes Approach}
+
+The current ORIG-based prototype reconstructs a local cohesive settling speed
+from concentration, salinity, turbulence intensity, and primary sediment size.
+Then it inverts the settling speed through Stokes law to obtain an
+``equivalent'' floc diameter.  This becomes inconsistent when the reconstructed
+settling speed is capped: many different physical sizes can collapse to the
+same capped velocity, and Stokes inversion then returns the same small
+hydraulic diameter.
+
+The concentration-regime formulation avoids that step.  It directly prescribes
+a settling speed as a function of local fine sediment concentration:
+\begin{itemize}
+  \item inert region at low sediment concentration;
+  \item transition region where MP/sediment interaction begins;
+  \item flocculation region where settling speed rises with concentration;
+  \item hindered-settling region where settling speed decreases with
+        concentration;
+  \item consolidation region at very high concentration.
+\end{itemize}
+
+This is therefore better suited as a replacement for the effective settling
+velocity signal.  It should not automatically be interpreted as a floc diameter
+law.
+
+\section*{Piecewise Formula in the MATLAB Script}
+
+Let $C$ be fine sediment concentration in kg m$^{-3}$ and $w_s(C)$ be the
+local effective settling speed in m s$^{-1}$.  The script constants are:
+
+\begin{table}[h]
+\centering
+\caption{Constants extracted from \texttt{MPTM\_FSK\_Veloc.m}.}
+\begin{tabular}{lll}
+\toprule
+Script name & Meaning in this memo & Value \\
+\midrule
+\texttt{V0SED} & inert MP settling speed & 1.67 m d$^{-1}$ \\
+\texttt{V0SED0} & inert MP settling speed & $1.93287\times10^{-5}$ m s$^{-1}$ \\
+\texttt{Reza} & lower interaction threshold $C_f$ & 0.1 kg m$^{-3}$ \\
+\texttt{ch2Sedc} & transition/flocculation boundary $C_2$ & 1.0 kg m$^{-3}$ \\
+\texttt{csoil} & hindered-settling threshold $C_h$ & 8.0 kg m$^{-3}$ \\
+\texttt{fcgel} & gel concentration $C_{\mathrm{gel}}$ & 50.0 kg m$^{-3}$ \\
+\texttt{cmax} & upper concentration limit $C_{\max}$ & 250.0 kg m$^{-3}$ \\
+\texttt{ws0} & high-flocculation reference speed & $3.0\times10^{-3}$ m s$^{-1}$ \\
+\texttt{fgws} & gel/consolidation reference speed & $1.0\times10^{-5}$ m s$^{-1}$ \\
+\texttt{fmfloc} & flocculation exponent $m$ & 1.1 \\
+\texttt{fbhis} & hindered-settling exponent $b_h$ & 2.0 \\
+\texttt{cconsol} & consolidation exponent $\beta$ & 3.0 \\
+\texttt{wsmin} & flocculation-zone lower bound & $1.0\times10^{-4}$ m s$^{-1}$ \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+The script first computes
+\begin{equation}
+  a_h =
+  \frac{1-\left(w_{\mathrm{gel}}/w_{s0}\right)^{1/b_h}}
+       {C_{\mathrm{gel}}},
+\end{equation}
+where $w_{\mathrm{gel}}=\texttt{fgws}$ and $w_{s0}=\texttt{ws0}$.  It then
+sets the flocculation coefficient
+\begin{equation}
+  k_1 =
+  \frac{w_{s0}\left(1-a_h C_h\right)^{b_h}}
+       {C_h^m}.
+\end{equation}
+For the provided constants, $a_h=1.88453\times10^{-2}$ and
+$k_1=2.19675\times10^{-4}$ in SI units.
+
+For the current \texttt{V0SED}=1.67 m d$^{-1}$ case, the script chooses
+$C_2=1.0$ kg m$^{-3}$ and a cubic transition exponent $n=3$.  The transition
+coefficient is
+\begin{equation}
+  m_R = \frac{k_1-w_i}{(C_2-C_f)^n},
+\end{equation}
+where $w_i=\texttt{V0SED0}$.
+
+The resulting piecewise function is:
+\begin{equation}
+w_s(C)=
+\begin{cases}
+w_i, & 0 < C < C_f, \\
+w_i + m_R(C-C_f)^3, & C_f \le C < C_2, \\
+\max(k_1 C^m, w_{\min}), & C_2 \le C < C_h, \\
+w_{s0}(1-a_h C)^{b_h}, & C_h \le C < C_{\mathrm{gel}}, \\
+w_{\mathrm{gel}}\left(C/C_{\mathrm{gel}}\right)^{-\beta},
+  & C_{\mathrm{gel}} \le C < C_{\max}, \\
+0, & C \le 0 \text{ or } C \ge C_{\max}.
+\end{cases}
+\end{equation}
+
+\section*{Representative Values}
+
+Table~\ref{tab:values} shows selected values from the local MATLAB
+implementation after applying the script constants above.
+
+\begin{table}[h]
+\centering
+\caption{Representative settling speeds from \texttt{MPTM\_FSK\_Veloc.m}.}
+\label{tab:values}
+\begin{tabular}{rlrr}
+\toprule
+$C$ (kg m$^{-3}$) & Regime & $w_s$ (m s$^{-1}$) & $w_s$ (m d$^{-1}$) \\
+\midrule
+0.01 & inert & $1.9329\times10^{-5}$ & 1.67 \\
+0.10 & transition start & $1.9329\times10^{-5}$ & 1.67 \\
+0.50 & transition & $3.6917\times10^{-5}$ & 3.19 \\
+1.00 & flocculation start & $2.1968\times10^{-4}$ & 18.98 \\
+2.00 & flocculation & $4.7088\times10^{-4}$ & 40.68 \\
+4.00 & flocculation & $1.0094\times10^{-3}$ & 87.21 \\
+8.00 & hindered start & $2.1636\times10^{-3}$ & 186.94 \\
+20.0 & hindered & $1.1647\times10^{-3}$ & 100.63 \\
+50.0 & consolidation start & $1.0000\times10^{-5}$ & 0.864 \\
+100.0 & consolidation & $1.2500\times10^{-6}$ & 0.108 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+This curve is qualitatively different from the current ORIG\_SED formula.  It
+does not depend on salinity, local turbulence intensity $G$, or primary
+sediment $D_{50}$.  It instead treats concentration regime as the controlling
+variable.
+
+\section*{Updated Modeling Scope}
+
+The paper under development focuses on MP-floc interaction, not on resolving
+floc population dynamics as the main scientific product.  Therefore, a full
+CSTMS/flocmod implementation is not required for the present study if we state
+the closure carefully.  A defensible pathway is to represent the observed
+estuarine floc field empirically with a small number of cohesive sediment/floc
+classes and to use the concentration-regime settling formulation as the
+effective settling-speed closure for MP-floc interaction.
+
+Under this scope:
+\begin{itemize}
+  \item the cohesive sediment classes are interpreted as empirical fine
+        sediment/floc classes, not as sand grains;
+  \item class properties and source strengths are tuned so that the simulated
+        turbidity maximum and representative floc-size distribution are
+        reasonable compared with available Delaware estuary observations;
+  \item the model is used to evaluate how plausible MP-floc interaction changes
+        MP transport, water-column partitioning, deposition, and bed storage;
+  \item the work does not claim to mechanistically predict floc generation,
+        aggregation, and fragmentation from first principles.
+\end{itemize}
+
+This keeps the scientific claim centered on MP behavior.  Sand-sized median
+grain classes remain relevant for bed structure, burial, and non-cohesive
+transport, but they should not be treated as MP-floc aggregate classes.
+
+\section*{Implications for FVCOM-MP}
+
+The formula directly gives a concentration-dependent settling velocity.  That
+is the quantity we need for:
+\begin{itemize}
+  \item differential-settling kernels;
+  \item aggregated MP settling speed;
+  \item output diagnostics such as \texttt{settle\_vel\_floc\_mp1}.
+\end{itemize}
+
+However, it does not provide a physical floc diameter.  Therefore, using
+Stokes inversion to recover a diameter would reintroduce the same conceptual
+problem documented in Memo 09.  The next implementation should treat
+$w_s(C)$ as the primary prognostic/diagnostic coupling signal.  If the MP
+aggregation kernel still requires a size-exclusion diameter, that diameter
+should be supplied by a separate empirical or parameterized rule, not inferred
+from pure Stokes inversion of $w_s(C)$.
+
+\section*{Implementation Plan}
+
+\begin{enumerate}
+  \item Stay within the current ORIG\_SED-compatible sediment framework for the
+        next implementation stage.  Do not move to CSTMS/flocmod yet.  The
+        near-term goal is an empirical multi-class cohesive setup that supports
+        MP-floc sensitivity experiments without claiming full floc-population
+        dynamics.
+  \item Configure two or three cohesive sediment/floc classes in the sediment
+        input.  These classes should represent fine primary material and larger
+        empirical floc/aggregate classes.  Their \texttt{SED\_SD50},
+        \texttt{SED\_WSET}, erosion/deposition thresholds, and source strengths
+        should be treated as tunable empirical parameters constrained by
+        Delaware estuary turbidity and floc observations.
+  \item Add a new optional concentration-regime settling method in
+        \texttt{mod\_sed.F}, for example
+        \texttt{SED\_WSET\_METHOD = FSK\_CONC}.  The default must remain the
+        current behavior so existing cases are unchanged.  The new method
+        should be available for cohesive classes.
+  \item Add input parameters corresponding to the MATLAB script constants:
+        \texttt{SED\_FSK\_C\_F}, \texttt{SED\_FSK\_C\_2},
+        \texttt{SED\_FSK\_C\_H}, \texttt{SED\_FSK\_C\_GEL},
+        \texttt{SED\_FSK\_C\_MAX}, \texttt{SED\_FSK\_WS\_INERT},
+        \texttt{SED\_FSK\_WS0}, \texttt{SED\_FSK\_WS\_GEL},
+        \texttt{SED\_FSK\_M\_FLOC}, \texttt{SED\_FSK\_B\_HIND},
+        \texttt{SED\_FSK\_BETA\_CONSOL}, \texttt{SED\_FSK\_WSMIN}, and
+        \texttt{SED\_FSK\_TRANS\_N}.  The defaults should reproduce
+        \texttt{MPTM\_FSK\_Veloc.m}.
+  \item Implement a scalar helper, for example
+        \texttt{Calc\_Wset\_FSK\_Cell(C,wset)}, and a column helper, for
+        example \texttt{Calc\_Wset\_FSK(n,c,wset)}.  The helper should use only
+        concentration and the configured constants.  For multi-class use, the
+        concentration argument should be either total cohesive/floc
+        concentration or class-specific concentration according to a documented
+        switch; the preferred first implementation is total cohesive
+        concentration so the ETM concentration regime controls all floc classes.
+  \item In the sediment settling routine, branch the cohesive-settling path:
+        retain \texttt{Calc\_Wset\_Floc} for the current ORIG method, and call
+        \texttt{Calc\_Wset\_FSK} when the new method is selected.
+  \item Expose the same helper to \texttt{mod\_plast.F} so the MP module can
+        reconstruct the exact same local settling signal from sediment
+        concentration without exchanging \texttt{Ws} arrays.  This preserves the
+        earlier design principle that MP reads local sediment concentration but
+        does not require a direct settling-speed exchange.
+  \item Replace the current ORIG/Stokes path in MP with the FSK concentration
+        path for \texttt{PLAST\_FLOC\_EFFECTIVE}.  The FSK value should be used
+        directly for differential settling, aggregated MP settling, and
+        \texttt{settle\_vel\_floc\_*} output.
+  \item Use the configured cohesive/floc class diameter directly as the MP
+        aggregation-size variable instead of pure Stokes inversion of
+        \texttt{Ws}.  This is consistent with the empirical multi-class setup:
+        class diameter represents the modeled floc/aggregate size, while the
+        FSK formula represents the concentration-regime settling speed.
+        A concentration-weighted effective class diameter can be diagnosed for
+        output and plotting.
+  \item Tune the cohesive/floc source terms and class parameters so that the
+        model produces a plausible ETM and a plausible floc-size enhancement
+        relative to available Delaware estuary measurements.  This tuning step
+        should be documented as empirical calibration for MP-floc experiments.
+  \item Add output diagnostics for the selected concentration regime and the
+        FSK settling speed.  Also output the concentration-weighted model-used
+        floc diameter and, where useful, each class contribution to the MP
+        aggregation kernel.  Any hydraulic/Stokes-equivalent diameter should be
+        labeled as diagnostic only.
+  \item Create new paired cases only after the method is implemented: one case
+        with identical multi-class cohesive sediment setup but MP-floc coupling
+        off or using the previous baseline, and one or more cases with FSK
+        MP-floc coupling on for selected MP types.  This keeps the sediment
+        environment fixed while evaluating MP response.
+\end{enumerate}
+
+\section*{Revised Technical Position}
+
+The size-exclusion issue should be handled empirically rather than by pure
+Stokes inversion.  The planned multi-class cohesive setup supplies the
+model-used floc/aggregate diameter from the configured class diameter.  The FSK
+formula supplies concentration-regime settling velocity.  These two pieces are
+therefore separated:
+\begin{itemize}
+  \item class diameter controls collision radius, number-density conversion,
+        and the MP size-exclusion rule;
+  \item FSK settling velocity controls differential settling and aggregated MP
+        settling/output;
+  \item source and class-parameter tuning controls whether the ETM produces a
+        realistic empirical floc distribution.
+\end{itemize}
+
+This approach is less mechanistic than CSTMS, but it is appropriate for a paper
+whose central question is how MP-floc interaction affects selected MP types
+under plausible Delaware estuary floc conditions.
+
+\section*{Implementation Update: Single-Class FSK Case D/E}
+
+The immediate implementation will first use a single cohesive sediment class as
+a formula-isolation test before returning to the broader empirical multi-class
+setup.  Case D and case E will use the same sediment and plastic geometry so
+that the effect of the MP effective-floc switch can be isolated:
+\begin{itemize}
+  \item one cohesive class with \texttt{SED\_SD50 = 0.010} mm;
+  \item \texttt{SED\_WSET\_METHOD = FSK\_CONC}, where the inert settling speed
+        is computed internally from \texttt{SED\_SD50} using the same
+        temperature-compatible Stokes form used by the MP effective-size
+        inversion;
+  \item a microfibre-like MP with \texttt{PLAST\_AAXI = 0.010} mm,
+        \texttt{PLAST\_BAXI = 0.002} mm, and
+        \texttt{PLAST\_CAXI = 0.002} mm;
+  \item case D sets \texttt{PLAST\_FLOC\_EFFECTIVE = T};
+  \item case E sets \texttt{PLAST\_FLOC\_EFFECTIVE = F}.
+\end{itemize}
+
+This single-class test intentionally keeps the Stokes-equivalent inversion in
+the MP effective path.  Sediment computes the FSK concentration-regime settling
+velocity, and the MP module reconstructs the same FSK settling velocity from
+local sediment concentration, sediment class properties, local water density,
+and temperature.  The MP module then applies the existing Stokes inversion with
+\texttt{PLAST\_FLOC\_RHO\_EFF} to obtain the effective floc diameter used by the
+current MP-floc interaction parameterization.  This is a diagnostic
+implementation test of the FSK settling pathway, not the final claim that FSK
+settling uniquely determines physical floc size.
+
+\section*{Wu et al. Minimum-Dimension Incorporation Criterion}
+
+The MP-floc incorporation threshold will be revised to match the size
+definition used by Wu et al. (2024), \emph{Flocs as vectors for microplastics
+in the aquatic environment}.  In that work, MP size for the boundary curve is
+the smallest relevant particle dimension: diameter for microspheres, diameter
+for microfibres, and minimum Feret diameter for irregular fragments.  Therefore,
+the model should not use the volume-equivalent diameter \texttt{dequ} when
+testing whether an MP can be incorporated into a floc.
+
+The code-design split is:
+\begin{itemize}
+  \item \texttt{dequ} remains the size used for MP settling, collision radius,
+        mass, and volume-related calculations;
+  \item the incorporation threshold uses
+        $\min(\texttt{aaxis},\texttt{baxis},\texttt{caxis})$, which is normally
+        \texttt{caxis} under the input convention;
+  \item the same minimum-dimension value is used in both aggregation
+        size-exclusion and disaggregation threshold calculations.
+\end{itemize}
+
+For the planned 10 $\mu$m floc test, the Wu threshold gives
+$d_{\mathrm{MP,max}}\approx3.58~\mu$m.  The selected 10 by 2 by 2 $\mu$m
+microfibre has a minimum dimension of 2 $\mu$m and should therefore pass the
+incorporation gate, while retaining its non-spherical geometry in the rest of
+the MP physics.
+
+\end{document}

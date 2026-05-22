@@ -135,7 +135,8 @@ Module Mod_Plast
 
 #if defined (SEDIMENT)
 # if defined (ORIG_SED)
-	Use Mod_Sed, only: sed, Nsed, Nbed
+	Use Mod_Sed, only: sed, Nsed, Nbed, Sed_Wset_Method_FSK, &
+		Calc_Wset_FSK_Cell
 # endif
 #endif
 
@@ -1099,10 +1100,12 @@ Subroutine Advance_plast(DTin,Tin,taub_in,s_in,t_in)
 	! Then calculate aggregation and disaggregation rates
 	do i=1,nplast
 		Call Calc_floc_MP_Aggregation_Rate(m,kbm1,plast(i)%dequ, &
+			min(plast(i)%aaxis,plast(i)%baxis,plast(i)%caxis), &
 			plast(i)%wset(1:m,1:kbm1),plast(i)%lambda_a(1:m,1:kbm1), &
 			plast(i)%Prho,rho_water(1:m,1:kbm1),floc_effective, &
 			unode(1:m,1:kbm1),vnode(1:m,1:kbm1))
 		Call Calc_floc_MP_Disaggregation_Rate(m,kbm1,DTplast,plast(i)%dequ, &
+			min(plast(i)%aaxis,plast(i)%baxis,plast(i)%caxis), &
 			plast(i)%lambda_a(1:m,1:kbm1),plast(i)%lambda_d(1:m,1:kbm1), &
 			floc_effective,unode(1:m,1:kbm1),vnode(1:m,1:kbm1), &
 			rho_water(1:m,1:kbm1))
@@ -4911,6 +4914,34 @@ End Subroutine Calc_Linear_Bottom_Kinetics
 !==========================================================================
 # if defined (SEDIMENT)
 
+Subroutine Calc_Effective_Floc_Diameter(wset_eff,rhow,temp_c,ds50,dfloc_eff)
+	!===========================================================================
+	! Convert an effective floc settling velocity to the Stokes-equivalent
+	! diameter used by the MP incorporation parameterization.
+	!===========================================================================
+
+	use control, only: grav
+
+	implicit none
+	real(sp), intent(in)  :: wset_eff,rhow,temp_c,ds50
+	real(sp), intent(out) :: dfloc_eff
+
+	real(sp) :: nu,mu,rho_diff
+
+	nu = 1.0E-6_sp*exp(-0.025_sp*(temp_c - 20.0_sp))
+	nu = max(0.5E-6_sp,min(2.0E-6_sp,nu))
+	mu = rhow*nu
+	rho_diff = floc_rho_eff - rhow
+
+	if(rho_diff > 0.0_sp .and. wset_eff > 0.0_sp)then
+		dfloc_eff = sqrt(18.0_sp*mu*wset_eff/(grav*rho_diff))
+		dfloc_eff = max(dfloc_eff,ds50)
+	else
+		dfloc_eff = ds50
+	endif
+
+End Subroutine Calc_Effective_Floc_Diameter
+
 Subroutine Calc_ORIG_Floc_Effective_Cell(csed,sal,u_node,v_node,depth,ds50,w0, &
 	rhow,temp_c,dfloc_eff,wset_eff)
 	!===========================================================================
@@ -4924,7 +4955,7 @@ Subroutine Calc_ORIG_Floc_Effective_Cell(csed,sal,u_node,v_node,depth,ds50,w0, &
 	real(sp), intent(in)  :: csed,sal,u_node,v_node,depth,ds50,w0,rhow,temp_c
 	real(sp), intent(out) :: dfloc_eff,wset_eff
 
-	real(sp) :: speed2,je,g1,factor,nu,mu,rho_diff,depth_eff
+	real(sp) :: speed2,je,g1,factor,depth_eff
 	real(sp), parameter :: mf_orig = 0.012_sp
 	real(sp), parameter :: vcons_orig = 1.0E-6_sp
 	real(sp), parameter :: a = 0.274_sp
@@ -4948,19 +4979,36 @@ Subroutine Calc_ORIG_Floc_Effective_Cell(csed,sal,u_node,v_node,depth,ds50,w0, &
 	wset_eff = w0*factor
 	if(wset_eff > 0.5E-3_sp) wset_eff = 0.5E-3_sp
 
-	nu = 1.0E-6_sp*exp(-0.025_sp*(temp_c - 20.0_sp))
-	nu = max(0.5E-6_sp,min(2.0E-6_sp,nu))
-	mu = rhow*nu
-	rho_diff = floc_rho_eff - rhow
-
-	if(rho_diff > 0.0_sp .and. wset_eff > 0.0_sp)then
-		dfloc_eff = sqrt(18.0_sp*mu*wset_eff/(grav*rho_diff))
-		dfloc_eff = max(dfloc_eff,ds50)
-	else
-		dfloc_eff = ds50
-	endif
+	call Calc_Effective_Floc_Diameter(wset_eff,rhow,temp_c,ds50,dfloc_eff)
 
 End Subroutine Calc_ORIG_Floc_Effective_Cell
+
+Subroutine Calc_Floc_Effective_Cell(csed,sal,u_node,v_node,depth,ds50,w0,srho, &
+	rhow,temp_c,dfloc_eff,wset_eff)
+	!===========================================================================
+	! Dispatch to the active ORIG_SED cohesive settling reconstruction. ORIG_FLOC
+	! keeps the previous salinity/G formula; FSK_CONC uses the concentration-
+	! regime method implemented in Mod_Sed.
+	!===========================================================================
+
+	implicit none
+	real(sp), intent(in)  :: csed,sal,u_node,v_node,depth,ds50,w0,srho,rhow,temp_c
+	real(sp), intent(out) :: dfloc_eff,wset_eff
+
+# if defined (ORIG_SED)
+	if(Sed_Wset_Method_FSK())then
+		call Calc_Wset_FSK_Cell(csed,ds50,srho,rhow,temp_c,wset_eff)
+		call Calc_Effective_Floc_Diameter(wset_eff,rhow,temp_c,ds50,dfloc_eff)
+	else
+		call Calc_ORIG_Floc_Effective_Cell(csed,sal,u_node,v_node,depth,ds50,w0, &
+			rhow,temp_c,dfloc_eff,wset_eff)
+	endif
+# else
+	call Calc_ORIG_Floc_Effective_Cell(csed,sal,u_node,v_node,depth,ds50,w0, &
+		rhow,temp_c,dfloc_eff,wset_eff)
+# endif
+
+End Subroutine Calc_Floc_Effective_Cell
 
 Subroutine Calc_Effective_Floc_Settling_Profile(inode,kbm1,unode,vnode,rho_water,wset_eff)
 	!===========================================================================
@@ -4991,9 +5039,10 @@ Subroutine Calc_Effective_Floc_Settling_Profile(inode,kbm1,unode,vnode,rho_water
 			if(sed(ised)%conc(inode,k) < sed_eps) cycle
 
 			if(trim(sed(ised)%stype) == 'cohesive')then
-				call Calc_ORIG_Floc_Effective_Cell(sed(ised)%conc(inode,k),S1(inode,k), &
+				call Calc_Floc_Effective_Cell(sed(ised)%conc(inode,k),S1(inode,k), &
 					unode(inode,k),vnode(inode,k),d(inode),sed(ised)%Sd50, &
-					sed(ised)%w0,rho_water(inode,k),T1(inode,k),dfloc_cell,wset_cell)
+					sed(ised)%w0,sed(ised)%Srho,rho_water(inode,k),T1(inode,k), &
+					dfloc_cell,wset_cell)
 			else
 				wset_cell = sed(ised)%Wset
 			endif
@@ -5007,7 +5056,7 @@ Subroutine Calc_Effective_Floc_Settling_Profile(inode,kbm1,unode,vnode,rho_water
 
 End Subroutine Calc_Effective_Floc_Settling_Profile
 
-Subroutine Calc_floc_MP_Aggregation_Rate(m,kbm1,dequ,wset,lambda_a,rhop, &
+Subroutine Calc_floc_MP_Aggregation_Rate(m,kbm1,dequ,dincorp,wset,lambda_a,rhop, &
 	rho_water,use_effective,unode,vnode)
 	!===========================================================================
 	! Calculate MP-sediment floc aggregation rate
@@ -5027,7 +5076,7 @@ Subroutine Calc_floc_MP_Aggregation_Rate(m,kbm1,dequ,wset,lambda_a,rhop, &
 
 	implicit none
 	integer, intent(in) 	:: m,kbm1
-	real(sp), intent(in) 	:: dequ
+	real(sp), intent(in) 	:: dequ,dincorp
 	real(sp), intent(in) 	:: wset(:,:)
 	real(sp), intent(in) 	:: rhop
 	real(sp), intent(in) 	:: rho_water(:,:)
@@ -5141,9 +5190,9 @@ Subroutine Calc_floc_MP_Aggregation_Rate(m,kbm1,dequ,wset,lambda_a,rhop, &
 				if (sed(ised)%conc(i, k) < 1.0E-10_sp) cycle
 
 				if(use_effective .and. trim(sed(ised)%stype) == 'cohesive')then
-					call Calc_ORIG_Floc_Effective_Cell(sed(ised)%conc(i,k),sal, &
+					call Calc_Floc_Effective_Cell(sed(ised)%conc(i,k),sal, &
 						unode(i,k),vnode(i,k),d(i),sed(ised)%Sd50,sed(ised)%w0, &
-						rho_water(i,k),temp_c,d_floc_m,w_sed)
+						sed(ised)%Srho,rho_water(i,k),temp_c,d_floc_m,w_sed)
 					particle_density = floc_rho_eff
 				else
 					d_floc_m = sed(ised)%Sd50
@@ -5151,9 +5200,9 @@ Subroutine Calc_floc_MP_Aggregation_Rate(m,kbm1,dequ,wset,lambda_a,rhop, &
 					particle_density = sed_density
 				endif
 
-				!Calculate the critical size of MP using the floc size
+				! Wu et al. threshold uses the MP minimum dimension, not dequ.
 				d_floc = d_floc_m*1.0E6_sp
-				d_MP = dequ*1.0E6_sp
+				d_MP = dincorp*1.0E6_sp
 				if (d_floc<900.0_sp) then
 					d_MP_max = -0.0002_sp*d_floc**2.0+0.36_sp*d_floc
 				else
@@ -5215,7 +5264,7 @@ Subroutine Calc_floc_MP_Aggregation_Rate(m,kbm1,dequ,wset,lambda_a,rhop, &
 
 End Subroutine Calc_floc_MP_Aggregation_Rate
 
-Subroutine Calc_floc_MP_Disaggregation_Rate(m,kbm1,dtb,dequ,lambda_a,lambda_d, &
+Subroutine Calc_floc_MP_Disaggregation_Rate(m,kbm1,dtb,dequ,dincorp,lambda_a,lambda_d, &
 	use_effective,unode,vnode,rho_water)
 
 # if defined (ORIG_SED)
@@ -5228,7 +5277,7 @@ Subroutine Calc_floc_MP_Disaggregation_Rate(m,kbm1,dtb,dequ,lambda_a,lambda_d, &
 # if defined (ORIG_SED)
 	integer :: NST
 # endif
-	real(sp), intent(in) 	:: dequ
+	real(sp), intent(in) 	:: dequ,dincorp
 	real(sp), intent(in)    :: dtb               !Barotropic time step
 	real(sp), intent(in) 	:: lambda_a(:,:)
 	logical, intent(in)     :: use_effective
@@ -5260,8 +5309,8 @@ Subroutine Calc_floc_MP_Disaggregation_Rate(m,kbm1,dtb,dequ,lambda_a,lambda_d, &
 	NST = Nsed
 # endif
 
-	! Convert MP equivalent diameter from meters to microns
-	d_MP = dequ * 1.0E6_sp  ! m to micron
+	! Wu et al. incorporation threshold uses the MP minimum dimension.
+	d_MP = dincorp * 1.0E6_sp  ! m to micron
 
 	! Loop over nodes
 	do i = 1, m
@@ -5287,9 +5336,9 @@ Subroutine Calc_floc_MP_Disaggregation_Rate(m,kbm1,dtb,dequ,lambda_a,lambda_d, &
 			do ised = 1, NST
 				if (sed(ised)%conc(i, k) > 1.0E-10_sp) then
 					if(use_effective .and. trim(sed(ised)%stype) == 'cohesive')then
-						call Calc_ORIG_Floc_Effective_Cell(sed(ised)%conc(i,k),S1(i,k), &
+						call Calc_Floc_Effective_Cell(sed(ised)%conc(i,k),S1(i,k), &
 							unode(i,k),vnode(i,k),d(i),sed(ised)%Sd50,sed(ised)%w0, &
-							rho_water(i,k),T1(i,k),d_floc_m,w_floc)
+							sed(ised)%Srho,rho_water(i,k),T1(i,k),d_floc_m,w_floc)
 						d_sed = d_floc_m*1.0E6_sp
 					else
 						! Convert Sd50 from meters to microns (multiply by 1E6)

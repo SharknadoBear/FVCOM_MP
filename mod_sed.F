@@ -228,6 +228,7 @@ real(sp) :: deposition_d50
 real(sp) :: sed_rhos
 real(sp) :: sed_wset
 !--------------------------------------------------
+character(len=20) :: sed_wset_method = 'ORIG_FLOC'
 logical, parameter    :: debug_sed = .false.
 
 !--------------------------------------------------
@@ -593,7 +594,7 @@ End Subroutine Setup_Sed
   Subroutine Read_Sed_Params
   Use Input_Util
   Implicit None
-  integer linenum,i,k1,iscan
+  integer linenum,i,k1,iscan,ierr
   real(sp)           :: ftemp
   character(len=120) :: stemp
 
@@ -732,6 +733,22 @@ End Subroutine Setup_Sed
 
   !read in point source switch 
   Call Get_Val(sed_source,sedfile,'SED_PTSOURCE',line=linenum,echo=.false.)
+
+  !optional cohesive settling method switch
+  sed_wset_method = 'ORIG_FLOC'
+  Call Extract_Val_String(sedfile,'SED_WSET_METHOD',stemp,ierr,linenum)
+  if(ierr == 0)then
+    if(stemp(1:3) == 'FSK' .or. stemp(1:3) == 'fsk')then
+      sed_wset_method = 'FSK_CONC'
+    else if(stemp(1:4) == 'ORIG' .or. stemp(1:4) == 'orig')then
+      sed_wset_method = 'ORIG_FLOC'
+    else
+      write(*,*)'error in SED_WSET_METHOD in sed param file'
+      write(*,*)'you entered: ',trim(stemp)
+      write(*,*)'must be ORIG_FLOC or FSK_CONC'
+      stop
+    endif
+  endif
 
   !check values
   if(nsed < 1)then
@@ -1303,6 +1320,7 @@ End Subroutine Setup_Sed
     write(*,*)'!  sediment supply       :  finite'
   endif
   write(*,*)'!  Settling CFL          :',settle_cfl
+  write(*,*)'!  settling method       :',trim(sed_wset_method)
   write(*,*)'!'
   write(*,*)'!   class        type   Sd50    Wset   tau_ce   '//&
             'tau_cd  Erate   Spor    Srho'
@@ -2094,7 +2112,12 @@ End Subroutine Setup_Sed
           end if          
           g1(k)=sqrt(grav*sqrt(unode(i,k)**2+vnode(i,k)**2)*je/Vcons)
         end do
-        call calc_wset_floc(kbm1,c,sal,g1,ds50,sed(ised)%w0,wset)
+        if(Sed_Wset_Method_FSK())then
+          call calc_wset_fsk(kbm1,c,ds50,sed(ised)%Srho,sed_rho_water, &
+               T1(i,1:kbm1),wset)
+        else
+          call calc_wset_floc(kbm1,c,sal,g1,ds50,sed(ised)%w0,wset)
+        endif
 !        if(d(i)<1.0)then
 !          ud = 0.812*(ds50*1000.0)**(0.4)*(wset(kbm1)*1000.0*1.0)**(0.2)
 !        else
@@ -2164,6 +2187,102 @@ End Subroutine Setup_Sed
   if(dbg_set(dbg_sbr)) write(ipt,*) "End: Calc_Deposition "
 
   End Subroutine Calc_Deposition
+
+!==========================================================================
+! Optional FSK/MPTM concentration-regime settling method.
+!==========================================================================
+  Logical Function Sed_Wset_Method_FSK()
+  implicit none
+
+  Sed_Wset_Method_FSK = (trim(sed_wset_method) == 'FSK_CONC')
+
+  End Function Sed_Wset_Method_FSK
+
+  Subroutine Calc_Wset_Stokes_Cell(ds50,srho,rhow,temp_c,wset)
+  implicit none
+  real(sp), intent(in   ) :: ds50,srho,rhow,temp_c
+  real(sp), intent(out  ) :: wset
+
+  real(sp) :: nu,rho_diff
+  real(sp), parameter :: grav_local = 9.81_sp
+
+  nu = 1.0E-6_sp*exp(-0.025_sp*(temp_c - 20.0_sp))
+  nu = max(0.5E-6_sp,min(2.0E-6_sp,nu))
+  rho_diff = srho - rhow
+
+  if(ds50 > 0.0_sp .and. rho_diff > 0.0_sp)then
+    wset = grav_local*rho_diff*ds50*ds50/(18.0_sp*rhow*nu)
+  else
+    wset = 0.0_sp
+  endif
+
+  End Subroutine Calc_Wset_Stokes_Cell
+
+  Subroutine Calc_Wset_FSK_Cell(c,ds50,srho,rhow,temp_c,wset)
+  implicit none
+  real(sp), intent(in   ) :: c,ds50,srho,rhow,temp_c
+  real(sp), intent(out  ) :: wset
+
+  real(sp) :: wi,fahis,fk,fws0,mreza,wscon,ctmp
+  real(sp), parameter :: cf = 0.1_sp
+  real(sp), parameter :: c2 = 1.0_sp
+  real(sp), parameter :: ch = 8.0_sp
+  real(sp), parameter :: cgel = 50.0_sp
+  real(sp), parameter :: cmax_fsk = 250.0_sp
+  real(sp), parameter :: ws0 = 3.0E-3_sp
+  real(sp), parameter :: fgws = 1.0E-5_sp
+  real(sp), parameter :: fmfloc = 1.1_sp
+  real(sp), parameter :: fbhis = 2.0_sp
+  real(sp), parameter :: cconsol = 3.0_sp
+  real(sp), parameter :: wsmin = 1.0E-4_sp
+  real(sp), parameter :: trans_n = 3.0_sp
+  real(sp), parameter :: tiny_ws = 1.0E-10_sp
+
+  call Calc_Wset_Stokes_Cell(ds50,srho,rhow,temp_c,wi)
+  wi = max(wi,tiny_ws)
+
+  fws0 = ws0
+  fahis = (1.0_sp-(fgws/fws0)**(1.0_sp/fbhis))/cgel
+  fk = (fws0*(1.0_sp-fahis*ch)**fbhis)/(ch**fmfloc)
+  mreza = (fk-wi)/((c2-cf)**trans_n)
+  ctmp = max(c,0.0_sp)
+
+  if(ctmp < cf)then
+    wset = wi
+  else if(ctmp < c2)then
+    wset = wi + mreza*(ctmp-cf)**trans_n
+  else if(ctmp < ch)then
+    wset = max(fk*ctmp**fmfloc,wsmin)
+  else if(ctmp < cgel)then
+    wset = fws0*(1.0_sp-fahis*ctmp)**fbhis
+  else if(ctmp < cmax_fsk)then
+    wscon = fws0*(1.0_sp-fahis*cgel)**fbhis
+    wset = wscon*(ctmp/cgel)**(-cconsol)
+  else
+    wset = tiny_ws
+  endif
+
+  wset = max(wset,tiny_ws)
+
+  End Subroutine Calc_Wset_FSK_Cell
+
+  Subroutine Calc_Wset_FSK(n,c,ds50,srho,rhow,temp_c,wset)
+  implicit none
+  integer , intent(in   ) :: n
+  real(sp), intent(in   ) :: ds50,srho,rhow,c(n),temp_c(n)
+  real(sp), intent(inout) :: wset(n)
+
+  integer :: i
+
+  if(dbg_set(dbg_sbr)) write(ipt,*) "Start: Calc_Wset_FSK"
+
+  do i=1,n
+    call Calc_Wset_FSK_Cell(c(i),ds50,srho,rhow,temp_c(i),wset(i))
+  end do
+
+  if(dbg_set(dbg_sbr)) write(ipt,*) "End: Calc_Wset_FSK"
+
+  End Subroutine Calc_Wset_FSK
 
 !==========================================================================
 ! Calculate settling velocity of cohesive sediment using the method of

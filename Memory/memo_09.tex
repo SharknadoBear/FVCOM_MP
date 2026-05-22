@@ -1,0 +1,286 @@
+\documentclass[11pt]{article}
+\usepackage[margin=1in]{geometry}
+\usepackage{amsmath}
+\usepackage{booktabs}
+\usepackage{hyperref}
+\usepackage{url}
+
+\title{Memo 09: Spatial Distribution Analysis for FVCOM-MP Cases C and D\\
+       Effective Floc Coupling, Days 10 and 30}
+\author{FVCOM-MP WaterPACT Investigation}
+\date{May 2026}
+
+\begin{document}
+\sloppy
+\maketitle
+
+\section*{Purpose}
+
+This memo records the first spatial-distribution comparison between case
+\texttt{c}, the comparison MP-floc case, and case \texttt{d}, the
+ORIG\_SED effective-floc coupling case.  The analysis used the day-10 and
+day-30 MAT files already extracted in \texttt{OUTPUT\_c} and
+\texttt{OUTPUT\_d}.  Day 90 is not included here because the corresponding
+v2 MAT files were not present at the time of this memo.
+
+\section*{Files and Command}
+
+The analysis inputs were:
+\begin{itemize}
+  \item \texttt{FVCOM\_MP\_test\_run/OUTPUT\_c/spatial\_distribution\_v2\_c\_day10.mat}
+  \item \texttt{FVCOM\_MP\_test\_run/OUTPUT\_d/spatial\_distribution\_v2\_d\_day10.mat}
+  \item \texttt{FVCOM\_MP\_test\_run/OUTPUT\_c/spatial\_distribution\_v2\_c\_day30.mat}
+  \item \texttt{FVCOM\_MP\_test\_run/OUTPUT\_d/spatial\_distribution\_v2\_d\_day30.mat}
+\end{itemize}
+
+The analysis was run with:
+\begin{verbatim}
+python FVCOM_MP_test_run/PYTHON/analyze_spatial_distribution_v2.py --days 10 30
+\end{verbatim}
+
+The outputs were written to:
+\begin{itemize}
+  \item \texttt{FVCOM\_MP\_test\_run/PYTHON/output/spatial\_distribution\_v2/day10}
+  \item \texttt{FVCOM\_MP\_test\_run/PYTHON/output/spatial\_distribution\_v2/day30}
+\end{itemize}
+Each day folder contains per-case maps, \texttt{d-c} maps,
+\texttt{summary\_stats.csv}, \texttt{diff\_summary\_stats.csv}, and
+\texttt{README.md}.  The run generated 108 PNG maps across the two day folders.
+
+\section*{Extraction Window}
+
+Both day-10 and day-30 MAT files contain 24 output records.  The day-10 files
+span simulation day 9.0000 to 9.9570, and the day-30 files span simulation day
+29.0000 to 29.9570.  These are therefore final-24-hour averages before the
+target day endpoints, as intended for this v2 spatial workflow.
+
+\section*{Equivalent Floc Size Post-processing}
+
+The equivalent floc size was computed from the existing output
+\texttt{settle\_vel\_floc\_mp1} with
+\begin{equation}
+  d_{\mathrm{floc,eff}} =
+  \left[
+  \frac{18 \mu W_{\mathrm{floc}}}
+       {g(\rho_{\mathrm{floc,eff}}-\rho_w)}
+  \right]^{1/2},
+\end{equation}
+where $\rho_{\mathrm{floc,eff}} = 1300$ kg m$^{-3}$ and
+\begin{equation}
+  \nu = 10^{-6}\exp[-0.025(T-20)], \qquad
+  0.5\times10^{-6} \le \nu \le 2.0\times10^{-6},
+\end{equation}
+with $\mu=\rho_w\nu$.  This is the same post-processing relation documented in
+Memo 08.
+
+\section*{Key Spatial Statistics}
+
+Table~\ref{tab:mainstats} summarizes the domain means and 95th percentiles for
+the depth-averaged fields most relevant to the effective-floc coupling.  All
+values are taken directly from the generated \texttt{summary\_stats.csv} files.
+
+\begin{table}[h]
+\centering
+\caption{Depth-averaged domain statistics for selected fields.}
+\label{tab:mainstats}
+\begin{tabular}{llrrrr}
+\toprule
+Day & Field & C mean & D mean & C p95 & D p95 \\
+\midrule
+10 & Sediment & $1.035$ & $4.506$ & $4.332$ & $10.506$ \\
+10 & $W_{\mathrm{floc}}$ (m s$^{-1}$) & $1.463{\times}10^{-3}$ & $7.527{\times}10^{-5}$ & $3.000{\times}10^{-3}$ & $2.079{\times}10^{-4}$ \\
+10 & $d_{\mathrm{floc,eff}}$ ($\mu$m) & $79.07$ & $19.35$ & $163.17$ & $38.69$ \\
+10 & $\lambda_a$ (s$^{-1}$) & $2.110{\times}10^{-2}$ & $0$ & $8.713{\times}10^{-2}$ & $0$ \\
+10 & $\lambda_d$ (s$^{-1}$) & $1.943{\times}10^{-2}$ & $4.996{\times}10^{-1}$ & $6.999{\times}10^{-2}$ & $5.000{\times}10^{-1}$ \\
+10 & MP total (kg m$^{-3}$) & $1.162{\times}10^{-6}$ & $6.697{\times}10^{-7}$ & $4.344{\times}10^{-6}$ & $2.700{\times}10^{-6}$ \\
+10 & MP aggregated fraction & $0.363$ & $0$ & $0.433$ & $0$ \\
+\midrule
+30 & Sediment & $0.524$ & $4.373$ & $2.518$ & $10.143$ \\
+30 & $W_{\mathrm{floc}}$ (m s$^{-1}$) & $2.720{\times}10^{-3}$ & $1.174{\times}10^{-4}$ & $3.000{\times}10^{-3}$ & $2.809{\times}10^{-4}$ \\
+30 & $d_{\mathrm{floc,eff}}$ ($\mu$m) & $148.31$ & $30.89$ & $167.08$ & $47.62$ \\
+30 & $\lambda_a$ (s$^{-1}$) & $1.028{\times}10^{-2}$ & $0$ & $4.213{\times}10^{-2}$ & $0$ \\
+30 & $\lambda_d$ (s$^{-1}$) & $8.798{\times}10^{-3}$ & $4.999{\times}10^{-1}$ & $3.934{\times}10^{-2}$ & $5.000{\times}10^{-1}$ \\
+30 & MP total (kg m$^{-3}$) & $3.495{\times}10^{-5}$ & $1.267{\times}10^{-6}$ & $1.702{\times}10^{-4}$ & $3.721{\times}10^{-6}$ \\
+30 & MP aggregated fraction & $0.181$ & $0$ & $0.388$ & $0$ \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\section*{Main Findings}
+
+\subsection*{The effective-floc settling signal changed strongly and plausibly}
+
+Case \texttt{d} has much smaller \texttt{settle\_vel\_floc\_mp1} than case
+\texttt{c}.  The domain-mean depth-averaged floc settling speed decreases from
+$1.46\times10^{-3}$ to $7.53\times10^{-5}$ m s$^{-1}$ on day 10, and from
+$2.72\times10^{-3}$ to $1.17\times10^{-4}$ m s$^{-1}$ on day 30.  The maximum
+case-\texttt{d} depth-averaged values were $4.32\times10^{-4}$ and
+$4.87\times10^{-4}$ m s$^{-1}$ on days 10 and 30, respectively, which is
+consistent with the ORIG\_SED floc settling cap of approximately
+$5.0\times10^{-4}$ m s$^{-1}$.
+
+\subsection*{The post-processed effective floc diameters are much smaller}
+
+The Stokes-equivalent floc size also decreases sharply in case \texttt{d}.  The
+domain-mean depth-averaged effective diameter is about 19.4 $\mu$m on day 10
+and 30.9 $\mu$m on day 30.  The corresponding 95th percentiles are about
+38.7 $\mu$m and 47.6 $\mu$m.  The maximum depth-averaged case-\texttt{d}
+values are approximately 61.6 $\mu$m on day 10 and 66.0 $\mu$m on day 30.
+
+\subsection*{The present size gate disables aggregation in case D}
+
+The plastic input has \texttt{PLAST\_AAXI = PLAST\_BAXI = PLAST\_CAXI = 0.100},
+which is read as a 0.100 mm, or 100 $\mu$m, equivalent plastic diameter.  In the
+current aggregation kernel, the critical MP size is computed from floc size as
+\begin{equation}
+  d_{\mathrm{MP,max}} =
+  -0.0002 d_{\mathrm{floc}}^2 + 0.36 d_{\mathrm{floc}},
+  \quad d_{\mathrm{floc}} < 900\ \mu\mathrm{m}.
+\end{equation}
+For the case-\texttt{d} effective floc range of roughly 20--66 $\mu$m, this
+gives $d_{\mathrm{MP,max}}$ of only about 7--23 $\mu$m.  The present 100 $\mu$m
+MP class is therefore larger than the allowed size for aggregation.  This
+explains why \texttt{lambda\_a\_mp1} is zero everywhere in case \texttt{d}, why
+\texttt{mp1\_agg} is zero, and why the aggregated MP fraction is zero in both
+day-10 and day-30 outputs.
+
+\subsection*{Disaggregation rate is high, but there is no aggregated MP mass}
+
+Case \texttt{d} has \texttt{lambda\_d\_mp1} close to 0.5 s$^{-1}$ across the
+domain.  Because \texttt{mp1\_agg} is zero in case \texttt{d}, this rate should
+be read mainly as a diagnostic rate produced by the kernel under the current
+effective-floc sizes, not as evidence of an active disaggregation flux.
+
+\subsection*{Sediment fields differ substantially between cases}
+
+The case-\texttt{d} sediment concentration is higher in the depth average on
+both days: the mean is $4.51$ versus $1.03$ on day 10, and $4.37$ versus
+$0.524$ on day 30.  Surface sediment is broadly higher in case \texttt{d},
+while bottom sediment has mixed differences and can be lower than case
+\texttt{c}.  This is expected to reflect the changed cohesive ORIG\_SED
+sediment configuration in case \texttt{d}, not only the MP-side effective-floc
+switch.
+
+\subsection*{MP response is strong}
+
+Case \texttt{d} has no aggregated MP and no bottom MP mass in the analyzed
+outputs.  The domain-mean total suspended MP concentration is lower than case
+\texttt{c}: about 42\% lower on day 10 and about 96\% lower on day 30.  This
+suggests that, under the present 100 $\mu$m MP size and ORIG-equivalent floc
+sizes, the effective-floc coupling moves the model into a non-aggregation
+regime rather than a modified-aggregation regime.
+
+\section*{Interpretation}
+
+The output confirms that the new post-processing workflow can see the intended
+case-\texttt{d} ORIG\_SED settling signal through
+\texttt{settle\_vel\_floc\_mp1}.  The effective settling speed and the
+back-calculated equivalent floc size both change in a physically consistent
+direction: lower settling speed produces smaller Stokes-equivalent flocs.
+
+The important model-behavior result is that these smaller effective flocs are
+too small to aggregate the current 100 $\mu$m plastic class under the existing
+critical-size closure.  Therefore, the case-\texttt{d} run is not just changing
+the aggregation strength; it is effectively shutting aggregation off for this
+plastic class.
+
+\section*{Sediment Setup Comparison and Equivalence Issue}
+
+The case-\texttt{c} and case-\texttt{d} results above should not be interpreted
+as an isolated test of only \texttt{PLAST\_FLOC\_EFFECTIVE}.  The sediment
+configuration also changed between the two cases.  Table~\ref{tab:sedsetup}
+summarizes the active sediment-module inputs.
+
+\begin{table}[h]
+\centering
+\caption{Active sediment-module setup in cases \texttt{c} and \texttt{d}.}
+\label{tab:sedsetup}
+\begin{tabular}{lll}
+\toprule
+Parameter & Case \texttt{c} & Case \texttt{d} \\
+\midrule
+Sediment file &
+\texttt{generic\_sediment\_c.inp} &
+\texttt{generic\_sediment\_d.inp} \\
+\texttt{SED\_TYPE} &
+\texttt{non-cohesive} &
+\texttt{cohesive} \\
+\texttt{SED\_SD50} &
+1.0 mm &
+0.004 mm \\
+\texttt{SED\_WSET} input &
+3.0 mm s$^{-1}$ &
+0.1 mm s$^{-1}$ \\
+Runtime base settling speed &
+$3.0\times10^{-3}$ m s$^{-1}$ &
+$1.0\times10^{-4}$ m s$^{-1}$ \\
+Settling treatment &
+constant non-cohesive \texttt{Wset} &
+ORIG\_SED cohesive flocculation \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+In \texttt{mod\_sed.F}, \texttt{SED\_WSET} is read in mm s$^{-1}$ and converted
+to m s$^{-1}$.  For non-cohesive sediment, the settling calculation uses
+\texttt{wset = sed(ised)\%Wset}.  For cohesive sediment, the code instead calls
+\texttt{Calc\_Wset\_Floc} with \texttt{sed(ised)\%w0} as the base settling
+velocity and then applies the ORIG flocculation treatment.  Therefore, case
+\texttt{c} uses a constant non-cohesive settling speed of 0.003 m s$^{-1}$,
+whereas case \texttt{d} starts from a cohesive base settling speed of
+$1.0\times10^{-4}$ m s$^{-1}$ and then reconstructs the ORIG floc signal.
+
+This means the current \texttt{c}--\texttt{d} comparison is not dynamically
+equivalent.  Case \texttt{d} simultaneously changes:
+\begin{itemize}
+  \item sediment type from non-cohesive to cohesive;
+  \item primary sediment size from 1.0 mm to 0.004 mm;
+  \item base settling speed from 3.0 mm s$^{-1}$ to 0.1 mm s$^{-1}$;
+  \item the sediment settling closure from constant settling to ORIG cohesive
+        flocculation;
+  \item the MP interaction path through \texttt{PLAST\_FLOC\_EFFECTIVE=T}.
+\end{itemize}
+
+The plastic input files also contain a separate static parameter
+\texttt{SED\_SD50 = 0.35} mm and \texttt{PLAST\_WSSED = 0.01} m s$^{-1}$ in
+both cases.  These are plastic-module ambient or bed parameters and are not the
+active suspended sediment class settings used by \texttt{mod\_sed.F}.  They
+should not be used to judge equivalence of the active sediment transport cases.
+
+For a clean MP-coupling comparison, the control and switch-on cases should keep
+the active sediment module configuration identical.  One practical setup would
+be:
+\begin{enumerate}
+  \item define a cohesive control case with the same \texttt{SED\_TYPE},
+        \texttt{SED\_SD50}, \texttt{SED\_WSET}, erosion, deposition, bed, and
+        forcing settings as case \texttt{d};
+  \item keep \texttt{PLAST\_FLOC=T} but set
+        \texttt{PLAST\_FLOC\_EFFECTIVE=F} in that control case;
+  \item compare it against a matched case with only
+        \texttt{PLAST\_FLOC\_EFFECTIVE=T}.
+\end{enumerate}
+That paired design would isolate the MP-side effective-floc-size treatment.
+The present case \texttt{c} versus case \texttt{d} comparison is still useful as
+a broad sediment-regime sensitivity, but it cannot support a strict
+attribution of the MP response to the effective-floc switch alone.
+
+\section*{Recommended Next Checks}
+
+\begin{enumerate}
+  \item Confirm that the 0.100 mm MP size is the intended particle size for
+        this sensitivity.  If the intention is to test ORIG-effective floc
+        aggregation, a smaller MP class may be needed.
+  \item Consider a sensitivity to \texttt{PLAST\_FLOC\_RHO\_EFF}.  Lowering the
+        assumed effective floc density toward water density increases the
+        Stokes-equivalent diameter for the same settling speed.
+  \item Consider adding optional diagnostics for
+        $d_{\mathrm{floc,eff}}$ and $d_{\mathrm{MP,max}}$ directly in model
+        output.  The current post-processing can recover
+        $d_{\mathrm{floc,eff}}$, but $d_{\mathrm{MP,max}}$ is still inferred
+        from the aggregation closure.
+  \item Repeat the same v2 extraction and analysis for day 90 when the
+        \texttt{spatial\_distribution\_v2\_\{c,d\}\_day90.mat} files are
+        available.
+\end{enumerate}
+
+\end{document}
