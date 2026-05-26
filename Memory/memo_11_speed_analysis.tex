@@ -10,7 +10,7 @@ spread/pack comparisons, and the figures below.
 \begin{figure}[htbp]
 \centering
 \includegraphics[width=0.92\linewidth]{memo_11_sec_per_iteration.png}
-\caption{Observed case-B SEC/IT versus total MPI ranks. Lower values are faster; B17 is the fastest observed point.}
+\caption{Observed case-B SEC/IT versus total MPI ranks. Lower values are faster; C08 and C09 are the fastest observed points.}
 \end{figure}
 
 \begin{figure}[htbp]
@@ -30,7 +30,16 @@ B15 & 4 x 104 & 416 & 0.0416 & 279.1 & 67.1\% \\
 B16 & 8 x 52 & 416 & 0.035 & 331.7 & 79.7\% \\
 B17 & 8 x 78 & 624 & 0.025 & 464.4 & 74.4\% \\
 B18 & 8 x 104 & 832 & 0.032 & 362.8 & 43.6\% \\
-B20 & 6 x 104 & 624 & 0.039 & 297.7 & 47.7\% \\
+C01 & 10 x 52 & 520 & 0.026 & 446.5 & 85.9\% \\
+C02 & 10 x 64 & 640 & 0.023 & 504.8 & 78.9\% \\
+C03 & 10 x 78 & 780 & 0.023 & 504.8 & 64.7\% \\
+C04 & 12 x 52 & 624 & 0.025 & 464.4 & 74.4\% \\
+C05 & 12 x 64 & 768 & 0.02 & 580.5 & 75.6\% \\
+C06 & 12 x 78 & 936 & 0.019 & 611.1 & 65.3\% \\
+C07 & 16 x 52 & 832 & 0.018 & 645.0 & 77.5\% \\
+C08 & 16 x 64 & 1024 & 0.017 & 682.9 & 66.7\% \\
+C09 & 16 x 78 & 1248 & 0.017 & 682.9 & 54.7\% \\
+C10 & 16 x 104 & 1664 & 0.023 & 504.8 & 30.3\% \\
 \bottomrule
 \end{tabular}
 \end{table}
@@ -45,28 +54,61 @@ Rank case & Packed/reference & Spread/candidate & SEC/IT change \\
 104 ranks & B10, 1 x 104 & B11, 2 x 52 & 20.0\% faster \\
 208 ranks & B12, 2 x 104 & B13, 4 x 52 & 18.9\% faster \\
 416 ranks & B15, 4 x 104 & B16, 8 x 52 & 15.9\% faster \\
+520 ranks & B19, 5 x 104 & C01, 10 x 52 & 29.7\% faster \\
 624 ranks & B20, 6 x 104 & B17, 8 x 78 & 35.9\% faster \\
+624 ranks & B20, 6 x 104 & C04, 12 x 52 & 35.9\% faster \\
+832 ranks & B18, 8 x 104 & C07, 16 x 52 & 43.8\% faster \\
 \bottomrule
 \end{tabular}
 \end{table}
 
 \subsection*{Analysis Interpretation}
 
-The fastest observed configuration is \textbf{B17}, with
-8 nodes, 78 ranks per node,
-624 total ranks, and 0.025 SEC/IT.
-This is a 464.4x speedup over B01 and is
-39.9\% faster than the current four-node B15 layout.
+The fastest observed SEC/IT is shared by \textbf{C08} and \textbf{C09}, both at
+0.017 SEC/IT.  Relative to the one-rank B01
+baseline this is a 682.9x speedup, and relative to the
+current four-node B15 layout it is 59.1\% lower in
+SEC/IT.  Because C08 reaches the same timing with 1024 ranks instead of 1248,
+it has higher parallel efficiency and is the preferred default for long
+production-style runs at the present tracer count.
+
+The C-series extension shows the benefit of moving beyond the previous
+eight-node tests.  The ten-node C02/C03 timings reach 0.023 SEC/IT, the
+twelve-node C05/C06 timings improve to 0.020--0.019 SEC/IT, and the sixteen-node
+C08/C09 timings reach the current minimum of 0.017 SEC/IT.
 
 For the near-416-rank operating point, \textbf{B16} is the
 best observed choice: 0.035 SEC/IT compared with
 0.0416 SEC/IT for B15.  The matched-rank checks show
-that spreading ranks across more nodes improves timing for 104, 208, 416, and
-624 total ranks in these observations.
+that spreading ranks across more nodes improves timing for 104, 208, 416, 520,
+624, and 832 total ranks in these observations.
 
 The eight-node full-occupancy run B18 is slower than B17 by
 28.0\%, even though B18 uses more ranks.  This suggests that
-the present sweet spot is not maximum rank count, but moderate per-node
-occupancy on eight nodes.  The practical recommendation is to use B17 when the
-queue allows eight nodes, use B16 for a 416-rank comparison run, and repeat
-B16--B18 if final production timing needs tighter uncertainty bounds.
+full node occupancy is not the preferred layout.  The same pattern becomes
+clearer at sixteen nodes: C10, the 16 x 104 full-occupancy run, is
+35.3\% slower than C08.  C09 ties C08 in SEC/IT, but its
+parallel efficiency is 17.9\% lower because it uses 224
+more ranks without reducing wall-clock time.
+
+\subsection*{Node/Core Recommendation for Later Runs}
+
+For the current case-B timing set, use \textbf{C08} as the default
+long-run configuration when the queue allows sixteen nodes:
+16 nodes, 64 ranks per node, 1024 total MPI ranks, and
+0.017 SEC/IT.  Use \textbf{C07} as the conservative
+sixteen-node option if the barotropic step or halo exchanges become noisy; it
+is only slightly slower at 0.018 SEC/IT and leaves more
+per-node headroom.  Use \textbf{C09} only as a repeat-test candidate for the
+final multi-floc setup, because it currently gives no speed advantage over C08.
+Avoid \textbf{C10} for production unless a later physics configuration changes
+the scaling behavior.
+
+When multiple floc tracers are enabled, the optimal point can shift because
+the tracer work increases, while the barotropic/external-mode work remains
+communication sensitive.  If the added floc tracers make the run more
+compute-bound, C09 may become useful; if the barotropic step becomes the heavy
+or noisy component, lower per-node occupancy should be favored.  The recommended
+final confirmation matrix is therefore C07, C08, C09, plus C06 as a lower-node
+fallback.  Treat C08 as the present best balance of elapsed time, efficiency,
+and margin for communication-heavy barotropic work.

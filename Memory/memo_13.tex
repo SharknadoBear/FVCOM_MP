@@ -1,0 +1,155 @@
+\documentclass[11pt]{article}
+\usepackage[margin=1in]{geometry}
+\usepackage{booktabs}
+\usepackage{hyperref}
+\usepackage{url}
+
+\title{Memo 13: MP-only Numerical Limiter Update for \texttt{PLAST\_FLOC=F}\\
+       Baseline Stability in \texttt{mod\_plast.F}}
+\author{FVCOM-MP WaterPACT Investigation}
+\date{May 25, 2026}
+
+\begin{document}
+\sloppy
+\maketitle
+
+\section*{Purpose}
+
+This memo records the model-development change made after the MP-only
+baseline runs with \texttt{PLAST\_FLOC=F} showed numerical divergence.  The
+main purpose of the change is to make the non-floc plastic pathway mirror the
+same water-column upper-bound value limiter already used by the split
+\texttt{PLAST\_FLOC=T} pathway.
+
+The project-level reference consulted for this memo was:
+\begin{quote}
+\path{C:\Users\huan111\OneDrive - PNNL\Desktop\WaterPACT_Local\4_Floc_MP_interaction\Memory\v003_mp_mass_divergence_diagnosis.tex}
+\end{quote}
+
+\section*{Background}
+
+The divergent cases were MP-only baseline tests using
+\texttt{PLAST\_FLOC=F}.  The reference memo showed that the river MP inputs
+were small and finite, while the model plastic mass grew to unrealistically
+large values during the run.  The growth was therefore not consistent with a
+forcing-magnitude problem.  Instead, the diagnostic checkpoints suggested that
+the non-floc transport pathway could create very large positive or negative
+combined plastic concentrations before the later lower-bound clipping stage.
+
+The important numerical asymmetry was:
+\begin{itemize}
+  \item With \texttt{PLAST\_FLOC=T}, the split plastic fields
+  \texttt{cnew\_a} and \texttt{cnew\_d} were already capped at 100 before the
+  \texttt{CP7\_after\_upper\_clamp} mass checkpoint.
+  \item With \texttt{PLAST\_FLOC=F}, the combined non-floc field
+  \texttt{cnew} passed through advection and vertical diffusion without the
+  corresponding upper-bound cap.
+\end{itemize}
+
+That difference made the nominal MP-only baseline a different numerical
+pathway, not simply a floc-disabled version of the coupled pathway.  In
+particular, once very large negative values were generated, the later
+non-negative clamp could zero them while leaving compensating positive
+excursions, producing an artificial mass increase.
+
+\section*{Code Change Recorded}
+
+The current development version of \texttt{mod\_plast.F} adds an upper-bound
+limiter to the combined non-floc concentration:
+\begin{verbatim}
+where (plast(iplast)%cnew > 100.0_sp) plast(iplast)%cnew = 100.0_sp
+\end{verbatim}
+
+This limiter is applied after the non-floc advection and vertical diffusion
+updates and before \texttt{CP7\_after\_upper\_clamp}.  The same treatment was
+added in both relevant non-floc branches:
+\begin{itemize}
+  \item the sediment-enabled branch used by the main FVCOM-MP sediment build;
+  \item the non-sediment fallback branch guarded by the preprocessor
+  alternative.
+\end{itemize}
+
+The mass-check labels were also clarified in the non-floc branch.  For
+\texttt{PLAST\_FLOC=F}, checkpoints \texttt{CP3p5} through \texttt{CP6}
+represent the same post-transport, pre-cap combined concentration state.
+\texttt{CP7\_after\_upper\_clamp} now records the state after the new
+upper-bound limiter.
+
+\section*{Before and After}
+
+\begin{center}
+\begin{tabular}{p{0.24\linewidth}p{0.34\linewidth}p{0.34\linewidth}}
+\toprule
+Aspect & Before & After \\
+\midrule
+\texttt{PLAST\_FLOC=T} split path &
+\texttt{cnew\_a} and \texttt{cnew\_d} capped at 100 before
+\texttt{CP7}. &
+Unchanged. \\
+\addlinespace
+\texttt{PLAST\_FLOC=F} combined path &
+\texttt{cnew} was advected and vertically diffused, but no equivalent
+upper cap was applied before \texttt{CP7}. &
+\texttt{cnew} is capped at 100 before
+\texttt{CP7\_after\_upper\_clamp}. \\
+\addlinespace
+Lower-bound treatment &
+The later non-negative clamp was already applied after open-boundary and
+point-source handling. &
+Unchanged.  The new change only adds the missing upper-bound limiter. \\
+\addlinespace
+Physical parameterization &
+No change to aggregation, disaggregation, settling, density, or floc
+coupling physics. &
+Still no change to those physics.  This is a numerical value limiter. \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\section*{Interpretation}
+
+This update makes the MP-only baseline numerically more comparable to the
+floc-enabled configuration.  It does not turn on floc coupling, aggregation,
+disaggregation, equivalent grain size interaction, or sediment-floc physics
+when \texttt{PLAST\_FLOC=F}.  It only prevents the combined non-floc plastic
+field from exceeding the same upper concentration bound that already protected
+the split \texttt{PLAST\_FLOC=T} fields.
+
+The change should reduce the risk that an MP-only baseline diverges simply
+because it lacks a limiter present in the coupled run.  Therefore, if the
+baseline becomes stable after this update, the result should be interpreted as
+a correction to the numerical pathway rather than a change in the physical
+meaning of the baseline case.
+
+\section*{Recommended Verification Runs}
+
+For the next short P0/P1 verification, use the same forcing and model setup
+that previously diverged, but retain the plastic mass-check output.  The key
+diagnostic comparison is:
+\begin{itemize}
+  \item \texttt{CP3\_after\_update\_bottom}: mass before water-column
+  advection and diffusion;
+  \item \texttt{CP3p5\_after\_adv\_a} through \texttt{CP6\_after\_kinetics}:
+  the post-transport, pre-cap combined non-floc state;
+  \item \texttt{CP7\_after\_upper\_clamp}: the first checkpoint after the
+  new cap;
+  \item \texttt{CP10\_after\_neg\_clamp}: the state after the existing
+  non-negative lower-bound clamp.
+\end{itemize}
+
+The expected healthy behavior is that \texttt{CP7} no longer permits extreme
+positive concentrations, and \texttt{CP10} no longer shows explosive mass
+growth caused by clipping very large negative values.  If divergence persists,
+the next isolation tests should be a transport-only run with point sources
+disabled, followed by a focused search for the first cell and time step where
+\texttt{cnew} becomes non-finite or very large in magnitude.
+
+\section*{Summary}
+
+The development repository now includes a missing upper-bound limiter for the
+combined MP concentration used when \texttt{PLAST\_FLOC=F}.  This brings the
+MP-only pathway into closer numerical alignment with the existing
+\texttt{PLAST\_FLOC=T} split-field pathway and should make the baseline tests a
+fairer comparison for long-run MP-floc experiments.
+
+\end{document}

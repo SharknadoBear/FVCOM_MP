@@ -4745,10 +4745,16 @@ CONTAINS
          & ("THE RIVER FILE:"//TRIM(NCF%FNAME),"THE VARIABLE: "&
          &//TRIM(VAR%VARNAME), "IS MISSING THE ATTRIBUTE 'units'")
 		 
-		IF(TRIM(ATT%CHR(1)) /= "mg/l" .and. TRIM(ATT%CHR(1)) /= "gm^-3" .and. TRIM(ATT%CHR(1)) /= "kg/m^3")CALL FATAL_ERROR &
+		IF(TRIM(ATT%CHR(1)) /= "mg/l"   .and. TRIM(ATT%CHR(1)) /= "mg/L"     .and. &
+		   TRIM(ATT%CHR(1)) /= "gm^-3"  .and. TRIM(ATT%CHR(1)) /= "g/m^3"    .and. &
+		   TRIM(ATT%CHR(1)) /= "g m^-3" .and. TRIM(ATT%CHR(1)) /= "g m-3"    .and. &
+		   TRIM(ATT%CHR(1)) /= "g/l"    .and. TRIM(ATT%CHR(1)) /= "g/L"      .and. &
+		   TRIM(ATT%CHR(1)) /= "kg/m^3" .and. TRIM(ATT%CHR(1)) /= "kg/m3"    .and. &
+		   TRIM(ATT%CHR(1)) /= "kgm^-3" .and. TRIM(ATT%CHR(1)) /= "kg m^-3"  .and. &
+		   TRIM(ATT%CHR(1)) /= "kg m-3")CALL FATAL_ERROR &
          & ("THE RIVER FILE:"//TRIM(NCF%FNAME),"THE VARIABLE: "&
          &//TRIM(VAR%VARNAME), "THE ATTRIBUTE 'units' IS INCORRECT: EXPE&
-         &CTING 'mg/l' or 'gm^-3' and is "//TRIM(ATT%CHR(1)))
+         &CTING 'mg/l', 'gm^-3', 'g/l', or 'kg/m^3' and is "//TRIM(ATT%CHR(1)))
 	END DO
 	
 	IF (TOX_SWITCH) THEN
@@ -18277,4 +18283,3 @@ CONTAINS
 
 
 END MODULE MOD_FORCE
-

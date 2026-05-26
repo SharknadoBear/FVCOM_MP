@@ -1457,8 +1457,9 @@ else
     call vdif_scal(plast(iplast)%cnew,DTplast)
   end do
 
-  ! Non-floc path: all stages CP3p5-CP7 correspond to the same model state
-  ! (no split advection, no kinetics, no upper clamp on combined conc).
+  ! Non-floc path: CP3p5-CP6 correspond to the same post-transport state.
+  ! CP7 records the numerical upper-bound limiter below, mirroring the
+  ! PLAST_FLOC=T split-field treatment for cnew_a/cnew_d.
   if(PLAST_mass_check) then
     do iplast=1,nplast
       call Write_MC_1Field('CP3p5_after_adv_a',iplast, &
@@ -1469,6 +1470,17 @@ else
            plast(iplast)%cnew,plast(iplast)%mass)
       call Write_MC_1Field('CP6_after_kinetics',iplast, &
            plast(iplast)%cnew,plast(iplast)%mass)
+    end do
+  end if
+
+  ! Upper bound limiter for stability, applied to the combined non-floc
+  ! concentration exactly as the split-field path limits cnew_a/cnew_d.
+  do iplast=1,nplast
+    where (plast(iplast)%cnew > 100.0_sp) plast(iplast)%cnew = 100.0_sp
+  end do
+
+  if(PLAST_mass_check) then
+    do iplast=1,nplast
       call Write_MC_1Field('CP7_after_upper_clamp',iplast, &
            plast(iplast)%cnew,plast(iplast)%mass)
     end do
@@ -1519,6 +1531,12 @@ endif
   !------------------------------------------------------
   do i=1,nplast
     call vdif_scal(plast(i)%cnew,DTplast) 
+  end do
+
+  ! Mirror the PLAST_FLOC=T numerical upper-bound limiter for the combined
+  ! non-floc concentration.  This is a value cap only, not a physics change.
+  do i=1,nplast
+    where (plast(i)%cnew > 100.0_sp) plast(i)%cnew = 100.0_sp
   end do
 
 # endif
